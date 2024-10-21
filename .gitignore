@@ -1,0 +1,13 @@
+/target
+
+.pixi/
+.conda_lock_files/
+
+environment.yml
+
+.vscode/
+
+compliance/
+
+output/
+tests_private/
