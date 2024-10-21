@@ -1,0 +1,39 @@
+name: Cargo Build, Test & Lint
+
+on:
+  push:
+    branches: [main]
+  workflow_dispatch:
+  pull_request:
+
+env: 
+  CARGO_TERM_COLOR: always
+  # Colored output by the CLI should be colored in Github Actions
+  CLICOLOR_FORCE: 1
+  # Make sure CI fails on all warnings, including Clippy lints
+  RUSTFLAGS: "-Dwarnings"
+
+jobs:
+  build_and_test:
+    name: Rust project - latest
+    runs-on: ubuntu-latest
+    strategy:
+      matrix:
+        toolchain:
+          - stable
+          - beta
+          - nightly
+    steps:
+      - uses: actions/checkout@v4
+      - uses: Swatinem/rust-cache@23bce251a8cd2ffc3c1075eaa2367cf899916d84
+      - run: rustup update ${{ matrix.toolchain }} && rustup default ${{ matrix.toolchain }}
+      - run: cargo build --verbose
+      - run: cargo test --verbose
+
+  clippy:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - uses: Swatinem/rust-cache@23bce251a8cd2ffc3c1075eaa2367cf899916d84
+      - name: Run Clippy
+        run: cargo clippy --all-targets --all-features -- -D clippy::all

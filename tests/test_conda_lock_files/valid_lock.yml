@@ -1,0 +1,6 @@
+name: valid_lock
+channels:
+- conda-forge
+- nodefaults
+dependencies:
+- conda-forge/linux-64::package_name=1.0.0=conda_forge

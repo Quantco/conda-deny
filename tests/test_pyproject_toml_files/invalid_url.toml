@@ -1,0 +1,2 @@
+[tool.conda-deny]
+license-whitelist = "This is not a URL."

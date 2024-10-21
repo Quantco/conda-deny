@@ -1,0 +1,65 @@
+==> 2024-10-17 18:06:23 <==
+# cmd: /opt/homebrew/opt/micromamba/bin/micromamba install ipython
+# conda version: 3.8.0
++https://conda.anaconda.org/conda-forge/osx-arm64::xz-5.2.6-h57fd34a_0
++https://conda.anaconda.org/conda-forge/osx-arm64::libexpat-2.6.3-hf9b8971_0
++https://conda.anaconda.org/conda-forge/osx-arm64::libmpdec-4.0.0-h99b78c6_0
++https://conda.anaconda.org/conda-forge/osx-arm64::python_abi-3.13-5_cp313
++https://conda.anaconda.org/conda-forge/osx-arm64::ncurses-6.5-h7bae524_1
++https://conda.anaconda.org/conda-forge/osx-arm64::bzip2-1.0.8-h99b78c6_7
++https://conda.anaconda.org/conda-forge/osx-arm64::libffi-3.4.2-h3422bc3_5
++https://conda.anaconda.org/conda-forge/osx-arm64::libzlib-1.3.1-h8359307_2
++https://conda.anaconda.org/conda-forge/osx-arm64::ca-certificates-2024.8.30-hf0a4a13_0
++https://conda.anaconda.org/conda-forge/osx-arm64::readline-8.2-h92ec313_1
++https://conda.anaconda.org/conda-forge/osx-arm64::tk-8.6.13-h5083fa2_1
++https://conda.anaconda.org/conda-forge/osx-arm64::libsqlite-3.46.1-hc14010f_0
++https://conda.anaconda.org/conda-forge/osx-arm64::openssl-3.3.2-h8359307_0
++https://conda.anaconda.org/conda-forge/noarch::tzdata-2024b-hc8b5060_0
++https://conda.anaconda.org/conda-forge/osx-arm64::python-3.13.0-h206b6c5_100_cp313
++https://conda.anaconda.org/conda-forge/noarch::pip-24.2-pyh145f28c_1
++https://conda.anaconda.org/conda-forge/noarch::six-1.16.0-pyh6c4a22f_0
++https://conda.anaconda.org/conda-forge/noarch::parso-0.8.4-pyhd8ed1ab_0
++https://conda.anaconda.org/conda-forge/noarch::ptyprocess-0.7.0-pyhd3deb0d_0
++https://conda.anaconda.org/conda-forge/noarch::wcwidth-0.2.13-pyhd8ed1ab_0
++https://conda.anaconda.org/conda-forge/noarch::pure_eval-0.2.3-pyhd8ed1ab_0
++https://conda.anaconda.org/conda-forge/noarch::executing-2.1.0-pyhd8ed1ab_0
++https://conda.anaconda.org/conda-forge/noarch::typing_extensions-4.12.2-pyha770c72_0
++https://conda.anaconda.org/conda-forge/noarch::traitlets-5.14.3-pyhd8ed1ab_0
++https://conda.anaconda.org/conda-forge/noarch::pygments-2.18.0-pyhd8ed1ab_0
++https://conda.anaconda.org/conda-forge/noarch::exceptiongroup-1.2.2-pyhd8ed1ab_0
++https://conda.anaconda.org/conda-forge/noarch::decorator-5.1.1-pyhd8ed1ab_0
++https://conda.anaconda.org/conda-forge/noarch::pickleshare-0.7.5-py_1003
++https://conda.anaconda.org/conda-forge/noarch::asttokens-2.4.1-pyhd8ed1ab_0
++https://conda.anaconda.org/conda-forge/noarch::jedi-0.19.1-pyhd8ed1ab_0
++https://conda.anaconda.org/conda-forge/noarch::pexpect-4.9.0-pyhd8ed1ab_0
++https://conda.anaconda.org/conda-forge/noarch::prompt-toolkit-3.0.48-pyha770c72_0
++https://conda.anaconda.org/conda-forge/noarch::matplotlib-inline-0.1.7-pyhd8ed1ab_0
++https://conda.anaconda.org/conda-forge/noarch::stack_data-0.6.2-pyhd8ed1ab_0
++https://conda.anaconda.org/conda-forge/noarch::ipython-8.28.0-pyh707e725_0
+# update specs: ["ipython"]
+==> 2024-10-17 18:08:11 <==
+# cmd: /opt/homebrew/opt/micromamba/bin/micromamba install multipledispatch
+# conda version: 3.8.0
++https://conda.anaconda.org/conda-forge/noarch::multipledispatch-0.6.0-pyhd8ed1ab_1
+# update specs: ["multipledispatch"]
+==> 2024-10-17 18:08:18 <==
+# cmd: /opt/homebrew/opt/micromamba/bin/micromamba install numpy
+# conda version: 3.8.0
++https://conda.anaconda.org/conda-forge/osx-arm64::libcxx-19.1.2-ha82da77_0
++https://conda.anaconda.org/conda-forge/osx-arm64::llvm-openmp-19.1.2-hb52a8e5_0
++https://conda.anaconda.org/conda-forge/osx-arm64::libgfortran5-13.2.0-hf226fd6_3
++https://conda.anaconda.org/conda-forge/osx-arm64::libgfortran-5.0.0-13_2_0_hd922786_3
++https://conda.anaconda.org/conda-forge/osx-arm64::libopenblas-0.3.27-openmp_h517c56d_1
++https://conda.anaconda.org/conda-forge/osx-arm64::libblas-3.9.0-24_osxarm64_openblas
++https://conda.anaconda.org/conda-forge/osx-arm64::libcblas-3.9.0-24_osxarm64_openblas
++https://conda.anaconda.org/conda-forge/osx-arm64::liblapack-3.9.0-24_osxarm64_openblas
++https://conda.anaconda.org/conda-forge/osx-arm64::numpy-2.1.2-py313hab0c69d_0
+# update specs: ["numpy"]
+==> 2024-10-17 18:08:25 <==
+# cmd: /opt/homebrew/opt/micromamba/bin/micromamba install pandas
+# conda version: 3.8.0
++https://conda.anaconda.org/conda-forge/noarch::python-dateutil-2.9.0-pyhd8ed1ab_0
++https://conda.anaconda.org/conda-forge/noarch::python-tzdata-2024.2-pyhd8ed1ab_0
++https://conda.anaconda.org/conda-forge/noarch::pytz-2024.1-pyhd8ed1ab_0
++https://conda.anaconda.org/conda-forge/osx-arm64::pandas-2.2.3-py313h47b39a6_1
+# update specs: ["pandas"]
