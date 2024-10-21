@@ -8,7 +8,7 @@
 
 ![Cargo Build & Test](https://github.com/quantco/conda-deny/actions/workflows/ci.yml/badge.svg)
 ![Binary Build](https://github.com/quantco/conda-deny/actions/workflows/build.yml/badge.svg)
-![Conda Package](https://github.com/quantco/conda-deny/actions/workflows/package.yml/badge.svg)
+<!-- ![Conda Package](https://github.com/quantco/conda-deny/actions/workflows/package.yml/badge.svg) -->
 [![codecov](https://codecov.io/gh/Quantco/conda-deny/graph/badge.svg?token=uixrZFJln7)](https://codecov.io/gh/Quantco/conda-deny)
 
 </div>
