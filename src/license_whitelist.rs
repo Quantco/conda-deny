@@ -277,6 +277,7 @@ mod tests {
     #[test]
     fn test_fetch_safe_licenses_success() {
         let reader = MockReader;
+        // TODO: Change this to "https://raw.githubusercontent.com/QuantCo/conda-deny/main/tests/test_remote_base_configs/conda-deny-license_whitelist.toml"
         let result = fetch_safe_licenses("https://raw.githubusercontent.com/PaulKMueller/conda-deny-test/main/conda-deny-license_whitelist.toml", &reader)
             .unwrap();
 

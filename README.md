@@ -47,7 +47,7 @@ The tool expects a configuration in the following format:
 #--------------------------------------------------------
 # General setup options:
 #--------------------------------------------------------
-license-whitelist = "https://raw.githubusercontent.com/PaulKMueller/conda-deny-test/refs/heads/main/conda-deny-license_whitelist.toml" # or ["license_whitelist.toml", "other_license_whitelist.toml"]
+license-whitelist = "https://raw.githubusercontent.com/QuantCo/conda-deny/main/tests/test_remote_base_configs/conda-deny-license_whitelist.toml" # or ["license_whitelist.toml", "other_license_whitelist.toml"]
 platform = "linux-64" # or ["linux-64", "osx-arm64"]
 environment = "default" # or ["default", "py39", "py310", "prod"]
 lockfile = "environment/pixi.lock" # or ["environment1/pixi.lock", "environment2/pixi.lock"]
