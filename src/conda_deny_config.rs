@@ -116,6 +116,20 @@ impl CondaDenyConfig {
             None => vec![],
         }
     }
+
+    pub fn empty() -> Self {
+        CondaDenyConfig {
+            tool: Tool {
+                conda_deny: CondaDeny {
+                    license_whitelist: None,
+                    platform_spec: None,
+                    environment_spec: None,
+                    lockfile_spec: None,
+                },
+            },
+            path: "".to_string(),
+        }
+    }
 }
 
 #[cfg(test)]
