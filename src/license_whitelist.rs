@@ -248,6 +248,8 @@ pub fn build_license_whitelist(
 
     if final_license_whitelist.safe_licenses.is_empty() {
         anyhow::bail!("Your license whitelist is empty.");
+    } else {
+        debug!("License whitelist built successfully.");
     }
     Ok(final_license_whitelist)
 }
