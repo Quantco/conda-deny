@@ -1,9 +1,10 @@
 use anyhow::{Context, Result};
 use clap::Parser;
+use colored::Colorize;
 use conda_deny::cli::{Cli, Commands};
 use conda_deny::conda_deny_config::CondaDenyConfig;
 use conda_deny::{check_license_infos, format_check_output, list};
-use log::{debug, info};
+use log::debug;
 
 fn main() -> Result<()> {
     let cli = Cli::parse();
@@ -12,28 +13,39 @@ fn main() -> Result<()> {
         .filter_level(cli.verbose.log_level_filter())
         .init();
 
-    let config = if let Some(config_path) = cli.config {
-        CondaDenyConfig::from_path(config_path.as_str())
-            .with_context(|| format!("Failed to parse config file {}", config_path))?
-    } else {
-        match CondaDenyConfig::from_path("pixi.toml")
-            .with_context(|| "Failed to parse config file pixi.toml")
-        {
-            Ok(config) => {
-                debug!("Successfully loaded config from pixi.toml");
-                config
-            }
-            Err(e) => {
-                debug!(
+    let osi = match cli.command {
+        Commands::Check { osi, .. } => osi,
+        _ => false,
+    };
+
+    let mut config = CondaDenyConfig::empty();
+
+    if !osi {
+        config = if let Some(config_path) = cli.config {
+            CondaDenyConfig::from_path(config_path.as_str())
+                .with_context(|| format!("Failed to parse config file {}", config_path))?
+        } else {
+            match CondaDenyConfig::from_path("pixi.toml")
+                .with_context(|| "Failed to parse config file pixi.toml")
+            {
+                Ok(config) => {
+                    debug!("Successfully loaded config from pixi.toml");
+                    config
+                }
+                Err(e) => {
+                    debug!(
                     "Error parsing config file: pixi.toml: {}. Attempting to use pyproject.toml instead...",
                     e
                 );
-                CondaDenyConfig::from_path("pyproject.toml")
-                    .context(e)
-                    .with_context(|| "Failed to parse config file pyproject.toml")?
+                    CondaDenyConfig::from_path("pyproject.toml")
+                        .context(e)
+                        .with_context(|| "Failed to parse config file pyproject.toml")?
+                }
             }
-        }
-    };
+        };
+    } else {
+        debug!("Skipping config file parsing for OSI compliance check. Your {} section will be ignored.", "[tool.conda-deny]".yellow());
+    }
 
     let conda_prefixes = cli.prefix.unwrap_or_default();
 
@@ -56,9 +68,10 @@ fn main() -> Result<()> {
             let mut locks_to_check = cli_lockfiles.clone();
             locks_to_check.push("pixi.lock".to_string());
             debug!("Checking pixi lockfiles: {:?}", locks_to_check);
+            debug!("Checking for OSI compliance: {}", osi);
 
             if include_safe {
-                info!("Including safe dependencies in output");
+                debug!("Including safe dependencies in output");
             }
 
             let check_input = (

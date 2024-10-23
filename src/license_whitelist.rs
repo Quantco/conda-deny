@@ -248,6 +248,8 @@ pub fn build_license_whitelist(
 
     if final_license_whitelist.safe_licenses.is_empty() {
         anyhow::bail!("Your license whitelist is empty.");
+    } else {
+        debug!("License whitelist built successfully.");
     }
     Ok(final_license_whitelist)
 }
@@ -277,6 +279,7 @@ mod tests {
     #[test]
     fn test_fetch_safe_licenses_success() {
         let reader = MockReader;
+        // TODO: Change this to "https://raw.githubusercontent.com/QuantCo/conda-deny/main/tests/test_remote_base_configs/conda-deny-license_whitelist.toml"
         let result = fetch_safe_licenses("https://raw.githubusercontent.com/PaulKMueller/conda-deny-test/main/conda-deny-license_whitelist.toml", &reader)
             .unwrap();
 
