@@ -10,7 +10,7 @@
 [![CI Status][ci-badge]][ci]
 ![Binary Build](https://github.com/quantco/conda-deny/actions/workflows/build.yml/badge.svg)
 [![Conda Platform][conda-badge]][conda-url]
-[![codecov](https://codecov.io/gh/Quantco/conda-deny/graph/badge.svg?token=uixrZFJln7)](https://codecov.io/gh/Quantco/conda-deny)
+[![codecov](https://codecov.io/gh/Quantco/conda-deny/graph/badge.svg)](https://codecov.io/gh/Quantco/conda-deny)
 
 [license-badge]: https://img.shields.io/github/license/quantco/conda-deny?style=flat-square
 [ci-badge]: https://img.shields.io/github/actions/workflow/status/quantco/conda-deny/ci.yml?style=flat-square&branch=main
