@@ -8,15 +8,23 @@
 
 [![License][license-badge]](LICENSE)
 [![CI Status][ci-badge]][ci]
-![Binary Build](https://github.com/quantco/conda-deny/actions/workflows/build.yml/badge.svg)
+[![Binary Build][binary-build-badge]][binary-build]
 [![Conda Platform][conda-badge]][conda-url]
-[![codecov](https://codecov.io/gh/Quantco/conda-deny/graph/badge.svg)](https://codecov.io/gh/Quantco/conda-deny)
+[![Codecov][codecov]][codecov-url]
 
 [license-badge]: https://img.shields.io/github/license/quantco/conda-deny?style=flat-square
-[ci-badge]: https://img.shields.io/github/actions/workflow/status/quantco/conda-deny/ci.yml?style=flat-square&branch=main
-[ci]: https://github.com/quantco/conda-deny/actions/
+
+[ci-badge]: https://img.shields.io/github/actions/workflow/status/quantco/conda-deny/ci.yml?branch=main&style=flat-square&label=CI
+[ci]: https://github.com/quantco/conda-deny/actions/workflows/ci.yml
+
+[binary-build-badge]: https://img.shields.io/github/actions/workflow/status/quantco/conda-deny/build.yml?branch=main&style=flat-square&label=Binary%20Build
+[binary-build]: https://github.com/quantco/conda-deny/actions/workflows/build.yml
+
 [conda-badge]: https://img.shields.io/conda/vn/conda-forge/conda-deny?style=flat-square
 [conda-url]: https://prefix.dev/channels/conda-forge/packages/conda-deny
+
+[codecov]: https://img.shields.io/codecov/c/github/quantco/conda-deny/main?style=flat-square
+[codecov-url]: https://codecov.io/gh/Quantco/conda-deny
 
 </div>
 

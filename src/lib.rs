@@ -29,15 +29,21 @@ pub type CheckInput<'a> = (
 );
 pub type CheckOutput = (Vec<LicenseInfo>, Vec<LicenseInfo>);
 
-pub fn list(conda_deny_config: &CondaDenyConfig) -> Result<()> {
-    let mut license_infos =
-        LicenseInfos::get_license_infos_from_config(conda_deny_config, vec![], vec![], vec![])
-            .with_context(|| "Getting license information from config file failed.")?;
+pub fn list(conda_deny_config: &CondaDenyConfig, conda_prefixes: Vec<String>) -> Result<()> {
+    if conda_prefixes.is_empty() {
+        let license_infos =
+            LicenseInfos::get_license_infos_from_config(conda_deny_config, vec![], vec![], vec![])
+                .with_context(|| "Getting license information from config file failed.")?;
 
-    license_infos.sort();
-    license_infos.dedup();
-
-    license_infos.list();
+        license_infos.list();
+    } else {
+        println!("Checking licenses for the following conda prefixes:");
+        for prefix in &conda_prefixes {
+            println!("{}", prefix);
+        }
+        let conda_prefixes_license_infos = LicenseInfos::from_conda_prefixes(&conda_prefixes)?;
+        conda_prefixes_license_infos.list();
+    }
     Ok(())
 }
 
@@ -46,7 +52,7 @@ pub fn check_license_infos(check_input: CheckInput) -> Result<CheckOutput> {
         check_input;
 
     if conda_prefixes.is_empty() {
-        let mut license_infos = LicenseInfos::get_license_infos_from_config(
+        let license_infos = LicenseInfos::get_license_infos_from_config(
             conda_deny_config,
             cli_lockfiles,
             cli_platforms,
@@ -54,28 +60,23 @@ pub fn check_license_infos(check_input: CheckInput) -> Result<CheckOutput> {
         )
         .with_context(|| "Getting license information from config file failed.")?;
 
-        license_infos.sort();
-        license_infos.dedup();
-
         if osi {
             debug!("Checking licenses for OSI compliance");
             Ok(license_infos.osi_check())
         } else {
             let license_whitelist = build_license_whitelist(conda_deny_config)
-            .with_context(|| "Building the license whitelist failed.")?;
+                .with_context(|| "Building the license whitelist failed.")?;
             debug!("Checking licenses against specified whitelist");
             Ok(license_infos.check(&license_whitelist))
         }
     } else {
-        let mut conda_prefixes_license_infos = LicenseInfos::from_conda_prefixes(&conda_prefixes)?;
-        conda_prefixes_license_infos.sort();
-        conda_prefixes_license_infos.dedup();
+        let conda_prefixes_license_infos = LicenseInfos::from_conda_prefixes(&conda_prefixes)?;
         if osi {
             debug!("Checking for OSI licenses");
             Ok(conda_prefixes_license_infos.osi_check())
         } else {
             let license_whitelist = build_license_whitelist(conda_deny_config)
-            .with_context(|| "Building the license whitelist failed.")?;
+                .with_context(|| "Building the license whitelist failed.")?;
             debug!("Checking licenses against specified whitelist");
             Ok(conda_prefixes_license_infos.check(&license_whitelist))
         }

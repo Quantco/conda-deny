@@ -99,7 +99,7 @@ fn main() -> Result<()> {
         }
         Commands::List {} => {
             debug!("List command called");
-            list(&config)
+            list(&config, conda_prefixes)
         }
     }
 }

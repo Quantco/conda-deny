@@ -176,6 +176,9 @@ impl LicenseInfos {
             license_infos.push(license_info);
         }
 
+        license_infos.sort();
+        license_infos.dedup();
+
         Ok(LicenseInfos { license_infos })
     }
 
@@ -196,6 +199,9 @@ impl LicenseInfos {
 
             license_infos.extend(license_infos_for_meta.license_infos);
         }
+
+        license_infos.sort();
+        license_infos.dedup();
 
         Ok(LicenseInfos { license_infos })
     }
