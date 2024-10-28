@@ -48,42 +48,40 @@ fn main() -> Result<()> {
     }
 
     let conda_prefixes = cli.prefix.unwrap_or_default();
+    let cli_lockfiles = cli.lockfile.unwrap_or_default();
+    let cli_platforms = cli.platform.unwrap_or_default();
+    let cli_environments = cli.environment.unwrap_or_default();
+
+    let cli_input = (
+        &config,
+        &cli_lockfiles,
+        &cli_platforms,
+        &cli_environments,
+        &conda_prefixes,
+        osi,
+    );
+
+    debug!("CLI input for platforms: {:?}", cli_platforms);
+    debug!("CLI input for environments: {:?}", cli_environments);
+    debug!("CLI input for conda prefixes: {:?}", conda_prefixes);
+    let mut locks_to_check = cli_lockfiles.clone();
+    locks_to_check.push("pixi.lock".to_string());
+    debug!("CLI input for pixi lockfiles: {:?}", locks_to_check);
+    debug!("CLI input for OSI compliance: {}", osi);
 
     match cli.command {
         Commands::Check {
             include_safe,
-            osi,
-            lockfile,
-            platform,
-            environment,
+            osi: _,
         } => {
-            let cli_lockfiles = lockfile.unwrap_or_default();
-            let cli_platforms = platform.unwrap_or_default();
-            let cli_environment = environment.unwrap_or_default();
 
             debug!("Check command called.");
-            debug!("Checking platforms: {:?}", cli_platforms);
-            debug!("Checking environments: {:?}", cli_environment);
-            debug!("Checking conda prefixes: {:?}", conda_prefixes);
-            let mut locks_to_check = cli_lockfiles.clone();
-            locks_to_check.push("pixi.lock".to_string());
-            debug!("Checking pixi lockfiles: {:?}", locks_to_check);
-            debug!("Checking for OSI compliance: {}", osi);
 
             if include_safe {
                 debug!("Including safe dependencies in output");
             }
 
-            let check_input = (
-                &config,
-                cli_lockfiles,
-                cli_platforms,
-                cli_environment,
-                conda_prefixes,
-                osi,
-            );
-
-            let check_output = check_license_infos(check_input)?;
+            let check_output = check_license_infos(cli_input)?;
 
             let (safe_dependencies, unsafe_dependencies) = check_output;
 
@@ -99,7 +97,8 @@ fn main() -> Result<()> {
         }
         Commands::List {} => {
             debug!("List command called");
-            list(&config, conda_prefixes)
+            list(cli_input)?;
+            Ok(())
         }
     }
 }
