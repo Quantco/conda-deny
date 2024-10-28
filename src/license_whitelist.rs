@@ -247,7 +247,7 @@ pub fn build_license_whitelist(
     }
 
     if final_license_whitelist.safe_licenses.is_empty() {
-        anyhow::bail!("Your license whitelist is empty.");
+        anyhow::bail!("Your license whitelist is empty.\nIf you want to use the OSI license whitelist, use the --osi flag.");
     } else {
         debug!("License whitelist built successfully.");
     }
