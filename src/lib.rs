@@ -29,11 +29,9 @@ pub type CliInput<'a> = (
 );
 pub type CheckOutput = (Vec<LicenseInfo>, Vec<LicenseInfo>);
 
-pub fn fetch_license_infos(
-    cli_input: CliInput,
-) -> Result<LicenseInfos> {
-
-    let (conda_deny_config, cli_lockfiles, cli_platforms, cli_environments, conda_prefixes, _) = cli_input;
+pub fn fetch_license_infos(cli_input: CliInput) -> Result<LicenseInfos> {
+    let (conda_deny_config, cli_lockfiles, cli_platforms, cli_environments, conda_prefixes, _) =
+        cli_input;
 
     if conda_prefixes.is_empty() {
         LicenseInfos::get_license_infos_from_config(
@@ -44,14 +42,14 @@ pub fn fetch_license_infos(
         )
         .with_context(|| "Getting license information from config file failed.")
     } else {
-        LicenseInfos::from_conda_prefixes(conda_prefixes).with_context(|| {
-            "Getting license information from conda prefixes failed."
-        })
+        LicenseInfos::from_conda_prefixes(conda_prefixes)
+            .with_context(|| "Getting license information from conda prefixes failed.")
     }
 }
 
 pub fn list(cli_input: CliInput) -> Result<()> {
-    let license_infos = fetch_license_infos(cli_input).with_context(|| "Fetching license information failed.")?;
+    let license_infos =
+        fetch_license_infos(cli_input).with_context(|| "Fetching license information failed.")?;
     license_infos.list();
     Ok(())
 }
@@ -59,7 +57,8 @@ pub fn list(cli_input: CliInput) -> Result<()> {
 pub fn check_license_infos(cli_input: CliInput) -> Result<CheckOutput> {
     let (conda_deny_config, _, _, _, _, osi) = cli_input;
 
-    let license_infos = fetch_license_infos(cli_input).with_context(|| "Fetching license information failed.")?;
+    let license_infos =
+        fetch_license_infos(cli_input).with_context(|| "Fetching license information failed.")?;
 
     if osi {
         debug!("Checking licenses for OSI compliance");

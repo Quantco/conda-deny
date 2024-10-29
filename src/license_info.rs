@@ -217,17 +217,17 @@ impl LicenseInfos {
 
     pub fn get_license_infos_from_config(
         config: &CondaDenyConfig,
-        cli_lockfiles: &Vec<String>,
-        cli_platforms: &Vec<String>,
-        cli_environments: &Vec<String>,
+        cli_lockfiles: &[String],
+        cli_platforms: &[String],
+        cli_environments: &[String],
     ) -> Result<LicenseInfos> {
         let mut platforms = config.get_platform_spec().map_or(vec![], |p| p);
         let mut lockfiles = config.get_lockfile_spec();
         let mut environment_specs = config.get_environment_spec().map_or(vec![], |e| e);
 
-        platforms.extend(cli_platforms.clone());
-        lockfiles.extend(cli_lockfiles.clone());
-        environment_specs.extend(cli_environments.clone());
+        platforms.extend(cli_platforms.to_owned());
+        lockfiles.extend(cli_lockfiles.to_owned());
+        environment_specs.extend(cli_environments.to_owned());
 
         LicenseInfos::from_pixi_lockfiles(lockfiles, platforms, environment_specs)
     }
@@ -469,8 +469,7 @@ mod tests {
             "tests/test_pyproject_toml_files/"
         );
         let config = CondaDenyConfig::from_path(&test_file_path).expect("Failed to read config");
-        let license_infos =
-            LicenseInfos::get_license_infos_from_config(&config, &vec![], &vec![], &vec![]);
+        let license_infos = LicenseInfos::get_license_infos_from_config(&config, &[], &[], &[]);
         assert_eq!(license_infos.unwrap().license_infos.len(), 396);
     }
 }

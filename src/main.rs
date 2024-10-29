@@ -74,7 +74,6 @@ fn main() -> Result<()> {
             include_safe,
             osi: _,
         } => {
-
             debug!("Check command called.");
 
             if include_safe {

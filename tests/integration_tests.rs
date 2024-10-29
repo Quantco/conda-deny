@@ -99,9 +99,9 @@ mod tests {
     fn test_prefix_list() {
         // When --prefix is specified, only the license information for the conda-meta directory in the specified prefix should be listed
         // License information from pixi.lock should not be listed
-    
+
         let test_dir = Path::new("tests/test_end_to_end/test_prefix_list");
-    
+
         let output = Command::cargo_bin("conda-deny")
             .unwrap()
             .arg("list")
@@ -110,16 +110,22 @@ mod tests {
             .current_dir(test_dir)
             .output()
             .expect("Failed to execute command");
-    
-        assert!(output.status.success(), "Command did not execute successfully");
-    
+
+        assert!(
+            output.status.success(),
+            "Command did not execute successfully"
+        );
+
         let stdout = str::from_utf8(&output.stdout).expect("Failed to convert output to string");
-    
+
         let line_count = stdout.lines().count();
 
         let expected_line_count = 50;
-        assert_eq!(line_count, expected_line_count, "Unexpected number of output lines");
-    
+        assert_eq!(
+            line_count, expected_line_count,
+            "Unexpected number of output lines"
+        );
+
         println!("Output has {} lines", line_count);
     }
 }
