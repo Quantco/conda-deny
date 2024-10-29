@@ -1,0 +1,4 @@
+[tool.conda-deny]
+license-whitelist = "license_whitelist.toml"
+platform = "linux-64"
+environment = "lint"

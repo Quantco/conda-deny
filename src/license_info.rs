@@ -153,7 +153,7 @@ impl LicenseInfos {
                 environment_specs.clone(),
                 platforms.clone(),
             )
-            .with_context(|| "Failed to ge package records for pixi.lock")?;
+            .with_context(|| "Failed to get package records for pixi.lock")?;
 
             package_records.extend(package_records_for_lockfile);
         } else {
@@ -176,6 +176,9 @@ impl LicenseInfos {
             license_infos.push(license_info);
         }
 
+        license_infos.sort();
+        license_infos.dedup();
+
         Ok(LicenseInfos { license_infos })
     }
 
@@ -197,6 +200,9 @@ impl LicenseInfos {
             license_infos.extend(license_infos_for_meta.license_infos);
         }
 
+        license_infos.sort();
+        license_infos.dedup();
+
         Ok(LicenseInfos { license_infos })
     }
 
@@ -211,17 +217,17 @@ impl LicenseInfos {
 
     pub fn get_license_infos_from_config(
         config: &CondaDenyConfig,
-        cli_lockfiles: Vec<String>,
-        cli_platforms: Vec<String>,
-        cli_environments: Vec<String>,
+        cli_lockfiles: &[String],
+        cli_platforms: &[String],
+        cli_environments: &[String],
     ) -> Result<LicenseInfos> {
         let mut platforms = config.get_platform_spec().map_or(vec![], |p| p);
         let mut lockfiles = config.get_lockfile_spec();
         let mut environment_specs = config.get_environment_spec().map_or(vec![], |e| e);
 
-        platforms.extend(cli_platforms);
-        lockfiles.extend(cli_lockfiles);
-        environment_specs.extend(cli_environments);
+        platforms.extend(cli_platforms.to_owned());
+        lockfiles.extend(cli_lockfiles.to_owned());
+        environment_specs.extend(cli_environments.to_owned());
 
         LicenseInfos::from_pixi_lockfiles(lockfiles, platforms, environment_specs)
     }
@@ -463,8 +469,7 @@ mod tests {
             "tests/test_pyproject_toml_files/"
         );
         let config = CondaDenyConfig::from_path(&test_file_path).expect("Failed to read config");
-        let license_infos =
-            LicenseInfos::get_license_infos_from_config(&config, vec![], vec![], vec![]);
-        assert_eq!(license_infos.unwrap().license_infos.len(), 534);
+        let license_infos = LicenseInfos::get_license_infos_from_config(&config, &[], &[], &[]);
+        assert_eq!(license_infos.unwrap().license_infos.len(), 396);
     }
 }

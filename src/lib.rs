@@ -19,66 +19,55 @@ use log::debug;
 use crate::conda_deny_config::CondaDenyConfig;
 use crate::license_info::LicenseInfos;
 
-pub type CheckInput<'a> = (
+pub type CliInput<'a> = (
     &'a CondaDenyConfig,
-    Vec<String>,
-    Vec<String>,
-    Vec<String>,
-    Vec<String>,
+    &'a Vec<String>,
+    &'a Vec<String>,
+    &'a Vec<String>,
+    &'a Vec<String>,
     bool,
 );
 pub type CheckOutput = (Vec<LicenseInfo>, Vec<LicenseInfo>);
 
-pub fn list(conda_deny_config: &CondaDenyConfig) -> Result<()> {
-    let mut license_infos =
-        LicenseInfos::get_license_infos_from_config(conda_deny_config, vec![], vec![], vec![])
-            .with_context(|| "Getting license information from config file failed.")?;
+pub fn fetch_license_infos(cli_input: CliInput) -> Result<LicenseInfos> {
+    let (conda_deny_config, cli_lockfiles, cli_platforms, cli_environments, conda_prefixes, _) =
+        cli_input;
 
-    license_infos.sort();
-    license_infos.dedup();
+    if conda_prefixes.is_empty() {
+        LicenseInfos::get_license_infos_from_config(
+            conda_deny_config,
+            cli_lockfiles,
+            cli_platforms,
+            cli_environments,
+        )
+        .with_context(|| "Getting license information from config file failed.")
+    } else {
+        LicenseInfos::from_conda_prefixes(conda_prefixes)
+            .with_context(|| "Getting license information from conda prefixes failed.")
+    }
+}
 
+pub fn list(cli_input: CliInput) -> Result<()> {
+    let license_infos =
+        fetch_license_infos(cli_input).with_context(|| "Fetching license information failed.")?;
     license_infos.list();
     Ok(())
 }
 
-pub fn check_license_infos(check_input: CheckInput) -> Result<CheckOutput> {
-    let (conda_deny_config, cli_lockfiles, cli_platforms, cli_environment, conda_prefixes, osi) =
-        check_input;
+pub fn check_license_infos(cli_input: CliInput) -> Result<CheckOutput> {
+    let (conda_deny_config, _, _, _, _, osi) = cli_input;
 
-    if conda_prefixes.is_empty() {
-        let mut license_infos = LicenseInfos::get_license_infos_from_config(
-            conda_deny_config,
-            cli_lockfiles,
-            cli_platforms,
-            cli_environment,
-        )
-        .with_context(|| "Getting license information from config file failed.")?;
+    let license_infos =
+        fetch_license_infos(cli_input).with_context(|| "Fetching license information failed.")?;
 
-        license_infos.sort();
-        license_infos.dedup();
-
-        if osi {
-            debug!("Checking licenses for OSI compliance");
-            Ok(license_infos.osi_check())
-        } else {
-            let license_whitelist = build_license_whitelist(conda_deny_config)
-            .with_context(|| "Building the license whitelist failed.")?;
-            debug!("Checking licenses against specified whitelist");
-            Ok(license_infos.check(&license_whitelist))
-        }
+    if osi {
+        debug!("Checking licenses for OSI compliance");
+        Ok(license_infos.osi_check())
     } else {
-        let mut conda_prefixes_license_infos = LicenseInfos::from_conda_prefixes(&conda_prefixes)?;
-        conda_prefixes_license_infos.sort();
-        conda_prefixes_license_infos.dedup();
-        if osi {
-            debug!("Checking for OSI licenses");
-            Ok(conda_prefixes_license_infos.osi_check())
-        } else {
-            let license_whitelist = build_license_whitelist(conda_deny_config)
+        let license_whitelist = build_license_whitelist(conda_deny_config)
             .with_context(|| "Building the license whitelist failed.")?;
-            debug!("Checking licenses against specified whitelist");
-            Ok(conda_prefixes_license_infos.check(&license_whitelist))
-        }
+        debug!("Checking licenses against specified whitelist");
+        Ok(license_infos.check(&license_whitelist))
     }
 }
 

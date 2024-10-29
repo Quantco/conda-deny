@@ -17,6 +17,15 @@ pub struct Cli {
 
     #[arg(long, global = true)]
     pub prefix: Option<Vec<String>>,
+
+    #[arg(short, long)]
+    pub lockfile: Option<Vec<String>>,
+
+    #[arg(short, long)]
+    pub platform: Option<Vec<String>>,
+
+    #[arg(short, long)]
+    pub environment: Option<Vec<String>>,
 }
 
 #[derive(clap::Subcommand, Debug)]
@@ -27,15 +36,6 @@ pub enum Commands {
 
         #[arg(short, long, action = ArgAction::SetTrue)]
         osi: bool,
-
-        #[arg(short, long)]
-        lockfile: Option<Vec<String>>,
-
-        #[arg(short, long)]
-        platform: Option<Vec<String>>,
-
-        #[arg(short, long)]
-        environment: Option<Vec<String>>,
     },
     List {},
 }
