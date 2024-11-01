@@ -387,6 +387,7 @@ dependencies = [
  "anyhow",
  "assert_cmd",
  "async-trait",
+ "bzip2",
  "clap",
  "clap-verbosity-flag",
  "colored",
