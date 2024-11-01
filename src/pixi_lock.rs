@@ -3,7 +3,7 @@ use std::path::Path;
 use anyhow::{Context, Result};
 
 use rattler_conda_types::{PackageRecord, Platform};
-use rattler_lock::LockFile;
+use rattler_lock::{CondaPackage, LockFile};
 
 fn _get_environment_names(pixi_lock_path: &Path) -> Vec<String> {
     let lock = LockFile::from_path(pixi_lock_path).unwrap();
@@ -14,11 +14,11 @@ fn _get_environment_names(pixi_lock_path: &Path) -> Vec<String> {
     environment_names
 }
 
-pub fn get_package_records_for_pixi_lock(
+pub fn get_conda_packages_for_pixi_lock(
     pixi_lock_path: Option<&Path>,
     mut environment_spec: Vec<String>,
     platform_spec: Vec<String>,
-) -> Result<Vec<PackageRecord>> {
+) -> Result<Vec<(CondaPackage, Option<String>)>> {
     let pixi_lock_path = pixi_lock_path.unwrap_or(Path::new("pixi.lock"));
 
     let lock = LockFile::from_path(pixi_lock_path)
@@ -37,8 +37,10 @@ pub fn get_package_records_for_pixi_lock(
                     if let Some(packages) = environment.packages(platform) {
                         for package in packages {
                             if let Some(conda_package) = package.into_conda() {
-                                let package_record = conda_package.package_record();
-                                package_records.push(package_record.to_owned());
+                                package_records.push((
+                                    conda_package.to_owned(),
+                                    Some(environment_name.clone()),
+                                ));
                             }
                         }
                     }
@@ -53,8 +55,10 @@ pub fn get_package_records_for_pixi_lock(
                         if let Some(packages) = environment.packages(platform) {
                             for package in packages {
                                 if let Some(conda_package) = package.into_conda() {
-                                    let package_record = conda_package.package_record();
-                                    package_records.push(package_record.to_owned());
+                                    package_records.push((
+                                        conda_package.to_owned(),
+                                        Some(environment_name.clone()),
+                                    ));
                                 }
                             }
                         }
@@ -83,14 +87,14 @@ mod tests {
     #[test]
     fn test_get_packages_for_pixi_lock() {
         let path = Path::new("tests/test_pixi_lock_files/valid1_pixi.lock");
-        let package_records = get_package_records_for_pixi_lock(Some(path), vec![], vec![]);
+        let package_records = get_conda_packages_for_pixi_lock(Some(path), vec![], vec![]);
         assert_eq!(package_records.unwrap().len(), 758);
 
         let package_records =
-            get_package_records_for_pixi_lock(Some(path), vec!["lint".to_string()], vec![]);
+            get_conda_packages_for_pixi_lock(Some(path), vec!["lint".to_string()], vec![]);
         assert_eq!(package_records.unwrap().len(), 219);
 
-        let package_records = get_package_records_for_pixi_lock(
+        let package_records = get_conda_packages_for_pixi_lock(
             Some(path),
             vec!["lint".to_string()],
             vec!["linux-64".to_string()],

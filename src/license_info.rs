@@ -7,12 +7,13 @@ use spdx::Expression;
 use colored::*;
 
 use crate::{
+    cli::combine_cli_and_config_input,
     conda_deny_config::CondaDenyConfig,
     conda_meta_entry::{CondaMetaEntries, CondaMetaEntry},
     expression_utils::{check_expression_safety, extract_license_ids, parse_expression},
     license_whitelist::ParsedLicenseWhitelist,
     list,
-    pixi_lock::get_package_records_for_pixi_lock,
+    pixi_lock::get_conda_packages_for_pixi_lock,
     CheckOutput,
 };
 
@@ -26,6 +27,7 @@ pub struct LicenseInfo {
     #[allow(dead_code)]
     pub platform: Option<String>,
     pub build: String,
+    pub environment: Option<String>,
 }
 
 impl LicenseInfo {
@@ -37,10 +39,11 @@ impl LicenseInfo {
             license: entry.license.clone(),
             platform: Some(entry.platform.clone()),
             build: entry.build.clone(),
+            environment: None,
         }
     }
 
-    pub fn from_package_record(package_record: PackageRecord) -> Self {
+    pub fn from_package_record(package_record: PackageRecord, environment: Option<String>) -> Self {
         let license_str = match &package_record.license {
             Some(license) => license.clone(),
             None => "None".to_string(),
@@ -57,6 +60,7 @@ impl LicenseInfo {
             license: license_for_package,
             platform: Some(package_record.subdir),
             build: package_record.build,
+            environment,
         }
     }
 
@@ -148,7 +152,7 @@ impl LicenseInfos {
         let mut package_records = Vec::new();
 
         if lockfiles.is_empty() {
-            let package_records_for_lockfile = get_package_records_for_pixi_lock(
+            let package_records_for_lockfile = get_conda_packages_for_pixi_lock(
                 None,
                 environment_specs.clone(),
                 platforms.clone(),
@@ -159,7 +163,7 @@ impl LicenseInfos {
         } else {
             for lockfile in lockfiles {
                 let path = Path::new(&lockfile);
-                let package_records_for_lockfile = get_package_records_for_pixi_lock(
+                let package_records_for_lockfile = get_conda_packages_for_pixi_lock(
                     Some(path),
                     environment_specs.clone(),
                     platforms.clone(),
@@ -171,8 +175,11 @@ impl LicenseInfos {
                 package_records.extend(package_records_for_lockfile);
             }
         }
-        for package_record in package_records {
-            let license_info = LicenseInfo::from_package_record(package_record);
+        for conda_package in package_records {
+            let license_info = LicenseInfo::from_package_record(
+                conda_package.0.package_record().to_owned(),
+                conda_package.1,
+            );
             license_infos.push(license_info);
         }
 
@@ -221,13 +228,8 @@ impl LicenseInfos {
         cli_platforms: &[String],
         cli_environments: &[String],
     ) -> Result<LicenseInfos> {
-        let mut platforms = config.get_platform_spec().map_or(vec![], |p| p);
-        let mut lockfiles = config.get_lockfile_spec();
-        let mut environment_specs = config.get_environment_spec().map_or(vec![], |e| e);
-
-        platforms.extend(cli_platforms.to_owned());
-        lockfiles.extend(cli_lockfiles.to_owned());
-        environment_specs.extend(cli_environments.to_owned());
+        let (lockfiles, platforms, environment_specs) =
+            combine_cli_and_config_input(config, cli_lockfiles, cli_platforms, cli_environments);
 
         LicenseInfos::from_pixi_lockfiles(lockfiles, platforms, environment_specs)
     }
@@ -325,6 +327,7 @@ mod tests {
             license: LicenseState::Invalid("Invalid-MIT".to_string()),
             platform: Some("linux-64".to_string()),
             build: "py_0".to_string(),
+            environment: None,
         };
 
         assert_eq!(license_info.package_name, "test");
@@ -373,6 +376,7 @@ mod tests {
             license: LicenseState::Invalid("Invalid-MIT".to_string()),
             platform: Some("linux-64".to_string()),
             build: "py_0".to_string(),
+            environment: None,
         };
         let safe_license_info = LicenseInfo {
             package_name: "test".to_string(),
@@ -381,6 +385,7 @@ mod tests {
             license: LicenseState::Valid(Expression::parse("MIT").unwrap()),
             platform: Some("linux-64".to_string()),
             build: "py_0".to_string(),
+            environment: None,
         };
 
         let unsafe_license_infos = LicenseInfos {
@@ -414,6 +419,7 @@ mod tests {
             license: LicenseState::Invalid("Invalid-MIT".to_string()),
             platform: Some("linux-64".to_string()),
             build: "py_0".to_string(),
+            environment: None,
         };
         let license_info2 = LicenseInfo {
             package_name: "test2".to_string(),
@@ -422,6 +428,7 @@ mod tests {
             license: LicenseState::Invalid("Invalid-MIT".to_string()),
             platform: Some("linux-64".to_string()),
             build: "py_0".to_string(),
+            environment: None,
         };
 
         let mut license_infos = LicenseInfos {
@@ -443,6 +450,7 @@ mod tests {
             license: LicenseState::Invalid("Invalid-MIT".to_string()),
             platform: Some("linux-64".to_string()),
             build: "py_0".to_string(),
+            environment: None,
         };
         let license_info2 = LicenseInfo {
             package_name: "test".to_string(),
@@ -451,6 +459,7 @@ mod tests {
             license: LicenseState::Invalid("Invalid-MIT".to_string()),
             platform: Some("linux-64".to_string()),
             build: "py_0".to_string(),
+            environment: None,
         };
 
         let mut license_infos = LicenseInfos {
