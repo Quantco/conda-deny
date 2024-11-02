@@ -1,3 +1,4 @@
+mod bundle;
 pub mod cli;
 pub mod conda_deny_config;
 mod conda_meta_entry;
@@ -9,24 +10,18 @@ mod list;
 mod pixi_lock;
 mod read_remote;
 
-use std::fs::{self, create_dir_all, File};
-use std::io::{self, copy, BufReader};
-use std::path::{Path, PathBuf};
+use std::path::Path;
 
-use bzip2::read::BzDecoder;
+use bundle::get_license_contents_for_package;
 use cli::{combine_cli_and_config_input, Cli, Commands};
 use colored::Colorize;
 use license_info::LicenseInfo;
 use license_whitelist::build_license_whitelist;
 
 use anyhow::{Context, Result};
-use log::{debug, warn};
+use indicatif::{ProgressBar, ProgressStyle};
+use log::debug;
 use pixi_lock::get_conda_packages_for_pixi_lock;
-use rattler_lock::CondaPackage;
-use reqwest::blocking::get;
-use tar::Archive;
-use zip::ZipArchive;
-use zstd::Decoder;
 
 use crate::conda_deny_config::CondaDenyConfig;
 use crate::license_info::LicenseInfos;
@@ -205,6 +200,7 @@ pub fn bundle(conda_deny_input: CondaDenyInput) -> Result<()> {
         &conda_deny_input.cli_platforms,
         &conda_deny_input.cli_environments,
     );
+
     let mut conda_packages = Vec::new();
 
     for lockfile in lockfiles {
@@ -217,12 +213,26 @@ pub fn bundle(conda_deny_input: CondaDenyInput) -> Result<()> {
         conda_packages.extend(packages_for_lockfile?);
     }
 
+    let bar = ProgressBar::new(conda_packages.len() as u64);
+
+    bar.set_style(
+        ProgressStyle::with_template(
+            "{msg}\n{spinner:.green} [{elapsed_precise}] {bar:40.yellow} {pos:>7}/{len:7} ETA {eta}",
+        )
+        .unwrap()
+        .progress_chars("##-"),
+    );
+
+    bar.set_message("📦 Bundling licenses...");
+
     std::fs::create_dir_all("licenses").with_context(|| "Failed to create licenses directory")?;
     std::fs::remove_dir_all("licenses").with_context(|| "Failed to create licenses directory")?;
     std::fs::create_dir_all("licenses").with_context(|| "Failed to create licenses directory")?;
 
-    debug!("Bundling licenses...");
     for (conda_package, environment) in conda_packages {
+        bar.inc(1);
+        // bar.println(format!("[{}] Bundling license for {}", environment.clone().unwrap(), conda_package.url()));
+
         let conda_package_path = conda_package.file_name().unwrap();
 
         let conda_package_dir = Path::new(conda_package_path)
@@ -266,167 +276,9 @@ pub fn bundle(conda_deny_input: CondaDenyInput) -> Result<()> {
             }
         }
     }
-    Ok(())
-}
 
-fn get_license_contents_for_package(conda_package: &CondaPackage) -> Result<Vec<(String, String)>> {
-    let file_path = match conda_package.file_name() {
-        Some(file_path) => file_path,
-        None => {
-            return Err(anyhow::anyhow!(
-                "Failed to get file path for {}",
-                conda_package.url().to_string()
-            ))
-        }
-    };
-    let output_dir = Path::new(file_path)
-        .file_stem()
-        .and_then(|stem| stem.to_str())
-        .expect("Failed to get file stem as str");
-
-    let url = format!("{}", conda_package.url());
-    download_file(&url, conda_package.file_name().unwrap())?;
-    unpack_conda_file(conda_package.file_name().unwrap())?;
-
-    let license_strings = get_licenses_from_unpacked_conda_package(output_dir)?;
-
-    std::fs::remove_file(file_path)
-        .with_context(|| format!("Failed to delete file {}", file_path))?;
-    std::fs::remove_dir_all(output_dir)
-        .with_context(|| format!("Failed to remove directory {}", output_dir))?;
-
-    Ok(license_strings)
-}
-
-fn get_licenses_from_unpacked_conda_package(output_dir: &str) -> Result<Vec<(String, String)>> {
-    let mut license_strings = Vec::new();
-    let licenses_dir = format!("{}/info/licenses", output_dir);
-
-    let licenses_path = Path::new(&licenses_dir);
-    if !licenses_path.exists() {
-        warn!(
-            "Warning: No 'info/licenses' directory found in {}. Adding default license message.",
-            output_dir
-        );
-        license_strings.push((
-            "NO LICENSE FOUND".to_string(),
-            "THE LICENSE OF THIS PACKAGE IS NOT PACKAGED!".to_string(),
-        ));
-        return Ok(license_strings);
-    }
-
-    fn visit_dir(path: &Path, license_strings: &mut Vec<(String, String)>) -> Result<()> {
-        for entry in fs::read_dir(path)? {
-            let entry = entry?;
-            let entry_path = entry.path();
-
-            if entry_path.is_dir() {
-                visit_dir(&entry_path, license_strings)?;
-            } else {
-                let entry_file_name = entry.file_name().to_string_lossy().to_string();
-                let content = fs::read_to_string(&entry_path)
-                    .with_context(|| format!("Failed to read {:?}", entry_path))?;
-                license_strings.push((entry_file_name, content));
-            }
-        }
-        Ok(())
-    }
-
-    visit_dir(licenses_path, &mut license_strings).with_context(|| {
-        format!(
-            "Failed to get license content from {}. Does the licenses directory exist within the package?",
-            licenses_dir
-        )
-    })?;
-
-    Ok(license_strings)
-}
-
-fn download_file(url: &str, file_path: &str) -> Result<()> {
-    let response = get(url).with_context(|| format!("Failed to download {}", file_path))?;
-
-    if !response.status().is_success() {
-        return Err(anyhow::anyhow!(
-            "Failed to download file: {}",
-            response.status()
-        ));
-    }
-
-    let mut dest = File::create(file_path)
-        .with_context(|| format!("File at {} could not be created", file_path))?;
-    let content = response.bytes()?;
-
-    copy(&mut content.as_ref(), &mut dest)?;
-
-    debug!("File downloaded successfully to {}", file_path);
-    Ok(())
-}
-
-fn unpack_conda_file(file_path: &str) -> Result<()> {
-    let output_dir = Path::new(file_path)
-        .file_stem()
-        .map(PathBuf::from)
-        .expect("Failed to get file stem");
-
-    let file_extension = Path::new(file_path)
-        .extension()
-        .and_then(|ext| ext.to_str())
-        .unwrap_or("");
-
-    match file_extension {
-        "conda" => unpack_conda_archive(file_path, &output_dir),
-        "bz2" => unpack_tar_bz2_archive(file_path, &output_dir),
-        _ => Err(anyhow::anyhow!("Unsupported file extension")),
-    }
-}
-
-fn unpack_conda_archive(file_path: &str, output_dir: &Path) -> Result<()> {
-    let zip_file =
-        File::open(file_path).with_context(|| format!("Failed to open {}", file_path))?;
-    let mut zip = ZipArchive::new(BufReader::new(zip_file))
-        .with_context(|| "Failed to create zip archive")?;
-
-    for i in 0..zip.len() {
-        let mut zip_file = zip.by_index(i)?;
-        if zip_file.name().ends_with(".tar.zst") {
-            let mut tar_zst_data = Vec::new();
-            io::copy(&mut zip_file, &mut tar_zst_data)?;
-
-            let mut decoder = Decoder::new(&tar_zst_data[..])?;
-            let mut tar_data = Vec::new();
-            io::copy(&mut decoder, &mut tar_data)?;
-
-            let mut tar = Archive::new(&tar_data[..]);
-            create_dir_all(output_dir).with_context(|| {
-                format!(
-                    "Failed to create directory {}",
-                    output_dir.to_string_lossy()
-                )
-            })?;
-            tar.unpack(output_dir)
-                .with_context(|| format!("Failed to unpack {}", output_dir.to_string_lossy()))?;
-            debug!("Successfully unpacked to {:?}", output_dir);
-            break;
-        }
-    }
-    Ok(())
-}
-
-fn unpack_tar_bz2_archive(file_path: &str, output_dir: &Path) -> Result<()> {
-    let tar_bz2_file =
-        File::open(file_path).with_context(|| format!("Failed to open {}", file_path))?;
-    let bz2_decoder = BzDecoder::new(tar_bz2_file);
-    let mut tar = Archive::new(bz2_decoder);
-
-    create_dir_all(output_dir).with_context(|| {
-        format!(
-            "Failed to create directory {}",
-            output_dir.to_string_lossy()
-        )
-    })?;
-    tar.unpack(output_dir)
-        .with_context(|| format!("Failed to unpack {}", output_dir.to_string_lossy()))?;
-    debug!("Successfully unpacked .tar.bz2 to {:?}", output_dir);
+    bar.finish_with_message("✅ Bundling licenses complete!");
+    bar.finish();
 
     Ok(())
 }
