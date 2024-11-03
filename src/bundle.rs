@@ -1,3 +1,4 @@
+use scopeguard::defer;
 use std::fs::{self, create_dir_all, File};
 use std::io::{self, copy, BufReader};
 use std::path::{Path, PathBuf};
@@ -23,8 +24,13 @@ pub fn get_license_contents_for_package_url(url: &str) -> Result<Vec<(String, St
         .ok_or_else(|| anyhow::anyhow!("Failed to get file stem as str"))?;
 
     download_file(url, file_name)?;
+    defer! {
+        let _ = fs::remove_file(file_name);
+    }
     unpack_conda_file(file_name)?;
-
+    defer! {
+        let _ = fs::remove_dir_all(output_dir);
+    }
     let license_strings = get_licenses_from_unpacked_conda_package(output_dir)?;
 
     std::fs::remove_file(file_name)

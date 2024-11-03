@@ -41,6 +41,7 @@ zstd = "0.13.2"
 bzip2 = "0.4.4"
 indicatif = "0.17.8"
 rayon = "1.10.0"
+scopeguard = "1.2.0"
 
 [dev-dependencies]
 assert_cmd = "2.0.14"

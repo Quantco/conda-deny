@@ -8,6 +8,7 @@ mod license_info;
 pub mod license_whitelist;
 mod list;
 mod pixi_lock;
+mod prefix;
 mod read_remote;
 
 use rayon::prelude::*;
@@ -16,7 +17,6 @@ use std::path::Path;
 use bundle::get_license_contents_for_package_url;
 use cli::{combine_cli_and_config_input, Cli, Commands};
 use colored::Colorize;
-use conda_meta_entry::CondaMetaEntries;
 use license_info::LicenseInfo;
 use license_whitelist::build_license_whitelist;
 
@@ -227,19 +227,9 @@ pub fn bundle(conda_deny_input: CondaDenyInput, output_dir: Option<String>) -> R
             conda_packages.extend(packages_for_lockfile?);
         }
 
-        let bar = ProgressBar::new(conda_packages.len() as u64);
+        let bar = setup_bundle_bar(conda_packages.len() as u64);
 
-        bar.set_style(
-        ProgressStyle::with_template(
-            "{msg}\n{spinner:.green} [{elapsed_precise}] {bar:40.yellow} {pos:>7}/{len:7} ETA {eta}",
-        )
-        .unwrap()
-        .progress_chars("##-"),
-    );
-
-        bar.set_message("📦 Bundling licenses...");
-
-        let bundling_result: Result<()> = conda_packages.par_iter().map(|(conda_package, environment)| {
+        let _bundling_result: Result<()> = conda_packages.par_iter().try_for_each(|(conda_package, environment)| {
             bar.inc(1);
 
             let conda_package_path = conda_package.file_name().unwrap();
@@ -248,6 +238,7 @@ pub fn bundle(conda_deny_input: CondaDenyInput, output_dir: Option<String>) -> R
                 .file_stem()
                 .and_then(|stem| stem.to_str())
                 .expect("Failed to get file stem as str");
+
             let license_files = get_license_contents_for_package_url(conda_package.url().as_str())
                 .with_context(|| {
                     format!(
@@ -256,7 +247,7 @@ pub fn bundle(conda_deny_input: CondaDenyInput, output_dir: Option<String>) -> R
                     )
                 })?;
 
-            for (license_file_name, license_file_contents) in license_files {
+            license_files.into_par_iter().try_for_each(|(license_file_name, license_file_contents)| {
                 let license_file_path = format!(
                     "{}/{}/{}/{}",
                     bundle_dir,
@@ -266,66 +257,42 @@ pub fn bundle(conda_deny_input: CondaDenyInput, output_dir: Option<String>) -> R
                 );
 
                 if !Path::new(&license_file_path).exists() {
-                    std::fs::create_dir_all(Path::new(&license_file_path).parent().unwrap())?;
+                    let parent_dir = Path::new(&license_file_path)
+                        .parent()
+                        .with_context(|| format!("Failed to get parent directory of {}", license_file_path))?;
+
+                    std::fs::create_dir_all(parent_dir).with_context(|| format!("Failed to create directory: {:?}", parent_dir))?;
+
                     std::fs::write(license_file_path.clone(), license_file_contents.clone())
                         .with_context(|| format!("Writing the file {}", license_file_path))?;
                     debug!("License file written to {}", license_file_path);
                 } else {
-                    let existing_license_file_contents =
-                        std::fs::read_to_string(&license_file_path)?;
-                    if existing_license_file_contents != license_file_contents {
-                        debug!("License file {} already exists and is different from the current license. Appending the new license to the file.", license_file_path);
+                    let existing_license_file_contents = std::fs::read_to_string(&license_file_path).with_context(|| format!("Failed to read file: {}", license_file_path))?;
+                    if existing_license_file_contents != *license_file_contents {
+                        debug!(
+                            "License file {} already exists and is different from the current license. Appending the new license to the file.",
+                            license_file_path
+                        );
                         std::fs::write(
                             license_file_path.clone(),
-                            format!(
-                                "{}\n\n{}",
-                                existing_license_file_contents, license_file_contents
-                            ),
+                            format!("{}\n\n{}", existing_license_file_contents, license_file_contents)
                         )
                         .with_context(|| format!("Writing the file {}", license_file_path))?;
                     }
                 }
-            }
+                Ok::<(), anyhow::Error>(())
+            })?;
             Ok(())
-        }).collect();
+        });
 
         bar.finish_with_message("✅ Bundling licenses complete!");
         bar.finish();
     } else {
-        let mut package_urls_for_prefix = Vec::new();
+        let package_urls_for_prefix = prefix::get_package_urls_for_prefixes(conda_prefixes)?;
+        let bar = setup_bundle_bar(package_urls_for_prefix.len() as u64);
 
-        for conda_prefix in conda_prefixes {
-            let conda_meta_path = format!("{}/conda-meta", conda_prefix);
-            let conda_meta_entries =
-                CondaMetaEntries::from_dir(&conda_meta_path).with_context(|| {
-                    format!(
-                        "Failed to parse conda meta entries from conda-meta: {}",
-                        conda_meta_path
-                    )
-                })?;
-
-            for entry in conda_meta_entries.entries {
-                package_urls_for_prefix.push(entry.url);
-            }
-        }
-        package_urls_for_prefix.sort();
-        package_urls_for_prefix.dedup();
-
-        let bar = ProgressBar::new(package_urls_for_prefix.len() as u64);
-
-        bar.set_style(
-        ProgressStyle::with_template(
-            "{msg}\n{spinner:.green} [{elapsed_precise}] {bar:40.yellow} {pos:>7}/{len:7} ETA {eta}",
-        )
-        .unwrap()
-        .progress_chars("##-"),
-    );
-
-        bar.set_message("📦 Bundling licenses...");
-
-        let bundling_result: Result<()> = package_urls_for_prefix.par_iter().map(|package_url| {
+        let _bundling_result: Result<()> = package_urls_for_prefix.par_iter().map(|package_url| {
             bar.inc(1);
-            // bar.println(format!("[{}] Bundling license for {}", environment.clone().unwrap(), conda_package.url()));
 
             let conda_package_path = Path::new(&package_url)
                 .file_name()
@@ -369,9 +336,23 @@ pub fn bundle(conda_deny_input: CondaDenyInput, output_dir: Option<String>) -> R
             }
             Ok(())
         }).collect();
-
         bar.finish_with_message("✅ Bundling licenses complete!");
         bar.finish();
     }
     Ok(())
+}
+
+fn setup_bundle_bar(steps: u64) -> ProgressBar {
+    let bar = ProgressBar::new(steps);
+
+    bar.set_style(
+        ProgressStyle::with_template(
+            "{msg}\n{spinner:.green} [{elapsed_precise}] {bar:40.yellow} {pos:>7}/{len:7}",
+        )
+        .unwrap()
+        .progress_chars("##-"),
+    );
+
+    bar.set_message("📦 Bundling licenses...");
+    bar
 }
