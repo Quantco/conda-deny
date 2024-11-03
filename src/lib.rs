@@ -10,6 +10,7 @@ mod list;
 mod pixi_lock;
 mod read_remote;
 
+use rayon::prelude::*;
 use std::path::Path;
 
 use bundle::get_license_contents_for_package_url;
@@ -134,7 +135,7 @@ pub fn format_check_output(
     output
 }
 
-pub fn parse_cli_input(cli: Cli) -> Result<CondaDenyInput> {
+pub fn parse_cli_input(cli: &Cli) -> Result<CondaDenyInput> {
     let osi = match cli.command {
         Commands::Check { osi, .. } => osi,
         _ => false,
@@ -143,7 +144,7 @@ pub fn parse_cli_input(cli: Cli) -> Result<CondaDenyInput> {
     let mut config = CondaDenyConfig::empty();
 
     if !osi {
-        config = if let Some(config_path) = cli.config {
+        config = if let Some(config_path) = cli.config.clone() {
             CondaDenyConfig::from_path(config_path.as_str())
                 .with_context(|| format!("Failed to parse config file {}", config_path))?
         } else {
@@ -169,10 +170,10 @@ pub fn parse_cli_input(cli: Cli) -> Result<CondaDenyInput> {
         debug!("Skipping config file parsing for OSI compliance check. Your {} section will be ignored.", "[tool.conda-deny]".yellow());
     }
 
-    let conda_prefixes = cli.prefix.unwrap_or_default();
-    let cli_lockfiles = cli.lockfile.unwrap_or_default();
-    let cli_platforms = cli.platform.unwrap_or_default();
-    let cli_environments = cli.environment.unwrap_or_default();
+    let conda_prefixes = cli.prefix.clone().unwrap_or_default();
+    let cli_lockfiles = cli.lockfile.clone().unwrap_or_default();
+    let cli_platforms = cli.platform.clone().unwrap_or_default();
+    let cli_environments = cli.environment.clone().unwrap_or_default();
 
     debug!("CLI input for platforms: {:?}", cli_platforms);
     debug!("CLI input for environments: {:?}", cli_environments);
@@ -194,7 +195,7 @@ pub fn parse_cli_input(cli: Cli) -> Result<CondaDenyInput> {
     Ok(cli_input)
 }
 
-pub fn bundle(conda_deny_input: CondaDenyInput) -> Result<()> {
+pub fn bundle(conda_deny_input: CondaDenyInput, output_dir: Option<String>) -> Result<()> {
     let (lockfiles, platforms, environment_specs) = combine_cli_and_config_input(
         &conda_deny_input.config,
         &conda_deny_input.cli_lockfiles,
@@ -203,6 +204,15 @@ pub fn bundle(conda_deny_input: CondaDenyInput) -> Result<()> {
     );
 
     let conda_prefixes = conda_deny_input.conda_prefixes.clone();
+
+    let bundle_dir = output_dir.unwrap_or_else(|| "licenses".to_string());
+
+    std::fs::create_dir_all(bundle_dir.clone())
+        .with_context(|| "Failed to create licenses directory")?;
+    std::fs::remove_dir_all(bundle_dir.clone())
+        .with_context(|| "Failed to create licenses directory")?;
+    std::fs::create_dir_all(bundle_dir.clone())
+        .with_context(|| "Failed to create licenses directory")?;
 
     if conda_prefixes.is_empty() {
         let mut conda_packages = Vec::new();
@@ -229,16 +239,8 @@ pub fn bundle(conda_deny_input: CondaDenyInput) -> Result<()> {
 
         bar.set_message("📦 Bundling licenses...");
 
-        std::fs::create_dir_all("licenses")
-            .with_context(|| "Failed to create licenses directory")?;
-        std::fs::remove_dir_all("licenses")
-            .with_context(|| "Failed to create licenses directory")?;
-        std::fs::create_dir_all("licenses")
-            .with_context(|| "Failed to create licenses directory")?;
-
-        for (conda_package, environment) in conda_packages {
+        let bundling_result: Result<()> = conda_packages.par_iter().map(|(conda_package, environment)| {
             bar.inc(1);
-            // bar.println(format!("[{}] Bundling license for {}", environment.clone().unwrap(), conda_package.url()));
 
             let conda_package_path = conda_package.file_name().unwrap();
 
@@ -256,7 +258,8 @@ pub fn bundle(conda_deny_input: CondaDenyInput) -> Result<()> {
 
             for (license_file_name, license_file_contents) in license_files {
                 let license_file_path = format!(
-                    "licenses/{}/{}/{}",
+                    "{}/{}/{}/{}",
+                    bundle_dir,
                     environment.clone().unwrap(),
                     conda_package_dir,
                     license_file_name
@@ -283,7 +286,8 @@ pub fn bundle(conda_deny_input: CondaDenyInput) -> Result<()> {
                     }
                 }
             }
-        }
+            Ok(())
+        }).collect();
 
         bar.finish_with_message("✅ Bundling licenses complete!");
         bar.finish();
@@ -304,7 +308,7 @@ pub fn bundle(conda_deny_input: CondaDenyInput) -> Result<()> {
                 package_urls_for_prefix.push(entry.url);
             }
         }
-
+        package_urls_for_prefix.sort();
         package_urls_for_prefix.dedup();
 
         let bar = ProgressBar::new(package_urls_for_prefix.len() as u64);
@@ -319,14 +323,7 @@ pub fn bundle(conda_deny_input: CondaDenyInput) -> Result<()> {
 
         bar.set_message("📦 Bundling licenses...");
 
-        std::fs::create_dir_all("licenses")
-            .with_context(|| "Failed to create licenses directory")?;
-        std::fs::remove_dir_all("licenses")
-            .with_context(|| "Failed to create licenses directory")?;
-        std::fs::create_dir_all("licenses")
-            .with_context(|| "Failed to create licenses directory")?;
-
-        for package_url in package_urls_for_prefix {
+        let bundling_result: Result<()> = package_urls_for_prefix.par_iter().map(|package_url| {
             bar.inc(1);
             // bar.println(format!("[{}] Bundling license for {}", environment.clone().unwrap(), conda_package.url()));
 
@@ -341,13 +338,13 @@ pub fn bundle(conda_deny_input: CondaDenyInput) -> Result<()> {
                 .and_then(|stem| stem.to_str())
                 .expect("Failed to get file stem as str");
             let license_files =
-                get_license_contents_for_package_url(&package_url).with_context(|| {
+                get_license_contents_for_package_url(package_url).with_context(|| {
                     format!("Failed to get license contents for package {}", package_url)
                 })?;
 
             for (license_file_name, license_file_contents) in license_files {
                 let license_file_path =
-                    format!("licenses/{}/{}", conda_package_dir, license_file_name);
+                    format!("{}/{}/{}", bundle_dir, conda_package_dir, license_file_name);
 
                 if !Path::new(&license_file_path).exists() {
                     std::fs::create_dir_all(Path::new(&license_file_path).parent().unwrap())?;
@@ -370,7 +367,8 @@ pub fn bundle(conda_deny_input: CondaDenyInput) -> Result<()> {
                     }
                 }
             }
-        }
+            Ok(())
+        }).collect();
 
         bar.finish_with_message("✅ Bundling licenses complete!");
         bar.finish();

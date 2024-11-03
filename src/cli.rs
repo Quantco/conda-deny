@@ -40,7 +40,10 @@ pub enum Commands {
         osi: bool,
     },
     List {},
-    Bundle {},
+    Bundle {
+        #[arg(short, long)]
+        output: Option<String>,
+    },
 }
 
 pub fn combine_cli_and_config_input(

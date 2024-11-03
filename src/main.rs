@@ -7,6 +7,7 @@ use log::debug;
 
 fn main() -> Result<()> {
     let cli = Cli::parse();
+    let conda_deny_input = parse_cli_input(&cli)?;
 
     env_logger::Builder::new()
         .filter_level(cli.verbose.log_level_filter())
@@ -17,8 +18,6 @@ fn main() -> Result<()> {
             include_safe,
             osi: _,
         } => {
-            let conda_deny_input = parse_cli_input(cli)?;
-
             debug!("Check command called.");
 
             if include_safe {
@@ -40,15 +39,13 @@ fn main() -> Result<()> {
             Ok(())
         }
         Commands::List {} => {
-            let conda_deny_input = parse_cli_input(cli)?;
             debug!("List command called");
             list(conda_deny_input)?;
             Ok(())
         }
-        Commands::Bundle {} => {
+        Commands::Bundle { output } => {
             debug!("Bundle command called");
-            let conda_deny_input = parse_cli_input(cli)?;
-            bundle(conda_deny_input)?;
+            bundle(conda_deny_input, output.clone())?;
             Ok(())
         }
     }
