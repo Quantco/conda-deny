@@ -3,7 +3,7 @@ use serde::{Deserialize, Serialize};
 
 #[derive(Debug)]
 #[allow(dead_code)]
-struct CondaMetaPackage {
+pub struct CondaMetaPackage {
     name: String,
     version: String,
     build: String,

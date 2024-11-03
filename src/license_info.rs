@@ -152,18 +152,18 @@ impl LicenseInfos {
         let mut package_records = Vec::new();
 
         if lockfiles.is_empty() {
-            let package_records_for_lockfile = get_conda_packages_for_pixi_lock(
+            let conda_packages_for_lockfile = get_conda_packages_for_pixi_lock(
                 None,
                 environment_specs.clone(),
                 platforms.clone(),
             )
             .with_context(|| "Failed to get package records for pixi.lock")?;
 
-            package_records.extend(package_records_for_lockfile);
+            package_records.extend(conda_packages_for_lockfile);
         } else {
             for lockfile in lockfiles {
                 let path = Path::new(&lockfile);
-                let package_records_for_lockfile = get_conda_packages_for_pixi_lock(
+                let conda_packages_for_lockfile = get_conda_packages_for_pixi_lock(
                     Some(path),
                     environment_specs.clone(),
                     platforms.clone(),
@@ -172,7 +172,7 @@ impl LicenseInfos {
                     format!("Failed to get package records from lockfile: {}", &lockfile)
                 })?;
 
-                package_records.extend(package_records_for_lockfile);
+                package_records.extend(conda_packages_for_lockfile);
             }
         }
         for conda_package in package_records {
@@ -351,6 +351,7 @@ mod tests {
             sha256: "123456".to_string(),
             platform: "linux-64".to_string(),
             build: "py_0".to_string(),
+            url: "https://test.com".to_string(),
         };
 
         let license_info = LicenseInfo::from_conda_meta_entry(&entry);

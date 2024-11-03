@@ -6,37 +6,29 @@ use bzip2::read::BzDecoder;
 
 use anyhow::{Context, Result};
 use log::{debug, warn};
-use rattler_lock::CondaPackage;
 use reqwest::blocking::get;
 use tar::Archive;
 use zip::ZipArchive;
 use zstd::Decoder;
 
-pub fn get_license_contents_for_package(
-    conda_package: &CondaPackage,
-) -> Result<Vec<(String, String)>> {
-    let file_path = match conda_package.file_name() {
-        Some(file_path) => file_path,
-        None => {
-            return Err(anyhow::anyhow!(
-                "Failed to get file path for {}",
-                conda_package.url().to_string()
-            ))
-        }
-    };
-    let output_dir = Path::new(file_path)
+pub fn get_license_contents_for_package_url(url: &str) -> Result<Vec<(String, String)>> {
+    let file_name = Path::new(url)
+        .file_name()
+        .and_then(|name| name.to_str())
+        .ok_or_else(|| anyhow::anyhow!("Failed to extract file name from URL"))?;
+
+    let output_dir = Path::new(file_name)
         .file_stem()
         .and_then(|stem| stem.to_str())
-        .expect("Failed to get file stem as str");
+        .ok_or_else(|| anyhow::anyhow!("Failed to get file stem as str"))?;
 
-    let url = format!("{}", conda_package.url());
-    download_file(&url, conda_package.file_name().unwrap())?;
-    unpack_conda_file(conda_package.file_name().unwrap())?;
+    download_file(url, file_name)?;
+    unpack_conda_file(file_name)?;
 
     let license_strings = get_licenses_from_unpacked_conda_package(output_dir)?;
 
-    std::fs::remove_file(file_path)
-        .with_context(|| format!("Failed to delete file {}", file_path))?;
+    std::fs::remove_file(file_name)
+        .with_context(|| format!("Failed to delete file {}", file_name))?;
     std::fs::remove_dir_all(output_dir)
         .with_context(|| format!("Failed to remove directory {}", output_dir))?;
 
