@@ -227,14 +227,14 @@ mod tests {
 
     #[test]
     fn test_find_all_licenses_directories() {
-        let root = Path::new("tests/test_bundle_utils/polarify-0.2.0-pyhd8ed1ab_0.conda");
+        let root = Path::new("tests/test_bundle_data/polarify-0.2.0-pyhd8ed1ab_0.conda");
         let result = find_all_licenses_directories(root).unwrap();
 
         assert_eq!(result.len(), 2);
-        assert!(result.contains(&PathBuf::from("tests/test_bundle_utils/polarify-0.2.0-pyhd8ed1ab_0.conda/pkg-polarify-0.2.0-pyhd8ed1ab_0/site-packages/polarify-0.2.0.dist-info/licenses")));
-        assert!(result.contains(&PathBuf::from("tests/test_bundle_utils/polarify-0.2.0-pyhd8ed1ab_0.conda/pkg-polarify-0.2.0-pyhd8ed1ab_0/info/licenses")));
+        assert!(result.contains(&PathBuf::from("tests/test_bundle_data/polarify-0.2.0-pyhd8ed1ab_0.conda/pkg-polarify-0.2.0-pyhd8ed1ab_0/site-packages/polarify-0.2.0.dist-info/licenses")));
+        assert!(result.contains(&PathBuf::from("tests/test_bundle_data/polarify-0.2.0-pyhd8ed1ab_0.conda/pkg-polarify-0.2.0-pyhd8ed1ab_0/info/licenses")));
 
-        let root = Path::new("tests/test_bundle_utils/_libgcc_mutex-0.1-free");
+        let root = Path::new("tests/test_bundle_data/_libgcc_mutex-0.1-free");
         let result = find_all_licenses_directories(root).unwrap();
 
         assert_eq!(result.len(), 0);
@@ -243,7 +243,7 @@ mod tests {
     #[test]
     fn test_get_licenses_from_unpacked_conda_package_with_license_files() {
         let unpacked_conda_dir =
-            Path::new("tests/test_bundle_utils/polarify-0.2.0-pyhd8ed1ab_0.conda");
+            Path::new("tests/test_bundle_data/polarify-0.2.0-pyhd8ed1ab_0.conda");
 
         let result =
             get_licenses_from_unpacked_conda_package(unpacked_conda_dir.to_str().unwrap()).unwrap();
@@ -259,7 +259,7 @@ mod tests {
 
     #[test]
     fn test_get_licenses_from_unpacked_conda_package_without_licenses_directory() {
-        let unpacked_conda_dir = Path::new("tests/test_bundle_utils/_libgcc_mutex-0.1-free");
+        let unpacked_conda_dir = Path::new("tests/test_bundle_data/_libgcc_mutex-0.1-free");
 
         let result =
             get_licenses_from_unpacked_conda_package(unpacked_conda_dir.to_str().unwrap()).unwrap();
@@ -273,7 +273,7 @@ mod tests {
 
     #[test]
     fn test_get_licenses_from_unpacked_conda_package_empty_liceses_dir() {
-        let unpacked_conda_dir = Path::new("tests/test_bundle_utils/empty_licenses_dir");
+        let unpacked_conda_dir = Path::new("tests/test_bundle_data/empty_licenses_dir");
 
         let result =
             get_licenses_from_unpacked_conda_package(unpacked_conda_dir.to_str().unwrap()).unwrap();
