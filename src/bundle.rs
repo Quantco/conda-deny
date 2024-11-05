@@ -12,6 +12,9 @@ use tar::Archive;
 use zip::ZipArchive;
 use zstd::Decoder;
 
+type LicenseFileName = String;
+type LicenseText = String;
+
 pub fn get_license_contents_for_package_url(url: &str) -> Result<Vec<(String, String)>> {
     let file_name = Path::new(url)
         .file_name()
@@ -41,48 +44,89 @@ pub fn get_license_contents_for_package_url(url: &str) -> Result<Vec<(String, St
     Ok(license_strings)
 }
 
-fn get_licenses_from_unpacked_conda_package(output_dir: &str) -> Result<Vec<(String, String)>> {
-    let mut license_strings = Vec::new();
-    let licenses_dir = format!("{}/info/licenses", output_dir);
+fn find_all_licenses_directories(root: &Path) -> Result<Vec<PathBuf>> {
+    let mut licenses_dirs = Vec::new();
+    visit_dir(root, &mut licenses_dirs)?;
+    Ok(licenses_dirs)
+}
 
-    let licenses_path = Path::new(&licenses_dir);
-    if !licenses_path.exists() {
+fn visit_dir(path: &Path, licenses_dirs: &mut Vec<PathBuf>) -> Result<()> {
+    for entry in fs::read_dir(path)? {
+        let entry = entry?;
+        let entry_path = entry.path();
+
+        if entry_path.is_dir() {
+            if entry_path.file_name().unwrap() == "licenses" {
+                licenses_dirs.push(entry_path.clone());
+            } else {
+                visit_dir(&entry_path, licenses_dirs)?;
+            }
+        }
+    }
+    Ok(())
+}
+
+fn get_licenses_from_unpacked_conda_package(
+    unpacked_conda_package_dir: &str,
+) -> Result<Vec<(LicenseFileName, LicenseText)>> {
+    let mut license_strings = Vec::new();
+
+    let licenses_dirs = find_all_licenses_directories(Path::new(unpacked_conda_package_dir))?;
+
+    if !licenses_dirs.is_empty() {
+        for licenses_dir in licenses_dirs {
+            get_license_texts_for_dir(&licenses_dir, &mut license_strings).with_context(|| {
+            format!(
+                "Failed to get license content from {}. Does the licenses directory exist within the package?",
+                licenses_dir.display()
+            )
+        })?;
+        }
+        if license_strings.is_empty() {
+            warn!(
+                "Warning: No license files found in {}. Adding default license message.",
+                unpacked_conda_package_dir
+            );
+            license_strings.push((
+                "NO LICENSE FOUND".to_string(),
+                "THE LICENSE OF THIS PACKAGE IS NOT PACKAGED!".to_string(),
+            ));
+        }
+    } else {
         warn!(
             "Warning: No 'info/licenses' directory found in {}. Adding default license message.",
-            output_dir
+            unpacked_conda_package_dir
         );
         license_strings.push((
             "NO LICENSE FOUND".to_string(),
             "THE LICENSE OF THIS PACKAGE IS NOT PACKAGED!".to_string(),
         ));
-        return Ok(license_strings);
     }
 
-    fn visit_dir(path: &Path, license_strings: &mut Vec<(String, String)>) -> Result<()> {
-        for entry in fs::read_dir(path)? {
-            let entry = entry?;
-            let entry_path = entry.path();
-
-            if entry_path.is_dir() {
-                visit_dir(&entry_path, license_strings)?;
-            } else {
-                let entry_file_name = entry.file_name().to_string_lossy().to_string();
-                let content = fs::read_to_string(&entry_path)
-                    .with_context(|| format!("Failed to read {:?}", entry_path))?;
-                license_strings.push((entry_file_name, content));
-            }
-        }
-        Ok(())
-    }
-
-    visit_dir(licenses_path, &mut license_strings).with_context(|| {
-        format!(
-            "Failed to get license content from {}. Does the licenses directory exist within the package?",
-            licenses_dir
-        )
-    })?;
+    license_strings.sort();
+    license_strings.dedup();
 
     Ok(license_strings)
+}
+
+fn get_license_texts_for_dir(
+    path: &Path,
+    license_strings: &mut Vec<(LicenseFileName, LicenseText)>,
+) -> Result<()> {
+    for entry in fs::read_dir(path)? {
+        let entry = entry?;
+        let entry_path = entry.path();
+
+        if entry_path.is_dir() {
+            get_license_texts_for_dir(&entry_path, license_strings)?;
+        } else {
+            let entry_file_name = entry.file_name().to_string_lossy().to_string();
+            let content = fs::read_to_string(&entry_path)
+                .with_context(|| format!("Failed to read {:?}", entry_path))?;
+            license_strings.push((entry_file_name, content));
+        }
+    }
+    Ok(())
 }
 
 fn download_file(url: &str, file_path: &str) -> Result<()> {
@@ -119,7 +163,10 @@ fn unpack_conda_file(file_path: &str) -> Result<()> {
     match file_extension {
         "conda" => unpack_conda_archive(file_path, &output_dir),
         "bz2" => unpack_tar_bz2_archive(file_path, &output_dir),
-        _ => Err(anyhow::anyhow!("Unsupported file extension")),
+        other => Err(anyhow::anyhow!(format!(
+            "Unsupported file extension: {}",
+            other
+        ))),
     }
 }
 
@@ -172,4 +219,69 @@ fn unpack_tar_bz2_archive(file_path: &str, output_dir: &Path) -> Result<()> {
     debug!("Successfully unpacked .tar.bz2 to {:?}", output_dir);
 
     Ok(())
+}
+
+#[cfg(test)]
+mod tests {
+    use super::*;
+
+    #[test]
+    fn test_find_all_licenses_directories() {
+        let root = Path::new("tests/test_bundle_utils/polarify-0.2.0-pyhd8ed1ab_0.conda");
+        let result = find_all_licenses_directories(root).unwrap();
+
+        assert_eq!(result.len(), 2);
+        assert!(result.contains(&PathBuf::from("tests/test_bundle_utils/polarify-0.2.0-pyhd8ed1ab_0.conda/pkg-polarify-0.2.0-pyhd8ed1ab_0/site-packages/polarify-0.2.0.dist-info/licenses")));
+        assert!(result.contains(&PathBuf::from("tests/test_bundle_utils/polarify-0.2.0-pyhd8ed1ab_0.conda/pkg-polarify-0.2.0-pyhd8ed1ab_0/info/licenses")));
+
+        let root = Path::new("tests/test_bundle_utils/_libgcc_mutex-0.1-free");
+        let result = find_all_licenses_directories(root).unwrap();
+
+        assert_eq!(result.len(), 0);
+    }
+
+    #[test]
+    fn test_get_licenses_from_unpacked_conda_package_with_license_files() {
+        let unpacked_conda_dir =
+            Path::new("tests/test_bundle_utils/polarify-0.2.0-pyhd8ed1ab_0.conda");
+
+        let result =
+            get_licenses_from_unpacked_conda_package(unpacked_conda_dir.to_str().unwrap()).unwrap();
+
+        println!("{:?}", result);
+
+        assert_eq!(result.len(), 1);
+        assert!(result.contains(&(
+            String::from("LICENSE"),
+            String::from("This is the license.")
+        )));
+    }
+
+    #[test]
+    fn test_get_licenses_from_unpacked_conda_package_without_licenses_directory() {
+        let unpacked_conda_dir = Path::new("tests/test_bundle_utils/_libgcc_mutex-0.1-free");
+
+        let result =
+            get_licenses_from_unpacked_conda_package(unpacked_conda_dir.to_str().unwrap()).unwrap();
+
+        assert_eq!(result.len(), 1);
+        assert!(result.contains(&(
+            "NO LICENSE FOUND".to_string(),
+            "THE LICENSE OF THIS PACKAGE IS NOT PACKAGED!".to_string()
+        )));
+    }
+
+    #[test]
+    fn test_get_licenses_from_unpacked_conda_package_empty_liceses_dir() {
+        let unpacked_conda_dir = Path::new("tests/test_bundle_utils/empty_licenses_dir");
+
+        let result =
+            get_licenses_from_unpacked_conda_package(unpacked_conda_dir.to_str().unwrap()).unwrap();
+
+        assert_eq!(result.len(), 1);
+        assert!(result.contains(&(
+            "NO LICENSE FOUND".to_string(),
+            "THE LICENSE OF THIS PACKAGE IS NOT PACKAGED!".to_string()
+        )));
+    }
 }

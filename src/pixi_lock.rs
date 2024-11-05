@@ -6,6 +6,8 @@ use log::warn;
 use rattler_conda_types::Platform;
 use rattler_lock::{CondaPackage, LockFile, Package};
 
+type Environment = String;
+
 fn _get_environment_names(pixi_lock_path: &Path) -> Vec<String> {
     let lock = LockFile::from_path(pixi_lock_path).unwrap();
     let environment_names = lock
@@ -19,7 +21,7 @@ pub fn get_conda_packages_for_pixi_lock(
     pixi_lock_path: Option<&Path>,
     mut environment_spec: Vec<String>,
     platform_spec: Vec<String>,
-) -> Result<Vec<(CondaPackage, Option<String>)>> {
+) -> Result<Vec<(CondaPackage, Option<Environment>)>> {
     let pixi_lock_path = pixi_lock_path.unwrap_or(Path::new("pixi.lock"));
 
     let lock = LockFile::from_path(pixi_lock_path)

@@ -5,6 +5,10 @@ use clap::Parser;
 
 use crate::conda_deny_config::CondaDenyConfig;
 
+type Platforms = Vec<String>;
+type Lockfiles = Vec<String>;
+type Environments = Vec<String>;
+
 #[derive(Parser, Debug)]
 #[command(name = "conda-deny", about = "Check and list licenses of pixi and conda environments", version = env!("CARGO_PKG_VERSION"))]
 pub struct Cli {
@@ -51,7 +55,7 @@ pub fn combine_cli_and_config_input(
     cli_lockfiles: &[String],
     cli_platforms: &[String],
     cli_environments: &[String],
-) -> (Vec<String>, Vec<String>, Vec<String>) {
+) -> (Lockfiles, Platforms, Environments) {
     let mut platforms = config.get_platform_spec().map_or(vec![], |p| p);
     let mut lockfiles = config.get_lockfile_spec();
     let mut environment_specs = config.get_environment_spec().map_or(vec![], |e| e);

@@ -1,0 +1,16 @@
+{
+  "arch": null,
+  "build": "pyhd8ed1ab_0",
+  "build_number": 0,
+  "depends": [
+    "polars >=0.14.24,<0.21",
+    "python >=3.9"
+  ],
+  "license": "BSD-3-Clause",
+  "name": "polarify",
+  "noarch": "python",
+  "platform": null,
+  "subdir": "noarch",
+  "timestamp": 1717087664388,
+  "version": "0.2.0"
+}

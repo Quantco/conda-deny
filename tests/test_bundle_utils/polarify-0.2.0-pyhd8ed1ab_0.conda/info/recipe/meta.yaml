@@ -1,0 +1,77 @@
+# This file created by conda-build 24.5.1
+# meta.yaml template originally from:
+# /home/conda/recipe_root, last modified Thu May 30 16:44:37 2024
+# ------------------------------------------------
+
+package:
+  name: polarify
+  version: 0.2.0
+source:
+  sha256: 17f2e34cc84e4c1a13db9173e56724ebb6955cba48ab649417e49175edae0f5a
+  url: https://pypi.io/packages/source/p/polarify/polarify-0.2.0.tar.gz
+build:
+  noarch: python
+  number: '0'
+  script: /home/conda/feedstock_root/build_artifacts/polarify_1717087555407/_h_env_placehold_placehold_placehold_placehold_placehold_placehold_placehold_placehold_placehold_placehold_placehold_placehold_placehold_placehold_placehold_placehold_placehold_placehold_pl/bin/python
+    -m pip install . -vv
+  string: pyhd8ed1ab_0
+requirements:
+  host:
+    - _libgcc_mutex 0.1 conda_forge
+    - _openmp_mutex 4.5 2_gnu
+    - bzip2 1.0.8 hd590300_5
+    - ca-certificates 2024.2.2 hbcca054_0
+    - editables 0.5 pyhd8ed1ab_0
+    - hatchling 1.24.2 pyhd8ed1ab_0
+    - importlib-metadata 7.1.0 pyha770c72_0
+    - ld_impl_linux-64 2.40 hf3520f5_1
+    - libexpat 2.6.2 h59595ed_0
+    - libffi 3.4.2 h7f98852_5
+    - libgcc-ng 13.2.0 h77fa898_7
+    - libgomp 13.2.0 h77fa898_7
+    - libnsl 2.0.1 hd590300_0
+    - libsqlite 3.45.3 h2797004_0
+    - libuuid 2.38.1 h0b41bf4_0
+    - libxcrypt 4.4.36 hd590300_1
+    - libzlib 1.2.13 h4ab18f5_6
+    - ncurses 6.5 h59595ed_0
+    - openssl 3.3.0 h4ab18f5_3
+    - packaging 24.0 pyhd8ed1ab_0
+    - pathspec 0.12.1 pyhd8ed1ab_0
+    - pip 24.0 pyhd8ed1ab_0
+    - pluggy 1.5.0 pyhd8ed1ab_0
+    - python 3.12.3 hab00c5b_0_cpython
+    - readline 8.2 h8228510_1
+    - setuptools 70.0.0 pyhd8ed1ab_0
+    - tk 8.6.13 noxft_h4845f30_101
+    - tomli 2.0.1 pyhd8ed1ab_0
+    - trove-classifiers 2024.5.22 pyhd8ed1ab_0
+    - tzdata 2024a h0c530f3_0
+    - wheel 0.43.0 pyhd8ed1ab_1
+    - xz 5.2.6 h166bdaf_0
+    - zipp 3.17.0 pyhd8ed1ab_0
+  run:
+    - polars >=0.14.24,<0.21
+    - python >=3.9
+test:
+  commands:
+    - pip check
+  imports:
+    - polarify
+  requires:
+    - pip
+about:
+  home: https://github.com/quantco/polarify
+  license: BSD-3-Clause
+  license_file: LICENSE
+  summary: "Simplifying conditional Polars Expressions with Python \U0001F40D \U0001F43B\
+    \u200D\u2744\uFE0F"
+extra:
+  copy_test_source_files: true
+  final: true
+  flow_run_id: azure_20240530.2.1
+  recipe-maintainers:
+    - '0xbe7a'
+    - pavelzw
+  remote_url: https://github.com/conda-forge/polarify-feedstock
+  sha: 7554dbefafab67b90cac19dc1d4744fe9d97005a

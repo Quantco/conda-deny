@@ -54,7 +54,7 @@ mod tests {
 
     #[tokio::test]
     async fn test_read_remote_config() {
-        let url = "https://raw.githubusercontent.com/PaulKMueller/conda-deny-test/main/conda-deny-license_whitelist.toml";
+        let url = "https://raw.githubusercontent.com/QuantCo/conda-deny/main/tests/test_remote_base_configs/conda-deny-license_whitelist.toml";
         let whitelist = _read_remote_config(url).await;
 
         assert!(whitelist.is_ok());
@@ -62,7 +62,7 @@ mod tests {
 
     #[tokio::test]
     async fn test_read_remote_non_existent_config() {
-        let url = "https://raw.githubusercontent.com/PaulKMueller/this-config-does-not-exist.toml";
+        let url = "https://raw.githubusercontent.com/QuantCo/conda-deny/main/tests/test_remote_base_configs/this-config-does-not-exist.toml";
         let whitelist = _read_remote_config(url).await;
 
         assert!(whitelist.is_err());
