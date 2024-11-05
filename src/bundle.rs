@@ -196,7 +196,6 @@ fn unpack_conda_archive(file_path: &str, output_dir: &Path) -> Result<()> {
             tar.unpack(output_dir)
                 .with_context(|| format!("Failed to unpack {}", output_dir.to_string_lossy()))?;
             debug!("Successfully unpacked to {:?}", output_dir);
-            break;
         }
     }
     Ok(())
@@ -247,8 +246,6 @@ mod tests {
 
         let result =
             get_licenses_from_unpacked_conda_package(unpacked_conda_dir.to_str().unwrap()).unwrap();
-
-        println!("{:?}", result);
 
         assert_eq!(result.len(), 1);
         assert!(result.contains(&(
