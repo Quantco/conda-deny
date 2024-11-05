@@ -269,11 +269,15 @@ mod tests {
     }
 
     #[test]
-    fn test_get_licenses_from_unpacked_conda_package_empty_liceses_dir() {
+    fn test_get_licenses_from_unpacked_conda_package_empty_licenses_dir() {
         let unpacked_conda_dir = Path::new("tests/test_bundle_data/empty_licenses_dir");
+
+        fs::create_dir_all(unpacked_conda_dir.join("licenses")).unwrap();
 
         let result =
             get_licenses_from_unpacked_conda_package(unpacked_conda_dir.to_str().unwrap()).unwrap();
+
+        fs::remove_dir_all(unpacked_conda_dir).unwrap();
 
         assert_eq!(result.len(), 1);
         assert!(result.contains(&(
