@@ -1,0 +1,2 @@
+[tool.conda-deny]
+safe-licenses = ["GPL-2.0-only"]

@@ -2,7 +2,7 @@ use std::path::Path;
 
 use anyhow::{Context, Result};
 
-use rattler_conda_types::{PackageRecord, Platform};
+use rattler_conda_types::Platform;
 use rattler_lock::{CondaPackage, LockFile};
 
 fn _get_environment_names(pixi_lock_path: &Path) -> Vec<String> {

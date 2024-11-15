@@ -10,7 +10,7 @@ use crate::{
     cli::combine_cli_and_config_input,
     conda_deny_config::CondaDenyConfig,
     conda_meta_entry::{CondaMetaEntries, CondaMetaEntry},
-    expression_utils::{check_expression_safety, extract_license_ids, parse_expression},
+    expression_utils::{check_expression_safety, extract_license_texts, parse_expression},
     license_whitelist::ParsedLicenseWhitelist,
     list,
     pixi_lock::get_conda_packages_for_pixi_lock,
@@ -274,7 +274,7 @@ impl LicenseInfos {
         for license_info in &self.license_infos {
             match &license_info.license {
                 LicenseState::Valid(license) => {
-                    let license_ids = extract_license_ids(license);
+                    let license_ids = extract_license_texts(license);
                     let is_safe = license_ids.iter().all(|license_id_str| {
                         if let Some(license_id) = spdx::license_id(license_id_str) {
                             license_id.is_osi_approved()
