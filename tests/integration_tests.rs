@@ -128,4 +128,13 @@ mod tests {
 
         println!("Output has {} lines", line_count);
     }
+
+    #[test]
+    fn test_exception_check() {
+        let test_dir = Path::new("tests/test_end_to_end/test_exception_use_case");
+
+        let mut command = Command::cargo_bin("conda-deny").unwrap();
+        command.arg("check").current_dir(test_dir);
+        command.assert().failure();
+    }
 }
