@@ -1,24 +1,20 @@
 use anyhow::{Context, Result};
-use spdx::{Expression, LicenseItem, LicenseReq, ParseMode};
+use spdx::{Expression, LicenseReq, ParseMode};
 
-pub fn extract_license_ids(expression: &Expression) -> Vec<String> {
+pub fn extract_license_texts(expression: &Expression) -> Vec<String> {
     expression
         .requirements()
-        .map(|req| match &req.req.license {
-            LicenseItem::Spdx { id, .. } => id.name.to_string(),
-            LicenseItem::Other { lic_ref, .. } => lic_ref.clone(),
-        })
+        .map(|req| req.req.to_string())
         .collect()
 }
 
 fn check_license_req_safety(license_req: &LicenseReq, safe_licenses: &[Expression]) -> bool {
-    let safe_license_ids: Vec<String> =
-        safe_licenses.iter().flat_map(extract_license_ids).collect();
+    let safe_license_requirements: Vec<String> = safe_licenses
+        .iter()
+        .flat_map(extract_license_texts)
+        .collect();
 
-    match &license_req.license {
-        LicenseItem::Spdx { id, .. } => safe_license_ids.contains(&id.name.to_string()),
-        LicenseItem::Other { lic_ref, .. } => safe_license_ids.contains(lic_ref),
-    }
+    safe_license_requirements.contains(&license_req.to_string())
 }
 
 pub fn check_expression_safety(expression: &Expression, safe_licenses: &[Expression]) -> bool {
@@ -44,11 +40,53 @@ mod tests {
     use crate::expression_utils::parse_expression;
 
     #[test]
+    fn test_extract_license_texts() {
+        let expression = parse_expression("MIT OR GPL-3.0-or-later").unwrap();
+        let license_texts = extract_license_texts(&expression);
+
+        assert_eq!(
+            license_texts,
+            vec!["MIT".to_string(), "GPL-3.0-or-later".to_string()]
+        );
+    }
+
+    #[test]
+    fn test_license_with_exception() {
+        let expression = parse_expression("GPL-2.0-only").unwrap();
+        let safe_licenses = &[Expression::parse("GPL-2.0-only WITH GCC-exception-2.0").unwrap()];
+
+        let license_allowed = check_expression_safety(&expression, safe_licenses);
+
+        assert!(!license_allowed);
+
+        let expression = parse_expression("GPL-2.0-only WITH GCC-exception-2.0").unwrap();
+        let safe_licenses = &[Expression::parse("GPL-2.0-only").unwrap()];
+        let license_allowed = check_expression_safety(&expression, safe_licenses);
+
+        assert!(!license_allowed);
+
+        let expression = parse_expression("GPL-3.0-only WITH GCC-exception-3.1").unwrap();
+        let safe_licenses = &[Expression::parse("GPL-3.0-only").unwrap()];
+        let license_allowed = check_expression_safety(&expression, safe_licenses);
+
+        assert!(!license_allowed);
+
+        let expression = parse_expression("GPL-3.0-only").unwrap();
+        let safe_licenses = &[Expression::parse("GPL-3.0-only WITH GCC-exception-3.1").unwrap()];
+        let license_allowed = check_expression_safety(&expression, safe_licenses);
+
+        assert!(!license_allowed);
+    }
+
+    #[test]
     fn test_extract_license_ids() {
         let expression = parse_expression("MIT OR GPL-3.0-or-later").unwrap();
-        let license_ids = super::extract_license_ids(&expression);
+        let license_ids = super::extract_license_texts(&expression);
 
-        assert_eq!(license_ids, vec!["MIT".to_string(), "GPL-3.0".to_string()]);
+        assert_eq!(
+            license_ids,
+            vec!["MIT".to_string(), "GPL-3.0-or-later".to_string()]
+        );
     }
 
     #[test]
