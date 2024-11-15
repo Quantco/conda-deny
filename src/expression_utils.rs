@@ -15,7 +15,6 @@ fn check_license_req_safety(license_req: &LicenseReq, safe_licenses: &[Expressio
         .collect();
 
     safe_license_requirements.contains(&license_req.to_string())
-        || safe_license_requirements.contains(&license_req.license.to_string())
 }
 
 pub fn check_expression_safety(expression: &Expression, safe_licenses: &[Expression]) -> bool {
@@ -64,13 +63,13 @@ mod tests {
         let safe_licenses = &[Expression::parse("GPL-2.0-only").unwrap()];
         let license_allowed = check_expression_safety(&expression, safe_licenses);
 
-        assert!(license_allowed);
+        assert!(!license_allowed);
 
         let expression = parse_expression("GPL-3.0-only WITH GCC-exception-3.1").unwrap();
         let safe_licenses = &[Expression::parse("GPL-3.0-only").unwrap()];
         let license_allowed = check_expression_safety(&expression, safe_licenses);
 
-        assert!(license_allowed);
+        assert!(!license_allowed);
 
         let expression = parse_expression("GPL-3.0-only").unwrap();
         let safe_licenses = &[Expression::parse("GPL-3.0-only WITH GCC-exception-3.1").unwrap()];
