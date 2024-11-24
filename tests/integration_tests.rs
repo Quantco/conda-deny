@@ -1,6 +1,6 @@
 #[cfg(test)]
 mod tests {
-    use assert_cmd::{assert, prelude::*};
+    use assert_cmd::prelude::*;
     use core::str;
     use std::path::Path;
     use std::process::Command;
@@ -104,8 +104,6 @@ mod tests {
     #[test]
     fn test_remote_whitelist_check() {
         let test_dir = Path::new("tests/test_end_to_end/test_remote_whitelist");
-
-        let mut command = Command::cargo_bin("conda-deny").unwrap();
 
         let output = Command::cargo_bin("conda-deny")
             .unwrap()
