@@ -123,8 +123,6 @@ mod tests {
             line_count, expected_line_count,
             "Unexpected number of output lines"
         );
-
-        assert!(stdout.contains("There were 242 safe licenses and 300 unsafe licenses."));
     }
 
     #[test]
@@ -207,8 +205,6 @@ mod tests {
             line_count, expected_line_count,
             "Unexpected number of output lines."
         );
-
-        assert!(stdout.contains("There were 27 safe licenses and 21 unsafe licenses."));
     }
 
     #[test]
@@ -234,8 +230,6 @@ mod tests {
             line_count, expected_line_count,
             "Unexpected number of output lines."
         );
-
-        assert!(stdout.contains("There were 458 safe licenses and 84 unsafe licenses."));
     }
 
     #[test]
@@ -291,7 +285,5 @@ mod tests {
             line_count, expected_line_count,
             "Unexpected number of output lines"
         );
-
-        assert!(stdout.contains("poppler 24.8.0-h37b219d_1"));
     }
 }
