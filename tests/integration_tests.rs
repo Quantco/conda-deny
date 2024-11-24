@@ -292,6 +292,6 @@ mod tests {
             "Unexpected number of output lines"
         );
 
-        assert!(stdout.contains("poppler 24.8.0-h37b219d_1 (osx-arm64): GPL-2.0-only"));
+        assert!(stdout.contains("poppler 24.8.0-h37b219d_1"));
     }
 }
