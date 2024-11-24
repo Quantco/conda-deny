@@ -12,53 +12,56 @@ pub struct CondaDenyConfig {
 }
 
 #[derive(Debug, Deserialize)]
-pub struct Tool {
+struct Tool {
     #[serde(rename = "conda-deny")]
     conda_deny: CondaDeny,
 }
 
 #[derive(Debug, Deserialize, Clone)]
 #[serde(untagged)]
-pub enum LicenseWhitelist {
+enum LicenseWhitelist {
     Single(String),
     Multiple(Vec<String>),
 }
 
 #[derive(Debug, Deserialize, Clone)]
 #[serde(untagged)]
-pub enum PlatformSpec {
+enum PlatformSpec {
     Single(String),
     Multiple(Vec<String>),
 }
 
 #[derive(Debug, Deserialize, Clone)]
 #[serde(untagged)]
-pub enum EnviromentSpec {
+enum EnviromentSpec {
     Single(String),
     Multiple(Vec<String>),
 }
 
 #[derive(Debug, Deserialize, Clone)]
 #[serde(untagged)]
-pub enum LockfileSpec {
+enum ExcludeEnviromentSpec {
+    Single(String),
+    Multiple(Vec<String>),
+}
+
+#[derive(Debug, Deserialize, Clone)]
+#[serde(untagged)]
+enum LockfileSpec {
     Single(String),
     Multiple(Vec<String>),
 }
 
 #[derive(Debug, Deserialize)]
-struct PixiEnvironmentEntry {
-    _file: String,
-    _environments: Vec<String>,
-}
-
-#[derive(Debug, Deserialize)]
-pub struct CondaDeny {
+struct CondaDeny {
     #[serde(rename = "license-whitelist")]
     license_whitelist: Option<LicenseWhitelist>,
     #[serde(rename = "platform")]
     platform_spec: Option<PlatformSpec>,
     #[serde(rename = "environment")]
     environment_spec: Option<EnviromentSpec>,
+    #[serde(rename = "exclude-environment")]
+    exclude_environment_spec: Option<ExcludeEnviromentSpec>,
     #[serde(rename = "lockfile")]
     lockfile_spec: Option<LockfileSpec>,
 }
@@ -76,6 +79,14 @@ impl CondaDenyConfig {
             .with_context(|| format!("Failed to parse TOML from the file: {}", filepath))?;
 
         config.path = filepath.to_string();
+
+        if config.tool.conda_deny.environment_spec.is_some()
+            && config.tool.conda_deny.exclude_environment_spec.is_some()
+        {
+            return Err(anyhow::anyhow!(
+                "Config cannot have both environment and exclude-environment fields"
+            ));
+        }
 
         debug!("Loaded config from file: {}", filepath);
 
@@ -109,6 +120,14 @@ impl CondaDenyConfig {
         }
     }
 
+    pub fn get_exclude_environment_spec(&self) -> Option<Vec<String>> {
+        match &self.tool.conda_deny.exclude_environment_spec {
+            Some(ExcludeEnviromentSpec::Single(name)) => Some(vec![name.clone()]),
+            Some(ExcludeEnviromentSpec::Multiple(names)) => Some(names.clone()),
+            None => None,
+        }
+    }
+
     pub fn get_lockfile_spec(&self) -> Vec<String> {
         match &self.tool.conda_deny.lockfile_spec {
             Some(LockfileSpec::Single(name)) => vec![name.clone()],
@@ -124,6 +143,7 @@ impl CondaDenyConfig {
                     license_whitelist: None,
                     platform_spec: None,
                     environment_spec: None,
+                    exclude_environment_spec: None,
                     lockfile_spec: None,
                 },
             },
@@ -138,7 +158,55 @@ mod tests {
 
     use super::*;
 
-    const TEST_FILES: &str = "tests/test_pyproject_toml_files/";
+    const TEST_FILES: &str = "tests/test_config_setups/";
+
+    #[test]
+    fn test_exclude_environment_parsing() {
+        let test_file_path = format!(
+            "{}/test_exclude_environment/exclude_environment.toml",
+            TEST_FILES
+        );
+        let config = CondaDenyConfig::from_path(&test_file_path);
+        assert!(config.is_ok());
+
+        let exclude_environment = config
+            .unwrap()
+            .tool
+            .conda_deny
+            .exclude_environment_spec
+            .unwrap();
+
+        let _correct_exclude_environment = ExcludeEnviromentSpec::Single("lint".to_string());
+        assert!(matches!(exclude_environment, _correct_exclude_environment));
+
+        let test_file_path = format!(
+            "{}/test_exclude_environment/multiple_exclude_environment.toml",
+            TEST_FILES
+        );
+        let config = CondaDenyConfig::from_path(&test_file_path);
+        assert!(config.is_ok());
+
+        let exclude_environments = config
+            .unwrap()
+            .tool
+            .conda_deny
+            .exclude_environment_spec
+            .unwrap();
+
+        let _correct_exclude_environments =
+            ExcludeEnviromentSpec::Multiple(vec!["lint".to_string(), "demo".to_string()]);
+        assert!(matches!(
+            exclude_environments,
+            _correct_exclude_environments
+        ));
+
+        let test_file_path = format!(
+            "{}/test_exclude_environment/error_exclude_environment.toml",
+            TEST_FILES
+        );
+        let config = CondaDenyConfig::from_path(&test_file_path);
+        assert!(config.is_err());
+    }
 
     #[test]
     fn test_valid_config_multiple_urls() {

@@ -1,0 +1,44 @@
+[project]
+name = "pixi-pack"
+channels = ["conda-forge"]
+platforms = ["osx-arm64", "osx-64", "linux-64", "linux-aarch64", "win-64"]
+
+[tasks]
+build = "cargo build --release"
+test = "cargo test"
+
+[dependencies]
+rust = "1.77.2"
+openssl = "3.*"
+pkg-config = "*"
+
+[target.linux.dependencies]
+compilers = ">=1.7.0"
+
+[feature.test.dependencies]
+conda = "*"
+micromamba = "*"
+
+[feature.demo.dependencies]
+vhs = "*"
+[feature.demo.tasks]
+demo = "vhs .github/assets/demo/demo-light.tape && vhs .github/assets/demo/demo-dark.tape"
+
+[feature.lint.dependencies]
+pre-commit = "*"
+prettier = "*"
+taplo = "*"
+pre-commit-hooks = "*"
+typos = "*"
+[feature.lint.tasks]
+pre-commit-install = "pre-commit install"
+pre-commit-run = "pre-commit run -a"
+
+[environments]
+default = ["lint", "test"]
+demo = { features = ["demo"], no-default-feature = true }
+lint = { features = ["lint"], no-default-feature = true }
+
+[tool.conda-deny]
+license-whitelist = "license_whitelist.toml"
+exclude-environment="lint"

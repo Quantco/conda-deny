@@ -4,6 +4,8 @@ safe-licenses = [
     "Unlicense",
     "WTFPL",
     "MIT",
+    "TCL"
+
 ]
 ignore-packages = [
     {package="_libgcc_mutex"}

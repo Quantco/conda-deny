@@ -1,6 +1,6 @@
 #[cfg(test)]
 mod tests {
-    use assert_cmd::prelude::*;
+    use assert_cmd::{assert, prelude::*};
     use core::str;
     use std::path::Path;
     use std::process::Command;
@@ -9,36 +9,96 @@ mod tests {
     fn test_default_use_case_check() {
         let test_dir = Path::new("tests/test_end_to_end/test_default_use_case");
 
-        let mut command = Command::cargo_bin("conda-deny").unwrap();
-        command.arg("check").current_dir(test_dir);
-        command.assert().failure();
+        let output = Command::cargo_bin("conda-deny")
+            .unwrap()
+            .arg("check")
+            .current_dir(test_dir)
+            .output()
+            .expect("Failed to execute command");
+
+        let stdout = str::from_utf8(&output.stdout).expect("Failed to convert output to string");
+
+        let exit_status = output.status.code().unwrap();
+        assert_eq!(exit_status, 1, "Unexpected exit status");
+
+        let line_count = stdout.lines().count();
+        let expected_line_count = 297;
+        assert_eq!(
+            line_count, expected_line_count,
+            "Unexpected number of output lines"
+        );
     }
 
     #[test]
     fn test_default_use_case_list() {
         let test_dir = Path::new("tests/test_end_to_end/test_default_use_case");
 
-        let mut command = Command::cargo_bin("conda-deny").unwrap();
-        command.arg("list").current_dir(test_dir);
-        command.assert().success();
+        let output = Command::cargo_bin("conda-deny")
+            .unwrap()
+            .arg("list")
+            .current_dir(test_dir)
+            .output()
+            .expect("Failed to execute command");
+
+        let stdout = str::from_utf8(&output.stdout).expect("Failed to convert output to string");
+
+        let exit_status = output.status.code().unwrap();
+        assert_eq!(exit_status, 0, "Unexpected exit status");
+
+        let line_count = stdout.lines().count();
+        let expected_line_count = 543;
+        assert_eq!(
+            line_count, expected_line_count,
+            "Unexpected number of output lines"
+        );
     }
 
     #[test]
     fn test_default_use_case_pyproject_check() {
         let test_dir = Path::new("tests/test_end_to_end/test_default_use_case_pyproject");
 
-        let mut command = Command::cargo_bin("conda-deny").unwrap();
-        command.arg("check").current_dir(test_dir);
-        command.assert().failure();
+        let output = Command::cargo_bin("conda-deny")
+            .unwrap()
+            .arg("check")
+            .current_dir(test_dir)
+            .output()
+            .expect("Failed to execute command");
+
+        let exit_status = output.status.code().unwrap();
+        assert_eq!(exit_status, 1, "Unexpected exit status");
+
+        let stdout = str::from_utf8(&output.stdout).expect("Failed to convert output to string");
+
+        let line_count = stdout.lines().count();
+        let expected_line_count = 289;
+        assert_eq!(
+            line_count, expected_line_count,
+            "Unexpected number of output lines"
+        );
     }
 
     #[test]
     fn test_default_use_case_pyproject_list() {
         let test_dir = Path::new("tests/test_end_to_end/test_default_use_case_pyproject");
 
-        let mut command = Command::cargo_bin("conda-deny").unwrap();
-        command.arg("list").current_dir(test_dir);
-        command.assert().success();
+        let output = Command::cargo_bin("conda-deny")
+            .unwrap()
+            .arg("list")
+            .current_dir(test_dir)
+            .output()
+            .expect("Failed to execute command");
+
+        let stdout = str::from_utf8(&output.stdout).expect("Failed to convert output to string");
+
+        let exit_status = output.status.code().unwrap();
+        assert_eq!(exit_status, 0, "Unexpected exit status");
+
+        let line_count = stdout.lines().count();
+        let expected_line_count = 543;
+        assert_eq!(
+            line_count, expected_line_count,
+            "Unexpected number of output lines"
+        );
     }
 
     #[test]
@@ -46,8 +106,27 @@ mod tests {
         let test_dir = Path::new("tests/test_end_to_end/test_remote_whitelist");
 
         let mut command = Command::cargo_bin("conda-deny").unwrap();
-        command.arg("check").current_dir(test_dir);
-        command.assert().failure();
+
+        let output = Command::cargo_bin("conda-deny")
+            .unwrap()
+            .arg("check")
+            .current_dir(test_dir)
+            .output()
+            .expect("Failed to execute command");
+
+        let exit_status = output.status.code().unwrap();
+        assert_eq!(exit_status, 1, "Unexpected exit status");
+
+        let stdout = str::from_utf8(&output.stdout).expect("Failed to convert output to string");
+
+        let line_count = stdout.lines().count();
+        let expected_line_count = 307;
+        assert_eq!(
+            line_count, expected_line_count,
+            "Unexpected number of output lines"
+        );
+
+        assert!(stdout.contains("There were 242 safe licenses and 300 unsafe licenses."));
     }
 
     #[test]
@@ -63,36 +142,102 @@ mod tests {
     fn test_multiple_whitelists_check() {
         let test_dir = Path::new("tests/test_end_to_end/test_multiple_whitelists");
 
-        let mut command = Command::cargo_bin("conda-deny").unwrap();
-        command.arg("check").current_dir(test_dir);
-        command.assert().failure();
+        let output = Command::cargo_bin("conda-deny")
+            .unwrap()
+            .arg("check")
+            .current_dir(test_dir)
+            .output()
+            .expect("Failed to execute command");
+
+        let exit_status = output.status.code().unwrap();
+        assert_eq!(exit_status, 1, "Unexpected exit status");
+
+        let stdout = str::from_utf8(&output.stdout).expect("Failed to convert output to string");
+
+        let line_count = stdout.lines().count();
+        let expected_line_count = 205;
+        assert_eq!(
+            line_count, expected_line_count,
+            "Unexpected number of output lines"
+        );
     }
 
     #[test]
     fn test_multiple_whitelists_list() {
         let test_dir = Path::new("tests/test_end_to_end/test_multiple_whitelists");
 
-        let mut command = Command::cargo_bin("conda-deny").unwrap();
-        command.arg("list").current_dir(test_dir);
-        command.assert().success();
+        let output = Command::cargo_bin("conda-deny")
+            .unwrap()
+            .arg("list")
+            .current_dir(test_dir)
+            .output()
+            .expect("Failed to execute command");
+
+        let stdout = str::from_utf8(&output.stdout).expect("Failed to convert output to string");
+
+        let exit_status = output.status.code().unwrap();
+        assert_eq!(exit_status, 0, "Unexpected exit status");
+
+        let line_count = stdout.lines().count();
+
+        let expected_line_count = 543;
+        assert_eq!(
+            line_count, expected_line_count,
+            "Unexpected number of output lines"
+        );
     }
 
     #[test]
     fn test_config_with_platform_and_env() {
         let test_dir = Path::new("tests/test_end_to_end/test_platform_env_spec");
 
-        let mut command = Command::cargo_bin("conda-deny").unwrap();
-        command.arg("check").current_dir(test_dir);
-        command.assert().failure();
+        let output = Command::cargo_bin("conda-deny")
+            .unwrap()
+            .arg("check")
+            .current_dir(test_dir)
+            .output()
+            .expect("Failed to execute command");
+
+        let stdout = str::from_utf8(&output.stdout).expect("Failed to convert output to string");
+
+        let exit_status = output.status.code().unwrap();
+        assert_eq!(exit_status, 1, "Unexpected exit status");
+
+        let line_count = stdout.lines().count();
+        let expected_line_count = 28;
+        assert_eq!(
+            line_count, expected_line_count,
+            "Unexpected number of output lines."
+        );
+
+        assert!(stdout.contains("There were 27 safe licenses and 21 unsafe licenses."));
     }
 
     #[test]
     fn test_osi_check() {
         let test_dir = Path::new("tests/test_end_to_end/test_osi_check");
 
-        let mut command = Command::cargo_bin("conda-deny").unwrap();
-        command.arg("check --osi").current_dir(test_dir);
-        command.assert().failure();
+        let output = Command::cargo_bin("conda-deny")
+            .unwrap()
+            .arg("check")
+            .arg("--osi")
+            .current_dir(test_dir)
+            .output()
+            .expect("Failed to execute command");
+
+        let stdout = str::from_utf8(&output.stdout).expect("Failed to convert output to string");
+
+        let exit_status = output.status.code().unwrap();
+        assert_eq!(exit_status, 1, "Unexpected exit status");
+
+        let line_count = stdout.lines().count();
+        let expected_line_count = 91;
+        assert_eq!(
+            line_count, expected_line_count,
+            "Unexpected number of output lines."
+        );
+
+        assert!(stdout.contains("There were 458 safe licenses and 84 unsafe licenses."));
     }
 
     #[test]
@@ -125,16 +270,30 @@ mod tests {
             line_count, expected_line_count,
             "Unexpected number of output lines"
         );
-
-        println!("Output has {} lines", line_count);
     }
 
     #[test]
     fn test_exception_check() {
         let test_dir = Path::new("tests/test_end_to_end/test_exception_use_case");
 
-        let mut command = Command::cargo_bin("conda-deny").unwrap();
-        command.arg("check").current_dir(test_dir);
-        command.assert().failure();
+        let output = Command::cargo_bin("conda-deny")
+            .unwrap()
+            .arg("check")
+            .current_dir(test_dir)
+            .output()
+            .expect("Failed to execute command");
+
+        let stdout = str::from_utf8(&output.stdout).expect("Failed to convert output to string");
+
+        let line_count = stdout.lines().count();
+
+        let expected_line_count = 10;
+
+        assert_eq!(
+            line_count, expected_line_count,
+            "Unexpected number of output lines"
+        );
+
+        assert!(stdout.contains("poppler 24.8.0-h37b219d_1 (osx-arm64): GPL-2.0-only"));
     }
 }
