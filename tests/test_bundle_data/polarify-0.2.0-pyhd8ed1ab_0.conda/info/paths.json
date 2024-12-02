@@ -1,0 +1,59 @@
+{
+  "paths": [
+    {
+      "_path": "site-packages/polarify-0.2.0.dist-info/INSTALLER",
+      "path_type": "hardlink",
+      "sha256": "d0edee15f91b406f3f99726e44eb990be6e34fd0345b52b910c568e0eef6a2a8",
+      "size_in_bytes": 5
+    },
+    {
+      "_path": "site-packages/polarify-0.2.0.dist-info/METADATA",
+      "path_type": "hardlink",
+      "sha256": "4e753b64fc1cb48abb75145a79768032c9bd805dceb9ce2e4c3c690acb3bd56b",
+      "size_in_bytes": 8458
+    },
+    {
+      "_path": "site-packages/polarify-0.2.0.dist-info/RECORD",
+      "path_type": "hardlink",
+      "sha256": "1daca8490c7086f3cfe55a2f0693b9409cd6599f895c2b50b3f7feb4b6c1a5e2",
+      "size_in_bytes": 833
+    },
+    {
+      "_path": "site-packages/polarify-0.2.0.dist-info/REQUESTED",
+      "path_type": "hardlink",
+      "sha256": "e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855",
+      "size_in_bytes": 0
+    },
+    {
+      "_path": "site-packages/polarify-0.2.0.dist-info/WHEEL",
+      "path_type": "hardlink",
+      "sha256": "cc431c46bf4aaf4df1d68cc6c20e6ff4d4012a7de49dda7a2d2a1295583e8e15",
+      "size_in_bytes": 87
+    },
+    {
+      "_path": "site-packages/polarify-0.2.0.dist-info/direct_url.json",
+      "path_type": "hardlink",
+      "sha256": "2b9fb09d3a50b09da65318b9051515b0e29b1895a1a70661d0d6cc5117f17657",
+      "size_in_bytes": 104
+    },
+    {
+      "_path": "site-packages/polarify-0.2.0.dist-info/licenses/LICENSE",
+      "path_type": "hardlink",
+      "sha256": "c9b4b17c0b699420c70ce63c589dce6d747877f84cf1e1a7fb17cddf5c7e8888",
+      "size_in_bytes": 1490
+    },
+    {
+      "_path": "site-packages/polarify/__init__.py",
+      "path_type": "hardlink",
+      "sha256": "bf889dbd5adff81247687f3d62518ba9f4a28b863af1350cdc03e36defd18fad",
+      "size_in_bytes": 1628
+    },
+    {
+      "_path": "site-packages/polarify/main.py",
+      "path_type": "hardlink",
+      "sha256": "c765cc6d191b445fe1a2dda03764446d91a5deaf9697a191bc589fabf9268d19",
+      "size_in_bytes": 14050
+    }
+  ],
+  "paths_version": 1
+}

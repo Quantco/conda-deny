@@ -18,6 +18,7 @@ pub struct CondaMetaEntry {
     #[allow(dead_code)]
     pub platform: String,
     pub build: String,
+    pub url: String,
 }
 
 impl CondaMetaEntry {
@@ -42,6 +43,7 @@ impl CondaMetaEntry {
             timestamp: v["timestamp"].as_u64().unwrap_or_default(),
             platform: v["subdir"].as_str().unwrap_or_default().to_owned(),
             build: v["build"].as_str().unwrap_or_default().to_owned(),
+            url: v["url"].as_str().unwrap_or_default().to_owned(),
         })
     }
 

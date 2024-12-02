@@ -125,8 +125,6 @@ mod tests {
             line_count, expected_line_count,
             "Unexpected number of output lines"
         );
-
-        println!("Output has {} lines", line_count);
     }
 
     #[test]

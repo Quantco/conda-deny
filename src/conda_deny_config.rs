@@ -4,14 +4,14 @@ use serde::Deserialize;
 use std::vec;
 use std::{fs::File, io::Read};
 
-#[derive(Debug, Deserialize)]
+#[derive(Debug, Deserialize, Clone)]
 pub struct CondaDenyConfig {
     tool: Tool,
     #[serde(skip)]
     pub path: String,
 }
 
-#[derive(Debug, Deserialize)]
+#[derive(Debug, Deserialize, Clone)]
 pub struct Tool {
     #[serde(rename = "conda-deny")]
     conda_deny: CondaDeny,
@@ -51,7 +51,7 @@ struct PixiEnvironmentEntry {
     _environments: Vec<String>,
 }
 
-#[derive(Debug, Deserialize)]
+#[derive(Debug, Deserialize, Clone)]
 pub struct CondaDeny {
     #[serde(rename = "license-whitelist")]
     license_whitelist: Option<LicenseWhitelist>,

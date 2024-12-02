@@ -1,0 +1,43 @@
+{% set name = "polarify" %}
+{% set version = "0.2.0" %}
+
+package:
+  name: {{ name|lower }}
+  version: {{ version }}
+
+source:
+  url: https://pypi.io/packages/source/{{ name[0] }}/{{ name }}/polarify-{{ version }}.tar.gz
+  sha256: 17f2e34cc84e4c1a13db9173e56724ebb6955cba48ab649417e49175edae0f5a
+
+build:
+  noarch: python
+  script: {{ PYTHON }} -m pip install . -vv
+  number: 0
+
+requirements:
+  host:
+    - python >=3.9
+    - hatchling
+    - pip
+  run:
+    - python >=3.9
+    - polars >=0.14.24,<0.21
+
+test:
+  imports:
+    - polarify
+  commands:
+    - pip check
+  requires:
+    - pip
+
+about:
+  home: https://github.com/quantco/polarify
+  summary: Simplifying conditional Polars Expressions with Python 🐍 🐻‍❄️
+  license: BSD-3-Clause
+  license_file: LICENSE
+
+extra:
+  recipe-maintainers:
+    - pavelzw
+    - '0xbe7a'
