@@ -23,23 +23,33 @@ fn main() -> Result<()> {
     if !osi {
         config = if let Some(config_path) = cli.config {
             CondaDenyConfig::from_path(config_path.as_str())
-                .with_context(|| format!("Failed to parse config file {}", config_path))?
+                .context(format!("Failed to parse config file {}", config_path))?
         } else {
             match CondaDenyConfig::from_path("pixi.toml")
-                .with_context(|| "Failed to parse config file pixi.toml")
+                .context("Failed to parse config file pixi.toml")
             {
                 Ok(config) => {
                     debug!("Successfully loaded config from pixi.toml");
                     config
                 }
-                Err(e) => {
+                Err(pixi_err) => {
                     debug!(
-                    "Error parsing config file: pixi.toml: {}. Attempting to use pyproject.toml instead...",
-                    e
-                );
+                        "Error parsing pixi.toml: {}. Attempting pyproject.toml...",
+                        pixi_err
+                    );
+                    for cause in pixi_err.chain() {
+                        debug!("Caused by: {}", cause);
+                    }
+
                     CondaDenyConfig::from_path("pyproject.toml")
-                        .context(e)
-                        .with_context(|| "Failed to parse config file pyproject.toml")?
+                        .context("Failed to parse config file pyproject.toml")
+                        .map_err(|pyproject_err| {
+                            anyhow::anyhow!(
+                                "Failed to parse both pixi.toml and pyproject.toml:\n  pixi.toml: {}\n  pyproject.toml: {}",
+                                pixi_err,
+                                pyproject_err
+                            )
+                        })?
                 }
             }
         };

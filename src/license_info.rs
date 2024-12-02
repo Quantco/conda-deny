@@ -1,6 +1,7 @@
 use std::path::Path;
 
 use anyhow::{Context, Result};
+use log::debug;
 use rattler_conda_types::PackageRecord;
 use spdx::Expression;
 
@@ -142,6 +143,7 @@ impl LicenseInfos {
         lockfiles: Vec<String>,
         platforms: Vec<String>,
         environment_specs: Vec<String>,
+        exclude_environment_specs: Vec<String>,
     ) -> Result<LicenseInfos> {
         let mut license_infos = Vec::new();
 
@@ -151,6 +153,7 @@ impl LicenseInfos {
             let package_records_for_lockfile = get_package_records_for_pixi_lock(
                 None,
                 environment_specs.clone(),
+                exclude_environment_specs.clone(),
                 platforms.clone(),
             )
             .with_context(|| "Failed to get package records for pixi.lock")?;
@@ -162,6 +165,7 @@ impl LicenseInfos {
                 let package_records_for_lockfile = get_package_records_for_pixi_lock(
                     Some(path),
                     environment_specs.clone(),
+                    exclude_environment_specs.clone(),
                     platforms.clone(),
                 )
                 .with_context(|| {
@@ -224,12 +228,23 @@ impl LicenseInfos {
         let mut platforms = config.get_platform_spec().map_or(vec![], |p| p);
         let mut lockfiles = config.get_lockfile_spec();
         let mut environment_specs = config.get_environment_spec().map_or(vec![], |e| e);
+        let exclude_environment_specs = config.get_exclude_environment_spec().map_or(vec![], |e| e);
+
+        debug!(
+            "The following environments will be excluded: {:?}",
+            exclude_environment_specs
+        );
 
         platforms.extend(cli_platforms.to_owned());
         lockfiles.extend(cli_lockfiles.to_owned());
         environment_specs.extend(cli_environments.to_owned());
 
-        LicenseInfos::from_pixi_lockfiles(lockfiles, platforms, environment_specs)
+        LicenseInfos::from_pixi_lockfiles(
+            lockfiles,
+            platforms,
+            environment_specs,
+            exclude_environment_specs,
+        )
     }
 
     pub fn check(&self, license_whitelist: &ParsedLicenseWhitelist) -> CheckOutput {
@@ -466,7 +481,7 @@ mod tests {
     fn test_license_infos_from_config() {
         let test_file_path = format!(
             "{}test_config_for_license_infos.toml",
-            "tests/test_pyproject_toml_files/"
+            "tests/test_config_setups/"
         );
         let config = CondaDenyConfig::from_path(&test_file_path).expect("Failed to read config");
         let license_infos = LicenseInfos::get_license_infos_from_config(&config, &[], &[], &[]);
