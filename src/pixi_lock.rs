@@ -36,8 +36,8 @@ pub fn get_package_records_for_pixi_lock(
                 for platform in environment.platforms() {
                     if let Some(packages) = environment.packages(platform) {
                         for package in packages {
-                            if let Some(conda_package) = package.into_conda() {
-                                let package_record = conda_package.package_record();
+                            if let Some(conda_package) = package.as_conda() {
+                                let package_record = conda_package.record();
                                 package_records.push(package_record.to_owned());
                             }
                         }
@@ -52,8 +52,8 @@ pub fn get_package_records_for_pixi_lock(
                     if let Some(environment) = lock.environment(&environment_name) {
                         if let Some(packages) = environment.packages(platform) {
                             for package in packages {
-                                if let Some(conda_package) = package.into_conda() {
-                                    let package_record = conda_package.package_record();
+                                if let Some(conda_package) = package.as_conda() {
+                                    let package_record = conda_package.record();
                                     package_records.push(package_record.to_owned());
                                 }
                             }
