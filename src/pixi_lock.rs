@@ -3,7 +3,7 @@ use std::path::Path;
 use anyhow::{Context, Result};
 
 use rattler_conda_types::{PackageRecord, Platform};
-use rattler_lock::LockFile;
+use rattler_lock::{LockFile, LockedPackageRef};
 
 fn _get_environment_names(pixi_lock_path: &Path) -> Vec<String> {
     let lock = LockFile::from_path(pixi_lock_path).unwrap();
@@ -36,9 +36,18 @@ pub fn get_package_records_for_pixi_lock(
                 for platform in environment.platforms() {
                     if let Some(packages) = environment.packages(platform) {
                         for package in packages {
-                            if let Some(conda_package) = package.into_conda() {
-                                let package_record = conda_package.package_record();
-                                package_records.push(package_record.to_owned());
+                            match package {
+                                LockedPackageRef::Conda(package_data) => {
+                                    match package_data {
+                                        rattler_lock::CondaPackageData::Binary(d) => {
+                                            package_records.push(d.package_record.clone());
+                                        }
+                                        rattler_lock::CondaPackageData::Source(d) => {
+                                            package_records.push(d.package_record.clone());
+                                        }
+                                    }
+                                }
+                                LockedPackageRef::Pypi(..) => panic!("pp"),
                             }
                         }
                     }
@@ -52,9 +61,18 @@ pub fn get_package_records_for_pixi_lock(
                     if let Some(environment) = lock.environment(&environment_name) {
                         if let Some(packages) = environment.packages(platform) {
                             for package in packages {
-                                if let Some(conda_package) = package.into_conda() {
-                                    let package_record = conda_package.package_record();
-                                    package_records.push(package_record.to_owned());
+                                match package {
+                                    LockedPackageRef::Conda(package_data) => {
+                                        match package_data {
+                                            rattler_lock::CondaPackageData::Binary(d) => {
+                                                package_records.push(d.package_record.clone());
+                                            }
+                                            rattler_lock::CondaPackageData::Source(d) => {
+                                                package_records.push(d.package_record.clone());
+                                            }
+                                        }
+                                    }
+                                    LockedPackageRef::Pypi(..) => panic!("pp"),
                                 }
                             }
                         }
