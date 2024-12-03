@@ -14,6 +14,24 @@ fn _get_environment_names(pixi_lock_path: &Path) -> Vec<String> {
     environment_names
 }
 
+fn get_package_record(package: &LockedPackageRef) -> Result<PackageRecord> {
+    match package {
+        LockedPackageRef::Conda(package_data) => {
+            match package_data {
+                rattler_lock::CondaPackageData::Binary(d) => {
+                    Ok(d.package_record.clone())
+                }
+                rattler_lock::CondaPackageData::Source(d) => {
+                    Ok(d.package_record.clone())
+                }
+            }
+        }
+        LockedPackageRef::Pypi(..) => {
+            return Err(anyhow::anyhow!("PyPI packages are not supported"));
+        }
+    }
+}
+
 pub fn get_package_records_for_pixi_lock(
     pixi_lock_path: Option<&Path>,
     mut environment_spec: Vec<String>,
@@ -36,19 +54,7 @@ pub fn get_package_records_for_pixi_lock(
                 for platform in environment.platforms() {
                     if let Some(packages) = environment.packages(platform) {
                         for package in packages {
-                            match package {
-                                LockedPackageRef::Conda(package_data) => {
-                                    match package_data {
-                                        rattler_lock::CondaPackageData::Binary(d) => {
-                                            package_records.push(d.package_record.clone());
-                                        }
-                                        rattler_lock::CondaPackageData::Source(d) => {
-                                            package_records.push(d.package_record.clone());
-                                        }
-                                    }
-                                }
-                                LockedPackageRef::Pypi(..) => panic!("pp"),
-                            }
+                            package_records.push(get_package_record(&package)?);
                         }
                     }
                 }
@@ -61,19 +67,7 @@ pub fn get_package_records_for_pixi_lock(
                     if let Some(environment) = lock.environment(&environment_name) {
                         if let Some(packages) = environment.packages(platform) {
                             for package in packages {
-                                match package {
-                                    LockedPackageRef::Conda(package_data) => {
-                                        match package_data {
-                                            rattler_lock::CondaPackageData::Binary(d) => {
-                                                package_records.push(d.package_record.clone());
-                                            }
-                                            rattler_lock::CondaPackageData::Source(d) => {
-                                                package_records.push(d.package_record.clone());
-                                            }
-                                        }
-                                    }
-                                    LockedPackageRef::Pypi(..) => panic!("pp"),
-                                }
+                                package_records.push(get_package_record(&package)?);
                             }
                         }
                     }
