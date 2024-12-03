@@ -1,0 +1,38 @@
+[project]
+name = "conda-metadata-app"
+version = "0.1.0"
+description = "A streamlit app to query metadata from conda packages"
+authors = ["jaimergp <jaimergp@users.noreply.github.com>"]
+channels = ["conda-forge"]
+platforms = ["linux-64", "win-64", "osx-arm64", "osx-64"]
+
+[tasks]
+dev = "streamlit run --server.runOnSave=true app.py"
+deploy = "streamlit run --server.headless=true --global.developmentMode=false app.py"
+schema = "python app_config.py"
+
+[dependencies]
+python = "3.12.*"
+pip = "23.3.2.*"
+pydantic-settings = ">=2.4.0,<3"
+pydantic = ">=2.8.2,<3"
+typing-extensions = ">=4.12.2,<5"
+zstandard = ">=0.23.0,<0.24"
+py-rattler = ">=0.7.0,<0.8"
+setuptools = "*"
+
+[feature.dev.dependencies]
+pixi-pycharm = ">=0.0.6,<0.0.7"
+
+[pypi-dependencies]
+conda-forge-metadata = ">=0.11.0,<0.12"
+conda-oci-mirror = { git = "https://github.com/channel-mirrors/conda-oci-mirror.git", rev = "25ea3e436f0b0bc5a9c646121efafc9c68e116cd" }    # v0.1.0
+streamlit = ">=1.38.0,<2"
+streamlit-searchbox = "==0.1.16"
+
+[environments]
+default = {}
+dev = { features = ["dev"], no-default-feature = true }
+
+[tool.conda-deny]
+license-whitelist = "license_whitelist.toml"

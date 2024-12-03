@@ -12,7 +12,7 @@ use crate::{
     expression_utils::{check_expression_safety, extract_license_texts, parse_expression},
     license_whitelist::ParsedLicenseWhitelist,
     list,
-    pixi_lock::get_package_records_for_pixi_lock,
+    pixi_lock::get_conda_packages_for_pixi_lock,
     CheckOutput,
 };
 
@@ -148,7 +148,7 @@ impl LicenseInfos {
         let mut package_records = Vec::new();
 
         if lockfiles.is_empty() {
-            let package_records_for_lockfile = get_package_records_for_pixi_lock(
+            let package_records_for_lockfile = get_conda_packages_for_pixi_lock(
                 None,
                 environment_specs.clone(),
                 platforms.clone(),
@@ -159,7 +159,7 @@ impl LicenseInfos {
         } else {
             for lockfile in lockfiles {
                 let path = Path::new(&lockfile);
-                let package_records_for_lockfile = get_package_records_for_pixi_lock(
+                let package_records_for_lockfile = get_conda_packages_for_pixi_lock(
                     Some(path),
                     environment_specs.clone(),
                     platforms.clone(),
