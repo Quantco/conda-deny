@@ -3,7 +3,7 @@ use std::path::Path;
 use anyhow::{Context, Result};
 
 use rattler_conda_types::{PackageRecord, Platform};
-use rattler_lock::{LockFile, LockedPackageRef};
+use rattler_lock::{CondaPackageData, LockFile, LockedPackageRef};
 
 fn _get_environment_names(pixi_lock_path: &Path) -> Vec<String> {
     let lock = LockFile::from_path(pixi_lock_path).unwrap();
@@ -16,16 +16,10 @@ fn _get_environment_names(pixi_lock_path: &Path) -> Vec<String> {
 
 fn get_package_record(package: &LockedPackageRef) -> Result<PackageRecord> {
     match package {
-        LockedPackageRef::Conda(package_data) => {
-            match package_data {
-                rattler_lock::CondaPackageData::Binary(d) => {
-                    Ok(d.package_record.clone())
-                }
-                rattler_lock::CondaPackageData::Source(d) => {
-                    Ok(d.package_record.clone())
-                }
-            }
-        }
+        LockedPackageRef::Conda(package_data) => match package_data {
+            CondaPackageData::Binary(d) => Ok(d.package_record.clone()),
+            CondaPackageData::Source(d) => Ok(d.package_record.clone()),
+        },
         LockedPackageRef::Pypi(..) => {
             return Err(anyhow::anyhow!("PyPI packages are not supported"));
         }
