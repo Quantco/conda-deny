@@ -8,7 +8,10 @@ use reqwest::header::{HeaderMap, HeaderValue, ACCEPT, AUTHORIZATION};
 use serde::Deserialize;
 use spdx::Expression;
 
-use crate::{conda_deny_config::CondaDenyConfig, expression_utils::parse_expression};
+use crate::{
+    conda_deny_config::CondaDenyTomlConfig, expression_utils::parse_expression,
+    CondaDenyCheckConfig,
+};
 
 #[derive(Debug, Deserialize)]
 pub struct LicenseWhitelistConfig {
@@ -196,27 +199,20 @@ pub fn fetch_safe_licenses(
     }
 }
 
-pub fn build_license_whitelist(
-    conda_deny_config: &CondaDenyConfig,
-) -> Result<ParsedLicenseWhitelist> {
-    debug!(
-        "Building license whitelist from config: {}",
-        conda_deny_config.path
-    );
+pub fn build_license_whitelist(config: &CondaDenyCheckConfig) -> Result<ParsedLicenseWhitelist> {
+    // TODO: license whitelist from config as well
+    // let license_whitelist = ParsedLicenseWhitelist::from_toml_file(&conda_deny_config.license_whitelist)
+    //     .with_context(|| {
+    //         format!(
+    //             "Failed to read the TOML file at path: {}",
+    //             conda_deny_config.path
+    //         )
+    //     })?;
+
+    // final_license_whitelist.extend(license_whitelist);
     let mut final_license_whitelist = ParsedLicenseWhitelist::empty();
 
-    // Getting the license whitelist from the config file
-    let license_whitelist = ParsedLicenseWhitelist::from_toml_file(&conda_deny_config.path)
-        .with_context(|| {
-            format!(
-                "Failed to read the TOML file at path: {}",
-                conda_deny_config.path
-            )
-        })?;
-
-    final_license_whitelist.extend(license_whitelist);
-
-    for license_whitelist_path in conda_deny_config.get_license_whitelists() {
+    for license_whitelist_path in config.license_whitelist.iter() {
         if license_whitelist_path.starts_with("http") {
             let reader = RealRemoteConfigReader;
 
@@ -398,7 +394,8 @@ mod tests {
     #[test]
     fn test_get_safe_licenses_local() {
         let conda_deny_config =
-            CondaDenyConfig::from_path("tests/test_remote_base_configs/valid_config.toml").unwrap();
+            CondaDenyTomlConfig::from_path("tests/test_remote_base_configs/valid_config.toml")
+                .unwrap();
         let safe_licenses_whitelist = super::build_license_whitelist(&conda_deny_config).unwrap();
         assert_eq!(safe_licenses_whitelist.safe_licenses.len(), 5);
         assert_eq!(

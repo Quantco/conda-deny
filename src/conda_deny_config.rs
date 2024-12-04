@@ -5,7 +5,7 @@ use std::vec;
 use std::{fs::File, io::Read};
 
 #[derive(Debug, Deserialize)]
-pub struct CondaDenyConfig {
+pub struct CondaDenyTomlConfig {
     tool: Tool,
     #[serde(skip)]
     pub path: String,
@@ -61,9 +61,13 @@ pub struct CondaDeny {
     environment_spec: Option<EnviromentSpec>,
     #[serde(rename = "lockfile")]
     lockfile_spec: Option<LockfileSpec>,
+    #[serde(rename = "osi")]
+    osi: Option<bool>,
+    #[serde(rename = "ignore-pypi")]
+    ignore_pypi: Option<bool>,
 }
 
-impl CondaDenyConfig {
+impl CondaDenyTomlConfig {
     pub fn from_path(filepath: &str) -> Result<Self> {
         let mut file =
             File::open(filepath).with_context(|| format!("Failed to open file: {}", filepath))?;
@@ -72,7 +76,7 @@ impl CondaDenyConfig {
         file.read_to_string(&mut contents)
             .with_context(|| format!("Failed to read file contents: {}", filepath))?;
 
-        let mut config: CondaDenyConfig = toml::from_str(&contents)
+        let mut config: CondaDenyTomlConfig = toml::from_str(&contents)
             .with_context(|| format!("Failed to parse TOML from the file: {}", filepath))?;
 
         config.path = filepath.to_string();
@@ -117,14 +121,24 @@ impl CondaDenyConfig {
         }
     }
 
+    pub fn get_osi(&self) -> Option<bool> {
+        self.tool.conda_deny.osi
+    }
+
+    pub fn get_ignore_pypi(&self) -> Option<bool> {
+        self.tool.conda_deny.ignore_pypi
+    }
+
     pub fn empty() -> Self {
-        CondaDenyConfig {
+        CondaDenyTomlConfig {
             tool: Tool {
                 conda_deny: CondaDeny {
                     license_whitelist: None,
                     platform_spec: None,
                     environment_spec: None,
                     lockfile_spec: None,
+                    osi: None,
+                    ignore_pypi: None,
                 },
             },
             path: "".to_string(),
@@ -143,7 +157,8 @@ mod tests {
     #[test]
     fn test_valid_config_multiple_urls() {
         let test_file_path = format!("{}valid_config_multiple_urls.toml", TEST_FILES);
-        let config = CondaDenyConfig::from_path(&test_file_path).expect("Failed to read config");
+        let config =
+            CondaDenyTomlConfig::from_path(&test_file_path).expect("Failed to read config");
 
         let license_config_paths = config.get_license_whitelists();
         assert_eq!(
@@ -158,7 +173,8 @@ mod tests {
     #[test]
     fn test_missing_optional_fields() {
         let test_file_path = format!("{}missing_optional_fields.toml", TEST_FILES);
-        let config = CondaDenyConfig::from_path(&test_file_path).expect("Failed to read config");
+        let config =
+            CondaDenyTomlConfig::from_path(&test_file_path).expect("Failed to read config");
 
         let license_config_paths = config.get_license_whitelists();
         assert_eq!(
@@ -170,7 +186,7 @@ mod tests {
     #[test]
     fn test_invalid_toml() {
         let test_file_path = format!("{}invalid.toml", TEST_FILES);
-        let result = CondaDenyConfig::from_path(&test_file_path);
+        let result = CondaDenyTomlConfig::from_path(&test_file_path);
 
         assert!(result.is_err());
     }
@@ -178,7 +194,8 @@ mod tests {
     #[test]
     fn test_get_license_config_paths() {
         let test_file_path = format!("{}/valid_config_single_url.toml", TEST_FILES);
-        let config = CondaDenyConfig::from_path(&test_file_path).expect("Failed to read config");
+        let config =
+            CondaDenyTomlConfig::from_path(&test_file_path).expect("Failed to read config");
 
         assert_eq!(
             config.get_license_whitelists(),
@@ -186,7 +203,8 @@ mod tests {
         );
 
         let test_file_path = format!("{}/valid_config_multiple_urls.toml", TEST_FILES);
-        let config = CondaDenyConfig::from_path(&test_file_path).expect("Failed to read config");
+        let config =
+            CondaDenyTomlConfig::from_path(&test_file_path).expect("Failed to read config");
 
         assert_eq!(
             config.get_license_whitelists(),
