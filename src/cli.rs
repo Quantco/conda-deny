@@ -94,15 +94,4 @@ mod tests {
             _ => panic!("Expected check subcommand with --include-safe"),
         }
     }
-
-    #[test]
-    fn test_cli_with_check_osi() {
-        let cli = Cli::try_parse_from(vec!["conda-deny", "check", "--osi"]).unwrap();
-        match cli.command {
-            CondaDenyCliConfig::Check { osi, .. } => {
-                assert!(osi);
-            }
-            _ => panic!("Expected check subcommand with --osi"),
-        }
-    }
 }
