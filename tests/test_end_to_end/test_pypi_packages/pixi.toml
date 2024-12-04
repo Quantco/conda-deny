@@ -1,0 +1,13 @@
+[project]
+	name = "project-with-pypi"
+	channels = ["conda-forge"]
+	platforms = ["linux-64"]
+	
+	[dependencies]
+	python = "3.12.*"
+	
+	[pypi-dependencies]
+	conda-forge-metadata = ">=0.11.0,<0.12"
+	
+	[tool.conda-deny]
+	license-whitelist = "license_whitelist.toml"

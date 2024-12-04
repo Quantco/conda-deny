@@ -12,7 +12,7 @@ use crate::{
     expression_utils::{check_expression_safety, extract_license_texts, parse_expression},
     license_whitelist::ParsedLicenseWhitelist,
     list,
-    pixi_lock::get_package_records_for_pixi_lock,
+    pixi_lock::get_conda_packages_for_pixi_lock,
     CheckOutput,
 };
 
@@ -142,16 +142,18 @@ impl LicenseInfos {
         lockfiles: Vec<String>,
         platforms: Vec<String>,
         environment_specs: Vec<String>,
+        ignore_pypi: bool,
     ) -> Result<LicenseInfos> {
         let mut license_infos = Vec::new();
 
         let mut package_records = Vec::new();
 
         if lockfiles.is_empty() {
-            let package_records_for_lockfile = get_package_records_for_pixi_lock(
+            let package_records_for_lockfile = get_conda_packages_for_pixi_lock(
                 None,
                 environment_specs.clone(),
                 platforms.clone(),
+                ignore_pypi,
             )
             .with_context(|| "Failed to get package records for pixi.lock")?;
 
@@ -159,10 +161,11 @@ impl LicenseInfos {
         } else {
             for lockfile in lockfiles {
                 let path = Path::new(&lockfile);
-                let package_records_for_lockfile = get_package_records_for_pixi_lock(
+                let package_records_for_lockfile = get_conda_packages_for_pixi_lock(
                     Some(path),
                     environment_specs.clone(),
                     platforms.clone(),
+                    ignore_pypi,
                 )
                 .with_context(|| {
                     format!("Failed to get package records from lockfile: {}", &lockfile)
@@ -220,6 +223,7 @@ impl LicenseInfos {
         cli_lockfiles: &[String],
         cli_platforms: &[String],
         cli_environments: &[String],
+        cli_ignore_pypi: bool,
     ) -> Result<LicenseInfos> {
         let mut platforms = config.get_platform_spec().map_or(vec![], |p| p);
         let mut lockfiles = config.get_lockfile_spec();
@@ -229,7 +233,7 @@ impl LicenseInfos {
         lockfiles.extend(cli_lockfiles.to_owned());
         environment_specs.extend(cli_environments.to_owned());
 
-        LicenseInfos::from_pixi_lockfiles(lockfiles, platforms, environment_specs)
+        LicenseInfos::from_pixi_lockfiles(lockfiles, platforms, environment_specs, cli_ignore_pypi)
     }
 
     pub fn check(&self, license_whitelist: &ParsedLicenseWhitelist) -> CheckOutput {
@@ -469,7 +473,7 @@ mod tests {
             "tests/test_pyproject_toml_files/"
         );
         let config = CondaDenyConfig::from_path(&test_file_path).expect("Failed to read config");
-        let license_infos = LicenseInfos::get_license_infos_from_config(&config, &[], &[], &[]);
+        let license_infos = LicenseInfos::get_license_infos_from_config(&config, &[], &[], &[], false);
         assert_eq!(license_infos.unwrap().license_infos.len(), 396);
     }
 }

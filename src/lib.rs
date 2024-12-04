@@ -19,6 +19,7 @@ use log::debug;
 use crate::conda_deny_config::CondaDenyConfig;
 use crate::license_info::LicenseInfos;
 
+// todo: refactor this
 pub type CliInput<'a> = (
     &'a CondaDenyConfig,
     &'a Vec<String>,
@@ -26,11 +27,12 @@ pub type CliInput<'a> = (
     &'a Vec<String>,
     &'a Vec<String>,
     bool,
+    bool,
 );
 pub type CheckOutput = (Vec<LicenseInfo>, Vec<LicenseInfo>);
 
 pub fn fetch_license_infos(cli_input: CliInput) -> Result<LicenseInfos> {
-    let (conda_deny_config, cli_lockfiles, cli_platforms, cli_environments, conda_prefixes, _) =
+    let (conda_deny_config, cli_lockfiles, cli_platforms, cli_environments, conda_prefixes, _, cli_ignore_pypi) =
         cli_input;
 
     if conda_prefixes.is_empty() {
@@ -38,7 +40,8 @@ pub fn fetch_license_infos(cli_input: CliInput) -> Result<LicenseInfos> {
             conda_deny_config,
             cli_lockfiles,
             cli_platforms,
-            cli_environments,
+            cli_environments, 
+            cli_ignore_pypi,
         )
         .with_context(|| "Getting license information from config file failed.")
     } else {
@@ -55,7 +58,7 @@ pub fn list(cli_input: CliInput) -> Result<()> {
 }
 
 pub fn check_license_infos(cli_input: CliInput) -> Result<CheckOutput> {
-    let (conda_deny_config, _, _, _, _, osi) = cli_input;
+    let (conda_deny_config, _, _, _, _, osi, _) = cli_input;
 
     let license_infos =
         fetch_license_infos(cli_input).with_context(|| "Fetching license information failed.")?;
