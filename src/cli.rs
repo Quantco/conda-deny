@@ -36,6 +36,10 @@ pub enum Commands {
 
         #[arg(short, long, action = ArgAction::SetTrue)]
         osi: bool,
+
+        /// Ignore when encountering pypi packages instead of failing.
+        #[arg(long, action = ArgAction::SetTrue)]
+        ignore_pypi: bool,
     },
     List {},
 }

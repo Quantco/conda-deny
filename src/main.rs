@@ -18,6 +18,12 @@ fn main() -> Result<()> {
         _ => false,
     };
 
+    // todo: add an end-to-end test for this
+    let ignore_pypi = match cli.command {
+        Commands::Check { ignore_pypi, .. } => ignore_pypi,
+        _ => false,
+    };
+
     let mut config = CondaDenyConfig::empty();
 
     if !osi {
@@ -59,6 +65,7 @@ fn main() -> Result<()> {
         &cli_environments,
         &conda_prefixes,
         osi,
+        ignore_pypi,
     );
 
     debug!("CLI input for platforms: {:?}", cli_platforms);
@@ -73,6 +80,7 @@ fn main() -> Result<()> {
         Commands::Check {
             include_safe,
             osi: _,
+            ignore_pypi: _
         } => {
             debug!("Check command called.");
 
