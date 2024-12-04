@@ -1,8 +1,8 @@
 use anyhow::{Context, Result};
 use clap::Parser;
 use conda_deny::cli::{Cli, CondaDenyCliConfig};
-use conda_deny::conda_deny_config::CondaDenyTomlConfig;
-use conda_deny::{check_license_infos, format_check_output, list};
+use conda_deny::conda_deny_config::{CondaDeny, CondaDenyTomlConfig};
+use conda_deny::{check_license_infos, format_check_output, list, CondaDenyListConfig};
 use conda_deny::{CondaDenyCheckConfig, CondaDenyConfig};
 use log::{debug, info, trace};
 
@@ -109,7 +109,48 @@ fn get_config_options(cli: Cli) -> Result<CondaDenyConfig> {
                 license_whitelist: toml_config.get_license_whitelists(),
             })
         }
-        CondaDenyCliConfig::List {} => CondaDenyConfig::List {},
+        CondaDenyCliConfig::List {lockfile,
+            prefix,
+            platform,
+            environment} => {
+
+            // todo: refactor with check
+            // cli overrides toml configuration
+            let lockfile = lockfile.unwrap_or(toml_config.get_lockfile_spec());
+            let prefix = prefix.unwrap_or_default();
+            if lockfile.is_empty() && prefix.is_empty() {
+                return Err(anyhow::anyhow!("No lockfiles or conda prefixes provided"));
+            }
+
+            let platform = if platform.is_some() {
+                platform
+            } else {
+                toml_config.get_platform_spec()
+            };
+            if platform.is_some() && !prefix.is_empty() {
+                return Err(anyhow::anyhow!(
+                    "Cannot specify platforms and conda prefixes at the same time"
+                ));
+            }
+
+            let environment = if environment.is_some() {
+                environment
+            } else {
+                toml_config.get_environment_spec()
+            };
+            if environment.is_some() && !prefix.is_empty() {
+                return Err(anyhow::anyhow!(
+                    "Cannot specify environments and conda prefixes at the same time"
+                ));
+            }
+
+            CondaDenyConfig::List(CondaDenyListConfig {
+                prefix,
+                lockfile,
+                platform,
+                environment,
+            })
+        },
     };
 
     Ok(config)
@@ -146,10 +187,8 @@ fn main() -> Result<()> {
             };
             Ok(())
         }
-        CondaDenyConfig::List {} => {
-            debug!("List command called");
-            panic!("TODO");
-            // list(&config)?;
+        CondaDenyConfig::List(list_config) => {
+            list(&list_config)?;
             Ok(())
         }
     }

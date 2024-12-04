@@ -7,7 +7,6 @@ use spdx::Expression;
 use colored::*;
 
 use crate::{
-    conda_deny_config::CondaDenyTomlConfig,
     conda_meta_entry::{CondaMetaEntries, CondaMetaEntry},
     expression_utils::{check_expression_safety, extract_license_texts, parse_expression},
     license_whitelist::ParsedLicenseWhitelist,

@@ -16,15 +16,15 @@ use license_whitelist::build_license_whitelist;
 use anyhow::{Context, Result};
 use log::debug;
 
-use crate::conda_deny_config::CondaDenyTomlConfig;
 use crate::license_info::LicenseInfos;
 
 #[derive(Debug)]
 pub enum CondaDenyConfig {
     Check(CondaDenyCheckConfig),
-    List {},
+    List(CondaDenyListConfig),
 }
 
+/// Configuration for the check command
 #[derive(Debug)]
 pub struct CondaDenyCheckConfig {
     pub prefix: Vec<String>,
@@ -37,26 +37,15 @@ pub struct CondaDenyCheckConfig {
     pub license_whitelist: Vec<String>,
 }
 
+/// Shared configuration between check and list commands
 #[derive(Debug)]
 pub struct CondaDenyListConfig {
     pub prefix: Vec<String>,
     pub lockfile: Vec<String>,
     pub platform: Option<Vec<String>>,
     pub environment: Option<Vec<String>>,
-    pub include_safe: bool,
-    pub ignore_pypi: bool,
 }
 
-// todo: refactor this
-pub type CliInput<'a> = (
-    &'a CondaDenyTomlConfig,
-    &'a Vec<String>,
-    &'a Vec<String>,
-    &'a Vec<String>,
-    &'a Vec<String>,
-    bool,
-    bool,
-);
 pub type CheckOutput = (Vec<LicenseInfo>, Vec<LicenseInfo>);
 
 pub fn fetch_license_infos(config: &CondaDenyCheckConfig) -> Result<LicenseInfos> {
@@ -70,12 +59,12 @@ pub fn fetch_license_infos(config: &CondaDenyCheckConfig) -> Result<LicenseInfos
     }
 }
 
-pub fn list(config: CondaDenyListConfig) -> Result<()> {
+pub fn list(config: &CondaDenyListConfig) -> Result<()> {
     panic!("TODO");
     // let license_infos =
     //     fetch_license_infos(config).with_context(|| "Fetching license information failed.")?;
     // license_infos.list();
-    // Ok(())
+    Ok(())
 }
 
 pub fn check_license_infos(config: &CondaDenyCheckConfig) -> Result<CheckOutput> {

@@ -396,19 +396,20 @@ mod tests {
         let conda_deny_config =
             CondaDenyTomlConfig::from_path("tests/test_remote_base_configs/valid_config.toml")
                 .unwrap();
-        let safe_licenses_whitelist = super::build_license_whitelist(&conda_deny_config).unwrap();
-        assert_eq!(safe_licenses_whitelist.safe_licenses.len(), 5);
-        assert_eq!(
-            safe_licenses_whitelist.safe_licenses,
-            vec![
-                parse_expression("MIT").unwrap(),
-                parse_expression("PSF-2.0").unwrap(),
-                parse_expression("Apache-2.0").unwrap(),
-                parse_expression("Unlicense").unwrap(),
-                parse_expression("WTFPL").unwrap()
-            ]
-        );
-        assert_eq!(safe_licenses_whitelist.ignore_packages.len(), 2);
-        assert_eq!(safe_licenses_whitelist.ignore_packages[0].version, None);
+        panic!("TODO");
+        // let safe_licenses_whitelist = super::build_license_whitelist(&conda_deny_config).unwrap();
+        // assert_eq!(safe_licenses_whitelist.safe_licenses.len(), 5);
+        // assert_eq!(
+        //     safe_licenses_whitelist.safe_licenses,
+        //     vec![
+        //         parse_expression("MIT").unwrap(),
+        //         parse_expression("PSF-2.0").unwrap(),
+        //         parse_expression("Apache-2.0").unwrap(),
+        //         parse_expression("Unlicense").unwrap(),
+        //         parse_expression("WTFPL").unwrap()
+        //     ]
+        // );
+        // assert_eq!(safe_licenses_whitelist.ignore_packages.len(), 2);
+        // assert_eq!(safe_licenses_whitelist.ignore_packages[0].version, None);
     }
 }

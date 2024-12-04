@@ -46,7 +46,23 @@ pub enum CondaDenyCliConfig {
         #[arg(long)]
         ignore_pypi: Option<bool>,
     },
-    List {},
+    List {
+        /// Path to the pixi lockfile(s)
+        #[arg(short, long)]
+        lockfile: Option<Vec<String>>,
+
+        /// Path to the conda prefix(es)
+        #[arg(long, global = true)]
+        prefix: Option<Vec<String>>,
+
+        /// Platform(s) to list
+        #[arg(short, long)]
+        platform: Option<Vec<String>>,
+
+        /// Environment(s) to list
+        #[arg(short, long)]
+        environment: Option<Vec<String>>,
+    },
 }
 
 #[cfg(test)]
