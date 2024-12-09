@@ -11,10 +11,11 @@ mod read_remote;
 
 use colored::Colorize;
 use license_info::LicenseInfo;
-use license_whitelist::build_license_whitelist;
+use license_whitelist::{build_license_whitelist, IgnorePackage, ParsedLicenseWhitelist};
 
 use anyhow::{Context, Result};
 use log::debug;
+use spdx::Expression;
 
 use crate::license_info::LicenseInfos;
 
@@ -34,7 +35,8 @@ pub struct CondaDenyCheckConfig {
     pub include_safe: bool,
     pub osi: bool,
     pub ignore_pypi: bool,
-    pub license_whitelist: Vec<String>,
+    pub safe_licenses: Vec<Expression>,
+    pub ignore_packages: Vec<IgnorePackage>,
 }
 
 /// Shared configuration between check and list commands
@@ -75,10 +77,8 @@ pub fn check_license_infos(config: &CondaDenyCheckConfig) -> Result<CheckOutput>
         debug!("Checking licenses for OSI compliance");
         Ok(license_infos.osi_check())
     } else {
-        let license_whitelist = build_license_whitelist(config)
-            .with_context(|| "Building the license whitelist failed.")?;
         debug!("Checking licenses against specified whitelist");
-        Ok(license_infos.check(&license_whitelist))
+        Ok(license_infos.check(&config))
     }
 }
 

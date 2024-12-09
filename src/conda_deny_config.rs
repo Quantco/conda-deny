@@ -4,9 +4,11 @@ use serde::Deserialize;
 use std::vec;
 use std::{fs::File, io::Read};
 
+use crate::license_whitelist::IgnorePackage;
+
 #[derive(Debug, Deserialize)]
 pub struct CondaDenyTomlConfig {
-    tool: Tool,
+    pub tool: Tool,
     #[serde(skip)]
     pub path: String,
 }
@@ -14,7 +16,7 @@ pub struct CondaDenyTomlConfig {
 #[derive(Debug, Deserialize)]
 pub struct Tool {
     #[serde(rename = "conda-deny")]
-    conda_deny: CondaDeny,
+    pub conda_deny: CondaDeny,
 }
 
 #[derive(Debug, Deserialize, Clone)]
@@ -65,6 +67,10 @@ pub struct CondaDeny {
     osi: Option<bool>,
     #[serde(rename = "ignore-pypi")]
     ignore_pypi: Option<bool>,
+    #[serde(rename = "safe-licenses")]
+    pub safe_licenses: Option<Vec<String>>,
+    #[serde(rename = "ignore-packages")]
+    pub ignore_packages: Option<Vec<IgnorePackage>>,
 }
 
 impl CondaDenyTomlConfig {
@@ -139,6 +145,8 @@ impl CondaDenyTomlConfig {
                     lockfile_spec: None,
                     osi: None,
                     ignore_pypi: None,
+                    safe_licenses: None,
+                    ignore_packages: None,
                 },
             },
             path: "".to_string(),

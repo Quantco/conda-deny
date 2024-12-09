@@ -44,6 +44,42 @@ struct LicenseWhitelist {
     ignore_packages: Option<Vec<IgnorePackage>>,
 }
 
+pub fn is_package_ignored_2(safe_licenses: Vec<Expression>, package_name: &str, package_version: &str) -> Result<bool> {
+    let parsed_package_version = Version::from_str(package_version).with_context(|| {
+        format!(
+            "Error parsing package version: {} for package: {}",
+            package_version, package_name
+        )
+    })?;
+
+    for ignore_package in &self.ignore_packages {
+        if ignore_package.package == package_name {
+            match &ignore_package.version {
+                Some(version_req_str) => {
+                    let version_req =
+                        VersionSpec::from_str(version_req_str, ParseStrictness::Strict)
+                            .with_context(|| {
+                                format!(
+                                    "Error parsing version requirement: {} for package: {}",
+                                    version_req_str, package_name
+                                )
+                            })?;
+
+                    if version_req.matches(&parsed_package_version) {
+                        return Ok(true);
+                    }
+                }
+                None => {
+                    return Ok(true);
+                }
+            }
+        }
+    }
+
+    // If no matches were found, the package is not ignored
+    Ok(false)
+}
+
 impl ParsedLicenseWhitelist {
     pub fn from_toml_file(toml_file: &str) -> Result<ParsedLicenseWhitelist> {
         let config_content = fs::read_to_string(toml_file)
@@ -199,7 +235,7 @@ pub fn fetch_safe_licenses(
     }
 }
 
-pub fn build_license_whitelist(config: &CondaDenyCheckConfig) -> Result<ParsedLicenseWhitelist> {
+pub fn build_license_whitelist(license_whitelist: &Vec<String>) -> Result<ParsedLicenseWhitelist> {
     // TODO: license whitelist from config as well
     // let license_whitelist = ParsedLicenseWhitelist::from_toml_file(&conda_deny_config.license_whitelist)
     //     .with_context(|| {
@@ -212,7 +248,7 @@ pub fn build_license_whitelist(config: &CondaDenyCheckConfig) -> Result<ParsedLi
     // final_license_whitelist.extend(license_whitelist);
     let mut final_license_whitelist = ParsedLicenseWhitelist::empty();
 
-    for license_whitelist_path in config.license_whitelist.iter() {
+    for license_whitelist_path in license_whitelist.iter() {
         if license_whitelist_path.starts_with("http") {
             let reader = RealRemoteConfigReader;
 

@@ -230,14 +230,14 @@ impl LicenseInfos {
 
     // }
 
-    pub fn check(&self, license_whitelist: &ParsedLicenseWhitelist) -> CheckOutput {
+    pub fn check(&self, config: &CondaDenyCheckConfig) -> CheckOutput {
         let mut safe_dependencies = Vec::new();
         let mut unsafe_dependencies = Vec::new();
 
         for license_info in &self.license_infos {
             match &license_info.license {
                 LicenseState::Valid(license) => {
-                    if check_expression_safety(license, &license_whitelist.safe_licenses)
+                    if check_expression_safety(license, &config.safe_licenses)
                         || license_whitelist
                             .is_package_ignored(&license_info.package_name, &license_info.version)
                             .unwrap()
