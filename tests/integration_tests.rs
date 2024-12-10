@@ -53,11 +53,24 @@ mod tests {
 
     #[test]
     fn test_remote_whitelist_list() {
-        let test_dir = Path::new("tests/test_end_to_end/test_remote_whitelist");
+        // todo: this test doesn't make sense
+        let cli = CondaDenyCliConfig::List {
+            lockfile: None,
+            prefix: Some(vec!["../../../tests/test_conda_prefixes/test-env".into()]),
+            platform: None,
+            environment: None,
+        };
 
-        let mut command = Command::cargo_bin("conda-deny").unwrap();
-        command.arg("list").current_dir(test_dir);
-        command.assert().success();
+        let config = get_config_options(
+            Some("tests/test_end_to_end/test_remote_whitelist/pixi.toml".into()), cli
+        ).unwrap();
+
+        let mut out = Vec::new();
+        let result = match config {
+            CondaDenyConfig::List(list_config) => list(&list_config, &mut out),
+            _ => panic!()
+        };
+        assert!(result.is_ok());
     }
 
     #[test]
