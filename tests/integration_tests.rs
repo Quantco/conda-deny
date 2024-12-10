@@ -3,7 +3,6 @@ mod tests {
     use assert_cmd::prelude::*;
     use conda_deny::cli::CondaDenyCliConfig;
     use conda_deny::{get_config_options, list, CondaDenyConfig};
-    use core::str;
     use std::path::Path;
     use std::process::Command;
 
