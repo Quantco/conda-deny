@@ -1,6 +1,8 @@
 #[cfg(test)]
 mod tests {
     use assert_cmd::prelude::*;
+    use conda_deny::cli::CondaDenyCliConfig;
+    use conda_deny::{get_config_options, list, CondaDenyConfig};
     use core::str;
     use std::path::Path;
     use std::process::Command;
@@ -99,27 +101,26 @@ mod tests {
     fn test_prefix_list() {
         // When --prefix is specified, only the license information for the conda-meta directory in the specified prefix should be listed
         // License information from pixi.lock should not be listed
+        let cli = CondaDenyCliConfig::List {
+            lockfile: None,
+            prefix: Some(vec!["../../../tests/test_conda_prefixes/test-env".into()]),
+            platform: None,
+            environment: None,
+        };
 
-        let test_dir = Path::new("tests/test_end_to_end/test_prefix_list");
+        let config = get_config_options(
+            Some("tests/test_end_to_end/test_prefix_list/pixi.toml".into()),
+            cli,
+        )
+        .unwrap();
 
-        let output = Command::cargo_bin("conda-deny")
-            .unwrap()
-            .arg("list")
-            .arg("--prefix")
-            .arg("../../../tests/test_conda_prefixes/test-env")
-            .current_dir(test_dir)
-            .output()
-            .expect("Failed to execute command");
-
-        assert!(
-            output.status.success(),
-            "Command did not execute successfully"
-        );
-
-        let stdout = str::from_utf8(&output.stdout).expect("Failed to convert output to string");
-
-        let line_count = stdout.lines().count();
-
+        let mut out = Vec::new();
+        let result = match config {
+            CondaDenyConfig::List(list_config) => list(&list_config, &mut out),
+            _ => panic!(),
+        };
+        assert!(result.is_ok());
+        let line_count = String::from_utf8(out).unwrap().split("\n").count();
         let expected_line_count = 50;
         assert_eq!(
             line_count, expected_line_count,

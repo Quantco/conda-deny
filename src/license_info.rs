@@ -238,8 +238,12 @@ impl LicenseInfos {
             match &license_info.license {
                 LicenseState::Valid(license) => {
                     if check_expression_safety(license, &config.safe_licenses)
-                        || is_package_ignored_2(&config.ignore_packages, &license_info.package_name, &license_info.version)
-                            .unwrap()
+                        || is_package_ignored_2(
+                            &config.ignore_packages,
+                            &license_info.package_name,
+                            &license_info.version,
+                        )
+                        .unwrap()
                     {
                         safe_dependencies.push(license_info.clone());
                     } else {
@@ -247,8 +251,12 @@ impl LicenseInfos {
                     }
                 }
                 LicenseState::Invalid(_) => {
-                    if is_package_ignored_2(&config.ignore_packages, &license_info.package_name, &license_info.version)
-                        .unwrap()
+                    if is_package_ignored_2(
+                        &config.ignore_packages,
+                        &license_info.package_name,
+                        &license_info.version,
+                    )
+                    .unwrap()
                     {
                         safe_dependencies.push(license_info.clone());
                     } else {
@@ -387,20 +395,26 @@ mod tests {
             license_infos: vec![safe_license_info.clone(), safe_license_info.clone()],
         };
 
-        panic!("TODO");
+        let safe_licenses = vec![Expression::parse("MIT").unwrap()];
+        let ignore_packages = vec![];
 
-        // let license_whitelist = ParsedLicenseWhitelist {
-        //     safe_licenses: vec![Expression::parse("MIT").unwrap()],
-        //     ignore_packages: vec![],
-        // };
+        let config = CondaDenyCheckConfig {
+            prefix: vec![],
+            lockfile: vec![],
+            platform: None,
+            environment: None,
+            include_safe: false,
+            osi: false,
+            ignore_pypi: false,
+            safe_licenses,
+            ignore_packages,
+        };
 
-        // let (_safe_dependencies, _unsafe_dependencies) =
-        //     unsafe_license_infos.check(&license_whitelist);
-        // assert!(!_unsafe_dependencies.is_empty());
+        let (_safe_dependencies, _unsafe_dependencies) = unsafe_license_infos.check(&config);
+        assert!(!_unsafe_dependencies.is_empty());
 
-        // let (_safe_dependencies, _unsafe_dependencies) =
-        //     safe_license_infos.check(&license_whitelist);
-        // assert!(_unsafe_dependencies.is_empty());
+        let (_safe_dependencies, _unsafe_dependencies) = safe_license_infos.check(&config);
+        assert!(_unsafe_dependencies.is_empty());
     }
 
     #[test]
