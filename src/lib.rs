@@ -2,7 +2,7 @@ pub mod cli;
 pub mod conda_deny_config;
 mod conda_meta_entry;
 mod conda_meta_package;
-mod expression_utils;
+pub mod expression_utils;
 mod license_info;
 pub mod license_whitelist;
 mod list;
@@ -11,7 +11,7 @@ mod read_remote;
 
 use colored::Colorize;
 use license_info::LicenseInfo;
-use license_whitelist::{build_license_whitelist, IgnorePackage, ParsedLicenseWhitelist};
+use license_whitelist::IgnorePackage;
 
 use anyhow::{Context, Result};
 use log::debug;

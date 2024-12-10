@@ -8,10 +8,7 @@ use reqwest::header::{HeaderMap, HeaderValue, ACCEPT, AUTHORIZATION};
 use serde::Deserialize;
 use spdx::Expression;
 
-use crate::{
-    conda_deny_config::CondaDenyTomlConfig, expression_utils::parse_expression,
-    CondaDenyCheckConfig,
-};
+use crate::expression_utils::parse_expression;
 
 #[derive(Debug, Deserialize)]
 pub struct LicenseWhitelistConfig {
@@ -30,7 +27,7 @@ pub struct ParsedLicenseWhitelist {
     pub ignore_packages: Vec<IgnorePackage>,
 }
 
-#[derive(Debug, Deserialize)]
+#[derive(Debug, Deserialize, Clone)]
 pub struct IgnorePackage {
     package: String,
     version: Option<String>,
@@ -44,7 +41,7 @@ struct LicenseWhitelist {
     ignore_packages: Option<Vec<IgnorePackage>>,
 }
 
-pub fn is_package_ignored_2(safe_licenses: Vec<Expression>, package_name: &str, package_version: &str) -> Result<bool> {
+pub fn is_package_ignored_2(ignore_packages: &Vec<IgnorePackage>, package_name: &str, package_version: &str) -> Result<bool> {
     let parsed_package_version = Version::from_str(package_version).with_context(|| {
         format!(
             "Error parsing package version: {} for package: {}",
@@ -52,7 +49,7 @@ pub fn is_package_ignored_2(safe_licenses: Vec<Expression>, package_name: &str, 
         )
     })?;
 
-    for ignore_package in &self.ignore_packages {
+    for ignore_package in ignore_packages {
         if ignore_package.package == package_name {
             match &ignore_package.version {
                 Some(version_req_str) => {
@@ -288,6 +285,8 @@ pub fn build_license_whitelist(license_whitelist: &Vec<String>) -> Result<Parsed
 
 #[cfg(test)]
 mod tests {
+    use crate::conda_deny_config::CondaDenyTomlConfig;
+
     use super::*;
     use async_trait::async_trait;
     use std::error::Error;

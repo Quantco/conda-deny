@@ -1,12 +1,12 @@
 use anyhow::{Context, Result};
 use clap::Parser;
 use conda_deny::cli::{Cli, CondaDenyCliConfig};
-use conda_deny::conda_deny_config::{CondaDeny, CondaDenyTomlConfig};
+use conda_deny::conda_deny_config::CondaDenyTomlConfig;
 use conda_deny::expression_utils::parse_expression;
 use conda_deny::license_whitelist::build_license_whitelist;
 use conda_deny::{check_license_infos, format_check_output, list, CondaDenyListConfig};
 use conda_deny::{CondaDenyCheckConfig, CondaDenyConfig};
-use log::{debug, info, trace};
+use log::{debug, info};
 
 fn get_config_options(cli: Cli) -> Result<CondaDenyConfig> {
     let toml_config = if let Some(config_path) = cli.config {
@@ -101,29 +101,31 @@ fn get_config_options(cli: Cli) -> Result<CondaDenyConfig> {
             .unwrap_or(false);
 
             // licenses
-            let license_whitelists = toml_config.get_license_whitelists();
-
             // todo: make prettier
             let safe_licenses_from_toml = toml_config
                 .tool
                 .conda_deny
                 .safe_licenses
+                .clone()
                 .unwrap_or_default();
             let ignore_packages_from_toml = toml_config
                 .tool
                 .conda_deny
                 .ignore_packages
+                .clone()
                 .unwrap_or_default();
 
-            let license_whitelist_urls = toml_config.get_license_whitelists();
+            let license_whitelist_urls = toml_config.get_license_whitelists().clone();
             let license_whitelists_remote = build_license_whitelist(&license_whitelist_urls)?;
             let safe_licenses = safe_licenses_from_toml
                 .iter()
-                .map(|license_str| parse_expression(license_str)?)
+                .map(|license_str| parse_expression(license_str))
+                .collect::<Result<Vec<_>>>()?
+                .into_iter()
                 .chain(license_whitelists_remote.safe_licenses)
                 .collect::<Vec<_>>();
             let ignore_packages = ignore_packages_from_toml
-                .iter()
+                .iter().cloned()
                 .chain(license_whitelists_remote.ignore_packages)
                 .collect::<Vec<_>>();
 
@@ -135,7 +137,7 @@ fn get_config_options(cli: Cli) -> Result<CondaDenyConfig> {
                 include_safe,
                 osi,
                 ignore_pypi,
-                safe_licenses: safe_licenes,
+                safe_licenses,
                 ignore_packages,
             })
         }

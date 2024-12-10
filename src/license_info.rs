@@ -9,7 +9,7 @@ use colored::*;
 use crate::{
     conda_meta_entry::{CondaMetaEntries, CondaMetaEntry},
     expression_utils::{check_expression_safety, extract_license_texts, parse_expression},
-    license_whitelist::ParsedLicenseWhitelist,
+    license_whitelist::is_package_ignored_2,
     list,
     pixi_lock::get_conda_packages_for_pixi_lock,
     CheckOutput, CondaDenyCheckConfig,
@@ -238,8 +238,7 @@ impl LicenseInfos {
             match &license_info.license {
                 LicenseState::Valid(license) => {
                     if check_expression_safety(license, &config.safe_licenses)
-                        || license_whitelist
-                            .is_package_ignored(&license_info.package_name, &license_info.version)
+                        || is_package_ignored_2(&config.ignore_packages, &license_info.package_name, &license_info.version)
                             .unwrap()
                     {
                         safe_dependencies.push(license_info.clone());
@@ -248,8 +247,7 @@ impl LicenseInfos {
                     }
                 }
                 LicenseState::Invalid(_) => {
-                    if license_whitelist
-                        .is_package_ignored(&license_info.package_name, &license_info.version)
+                    if is_package_ignored_2(&config.ignore_packages, &license_info.package_name, &license_info.version)
                         .unwrap()
                     {
                         safe_dependencies.push(license_info.clone());
@@ -389,18 +387,20 @@ mod tests {
             license_infos: vec![safe_license_info.clone(), safe_license_info.clone()],
         };
 
-        let license_whitelist = ParsedLicenseWhitelist {
-            safe_licenses: vec![Expression::parse("MIT").unwrap()],
-            ignore_packages: vec![],
-        };
+        panic!("TODO");
 
-        let (_safe_dependencies, _unsafe_dependencies) =
-            unsafe_license_infos.check(&license_whitelist);
-        assert!(!_unsafe_dependencies.is_empty());
+        // let license_whitelist = ParsedLicenseWhitelist {
+        //     safe_licenses: vec![Expression::parse("MIT").unwrap()],
+        //     ignore_packages: vec![],
+        // };
 
-        let (_safe_dependencies, _unsafe_dependencies) =
-            safe_license_infos.check(&license_whitelist);
-        assert!(_unsafe_dependencies.is_empty());
+        // let (_safe_dependencies, _unsafe_dependencies) =
+        //     unsafe_license_infos.check(&license_whitelist);
+        // assert!(!_unsafe_dependencies.is_empty());
+
+        // let (_safe_dependencies, _unsafe_dependencies) =
+        //     safe_license_infos.check(&license_whitelist);
+        // assert!(_unsafe_dependencies.is_empty());
     }
 
     #[test]
