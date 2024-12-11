@@ -26,6 +26,6 @@ fn main() -> Result<()> {
 
     match config {
         CondaDenyConfig::Check(check_config) => check(check_config, stdout),
-        CondaDenyConfig::List(list_config) => list(&list_config, stdout),
+        CondaDenyConfig::List(list_config) => list(list_config, stdout),
     }
 }

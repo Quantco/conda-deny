@@ -155,7 +155,7 @@ fn test_prefix_list(
 ) {
     // When --prefix is specified, only the license information for the conda-meta directory in the specified prefix should be listed
     // License information from pixi.lock should not be listed
-    let result = list(&list_config, &mut out);
+    let result = list(list_config, &mut out);
     assert!(result.is_ok(), "{:?}", result.unwrap_err());
     let line_count = String::from_utf8(out).unwrap().split("\n").count();
     let expected_line_count = 50;

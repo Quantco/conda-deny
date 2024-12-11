@@ -130,7 +130,6 @@ fn get_lockfile_or_prefix(
 }
 
 pub fn get_config_options(
-    // todo: make this a PathBuf
     config: Option<PathBuf>,
     cli_config: CondaDenyCliConfig,
 ) -> Result<CondaDenyConfig> {
