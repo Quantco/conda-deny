@@ -1,5 +1,6 @@
 use anyhow::{Context, Result};
 use log::debug;
+use rattler_conda_types::Platform;
 use serde::Deserialize;
 use std::vec;
 use std::{fs::File, io::Read};
@@ -29,8 +30,8 @@ pub enum LicenseWhitelist {
 #[derive(Debug, Deserialize, Clone)]
 #[serde(untagged)]
 pub enum PlatformSpec {
-    Single(String),
-    Multiple(Vec<String>),
+    Single(Platform),
+    Multiple(Vec<Platform>),
 }
 
 #[derive(Debug, Deserialize, Clone)]
@@ -103,7 +104,7 @@ impl CondaDenyTomlConfig {
         }
     }
 
-    pub fn get_platform_spec(&self) -> Option<Vec<String>> {
+    pub fn get_platform_spec(&self) -> Option<Vec<Platform>> {
         match &self.tool.conda_deny.platform_spec {
             Some(PlatformSpec::Single(name)) => Some(vec![name.clone()]),
             Some(PlatformSpec::Multiple(names)) => Some(names.clone()),
@@ -165,8 +166,7 @@ mod tests {
     #[test]
     fn test_valid_config_multiple_urls() {
         let test_file_path = format!("{}valid_config_multiple_urls.toml", TEST_FILES);
-        let config =
-            CondaDenyTomlConfig::from_path(&test_file_path).expect("Failed to read config");
+        let config = CondaDenyTomlConfig::from_path(&test_file_path).unwrap();
 
         let license_config_paths = config.get_license_whitelists();
         assert_eq!(
@@ -181,8 +181,7 @@ mod tests {
     #[test]
     fn test_missing_optional_fields() {
         let test_file_path = format!("{}missing_optional_fields.toml", TEST_FILES);
-        let config =
-            CondaDenyTomlConfig::from_path(&test_file_path).expect("Failed to read config");
+        let config = CondaDenyTomlConfig::from_path(&test_file_path).unwrap();
 
         let license_config_paths = config.get_license_whitelists();
         assert_eq!(
@@ -202,8 +201,7 @@ mod tests {
     #[test]
     fn test_get_license_config_paths() {
         let test_file_path = format!("{}/valid_config_single_url.toml", TEST_FILES);
-        let config =
-            CondaDenyTomlConfig::from_path(&test_file_path).expect("Failed to read config");
+        let config = CondaDenyTomlConfig::from_path(&test_file_path).unwrap();
 
         assert_eq!(
             config.get_license_whitelists(),
@@ -211,8 +209,7 @@ mod tests {
         );
 
         let test_file_path = format!("{}/valid_config_multiple_urls.toml", TEST_FILES);
-        let config =
-            CondaDenyTomlConfig::from_path(&test_file_path).expect("Failed to read config");
+        let config = CondaDenyTomlConfig::from_path(&test_file_path).unwrap();
 
         assert_eq!(
             config.get_license_whitelists(),

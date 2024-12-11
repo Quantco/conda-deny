@@ -3,6 +3,7 @@ use conda_deny::cli::CondaDenyCliConfig;
 use conda_deny::{
     check, get_config_options, list, CondaDenyCheckConfig, CondaDenyConfig, CondaDenyListConfig,
 };
+use rattler_conda_types::Platform;
 use rstest::{fixture, rstest};
 use std::path::{Path, PathBuf};
 use std::process::Command;
@@ -12,7 +13,7 @@ fn list_config(
     #[default(None)] config: Option<PathBuf>,
     #[default(None)] lockfile: Option<Vec<String>>,
     #[default(None)] prefix: Option<Vec<String>>,
-    #[default(None)] platform: Option<Vec<String>>,
+    #[default(None)] platform: Option<Vec<Platform>>,
     #[default(None)] environment: Option<Vec<String>>,
     #[default(None)] ignore_pypi: Option<bool>,
 ) -> CondaDenyListConfig {
@@ -25,7 +26,7 @@ fn list_config(
     };
 
     let config = get_config_options(
-        config.map(|p| p.to_str().unwrap().to_string()), // todo: prettier
+        config.map(|p| p.to_str().unwrap().to_string()),
         cli,
     )
     .unwrap();
@@ -41,7 +42,7 @@ fn check_config(
     #[default(None)] config: Option<PathBuf>,
     #[default(None)] lockfile: Option<Vec<String>>,
     #[default(None)] prefix: Option<Vec<String>>,
-    #[default(None)] platform: Option<Vec<String>>,
+    #[default(None)] platform: Option<Vec<Platform>>,
     #[default(None)] environment: Option<Vec<String>>,
     #[default(None)] osi: Option<bool>,
     #[default(None)] ignore_pypi: Option<bool>,
@@ -57,7 +58,7 @@ fn check_config(
     };
 
     let config = get_config_options(
-        config.map(|p| p.to_str().unwrap().to_string()), // todo: prettier
+        config.map(|p| p.to_str().unwrap().to_string()),
         cli,
     );
     let config = config.unwrap();
@@ -107,21 +108,6 @@ fn test_remote_whitelist_check(
 }
 
 #[rstest]
-fn test_remote_whitelist_list(
-    #[with(
-        Some(PathBuf::from("tests/test_end_to_end/test_remote_whitelist/pixi.toml")),
-        None,
-        Some(vec!["tests/test_conda_prefixes/test-env".into()]),
-    )]
-    list_config: CondaDenyListConfig,
-    mut out: Vec<u8>,
-) {
-    // todo: this test doesn't make sense
-    let result = list(&list_config, &mut out);
-    assert!(result.is_ok());
-}
-
-#[rstest]
 fn test_multiple_whitelists_check(
     #[with(
         Some(PathBuf::from("tests/test_end_to_end/test_multiple_whitelists/pixi.toml")),
@@ -132,17 +118,6 @@ fn test_multiple_whitelists_check(
 ) {
     let result = check(check_config, &mut out);
     assert!(result.is_err());
-}
-
-#[rstest]
-fn test_multiple_whitelists_list(
-    #[with(Some(PathBuf::from("tests/test_end_to_end/test_multiple_whitelists/pixi.toml")), Some(vec!["tests/test_end_to_end/test_multiple_whitelists/pixi.lock".into()]))]
-    list_config: CondaDenyListConfig,
-    mut out: Vec<u8>,
-) {
-    // todo this test doesn't make sense
-    let result = list(&list_config, &mut out);
-    assert!(result.is_ok());
 }
 
 #[rstest]
@@ -211,10 +186,11 @@ fn test_exception_check() {
     };
 
     let config = get_config_options(
-        Some("tests/test_end_to_end/test_exception_use_case/pixi.toml".into()), // todo: prettier
+        Some("tests/test_end_to_end/test_exception_use_case/pixi.toml".into()),
         cli,
     );
 
     assert!(config.is_err());
-    // todo error message
+    let err_string = config.unwrap_err().to_string();
+    assert!(err_string.contains("No lockfiles or conda prefixes provided"), "{}", err_string);
 }

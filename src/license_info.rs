@@ -451,15 +451,4 @@ mod tests {
 
         assert_eq!(license_infos.license_infos.len(), 1);
     }
-
-    // #[test]
-    // fn test_license_infos_from_config() {
-    //     let test_file_path = format!(
-    //         "{}test_config_for_license_infos.toml",
-    //         "tests/test_pyproject_toml_files/"
-    //     );
-    //     let config = CondaDenyTomlConfig::from_path(&test_file_path).expect("Failed to read config");
-    //     let license_infos = LicenseInfos::get_license_infos_from_config(&config, &[], &[], &[], false);
-    //     assert_eq!(license_infos.unwrap().license_infos.len(), 396);
-    // }
 }

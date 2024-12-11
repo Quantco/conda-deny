@@ -2,6 +2,7 @@ use clap::ArgAction;
 use clap_verbosity_flag::{ErrorLevel, Verbosity};
 
 use clap::Parser;
+use rattler_conda_types::Platform;
 
 #[derive(Parser, Debug)]
 #[command(name = "conda-deny", about = "Check and list licenses of pixi and conda environments", version = env!("CARGO_PKG_VERSION"))]
@@ -30,7 +31,7 @@ pub enum CondaDenyCliConfig {
 
         /// Platform(s) to check
         #[arg(short, long)]
-        platform: Option<Vec<String>>,
+        platform: Option<Vec<Platform>>,
 
         /// Environment(s) to check
         #[arg(short, long)]
@@ -57,7 +58,7 @@ pub enum CondaDenyCliConfig {
 
         /// Platform(s) to list
         #[arg(short, long)]
-        platform: Option<Vec<String>>,
+        platform: Option<Vec<Platform>>,
 
         /// Environment(s) to list
         #[arg(short, long)]
@@ -84,7 +85,7 @@ impl CondaDenyCliConfig {
         }
     }
 
-    pub fn platform(&self) -> Option<Vec<String>> {
+    pub fn platform(&self) -> Option<Vec<Platform>> {
         match self {
             CondaDenyCliConfig::Check { platform, .. } => platform.clone(),
             CondaDenyCliConfig::List { platform, .. } => platform.clone(),
@@ -100,8 +101,8 @@ impl CondaDenyCliConfig {
 
     pub fn ignore_pypi(&self) -> Option<bool> {
         match self {
-            CondaDenyCliConfig::Check { ignore_pypi, .. } => ignore_pypi.clone(),
-            CondaDenyCliConfig::List { ignore_pypi, .. } => ignore_pypi.clone(),
+            CondaDenyCliConfig::Check { ignore_pypi, .. } => *ignore_pypi,
+            CondaDenyCliConfig::List { ignore_pypi, .. } => *ignore_pypi,
         }
     }
 }
