@@ -19,6 +19,7 @@ use license_whitelist::{get_license_information_from_toml_config, IgnorePackage}
 
 use anyhow::{Context, Result};
 use log::debug;
+use rattler_conda_types::Platform;
 use spdx::Expression;
 
 use crate::license_info::LicenseInfos;
@@ -33,8 +34,6 @@ pub enum CondaDenyConfig {
 #[derive(Debug)]
 pub struct CondaDenyCheckConfig {
     pub lockfile_or_prefix: LockfileOrPrefix,
-    pub platform: Option<Vec<String>>,
-    pub environment: Option<Vec<String>>,
     pub include_safe: bool,
     pub osi: bool,
     pub ignore_pypi: bool,
@@ -46,25 +45,74 @@ pub struct CondaDenyCheckConfig {
 #[derive(Debug)]
 pub struct CondaDenyListConfig {
     pub lockfile_or_prefix: LockfileOrPrefix,
-    pub platform: Option<Vec<String>>,
-    pub environment: Option<Vec<String>>,
 }
 
-#[derive(Debug)]
+#[derive(Debug, Clone)]
+pub struct LockfileSpec {
+    lockfiles: Vec<PathBuf>,
+    platforms: Option<Vec<Platform>>,
+    environments: Option<Vec<String>>,
+    ignore_pypi: bool,
+}
+
+#[derive(Debug, Clone)]
 pub enum LockfileOrPrefix {
-    Lockfile(Vec<PathBuf>),
+    Lockfile(LockfileSpec),
     Prefix(Vec<PathBuf>),
 }
 
 pub type CheckOutput = (Vec<LicenseInfo>, Vec<LicenseInfo>);
 
-pub fn fetch_license_infos(config: &CondaDenyCheckConfig) -> Result<LicenseInfos> {
-    // TODO: what when both prefix and lockfiles are not empty?
-    match &config.lockfile_or_prefix {
-        LockfileOrPrefix::Lockfile(_) => LicenseInfos::from_pixi_lockfiles(config)
-            .with_context(|| "Getting license information from config file failed."),
-        LockfileOrPrefix::Prefix(_) => LicenseInfos::from_conda_prefixes(config)
+pub fn fetch_license_infos(lockfile_or_prefix: LockfileOrPrefix) -> Result<LicenseInfos> {
+    match lockfile_or_prefix {
+        LockfileOrPrefix::Lockfile(lockfile_spec) => {
+            LicenseInfos::from_pixi_lockfiles(lockfile_spec)
+                .with_context(|| "Getting license information from config file failed.")
+        }
+        LockfileOrPrefix::Prefix(prefixes) => LicenseInfos::from_conda_prefixes(&prefixes)
             .with_context(|| "Getting license information from conda prefixes failed."),
+    }
+}
+
+fn get_lockfile_or_prefix(
+    lockfile: Vec<String>,
+    prefix: Vec<String>,
+    platforms: Option<Vec<Platform>>,
+    environments: Option<Vec<String>>,
+    ignore_pypi: bool,
+) -> Result<LockfileOrPrefix> {
+    if lockfile.is_empty() && prefix.is_empty() {
+        // test if pixi.lock exists next to config file, otherwise error
+        let default_lockfile_path = env::current_dir()?.join("pixi.lock");
+        if !default_lockfile_path.is_file() {
+            Err(anyhow::anyhow!("No lockfiles or conda prefixes provided"))
+        } else {
+            Ok(LockfileOrPrefix::Lockfile(LockfileSpec {
+                lockfiles: vec![default_lockfile_path],
+                platforms,
+                environments,
+                ignore_pypi,
+            }))
+        }
+    } else if !lockfile.is_empty() && !prefix.is_empty() {
+        Err(anyhow::anyhow!(
+            "Both lockfiles and conda prefixes provided. Please only provide either or."
+        ))
+    } else if !lockfile.is_empty() {
+        Ok(LockfileOrPrefix::Lockfile(LockfileSpec {
+            lockfiles: lockfile.iter().map(|s| s.into()).collect(),
+            platforms: platforms,
+            environments: environments,
+            ignore_pypi,
+        }))
+    } else {
+        // todo: throw errors instead
+        assert!(!prefix.is_empty());
+        assert!(platforms.is_none());
+        assert!(environments.is_none());
+        Ok(LockfileOrPrefix::Prefix(
+            prefix.iter().map(|s| s.into()).collect(),
+        ))
     }
 }
 
@@ -123,29 +171,6 @@ pub fn get_config_options(
             let lockfile = lockfile.unwrap_or(toml_config.get_lockfile_spec());
             let prefix = prefix.unwrap_or_default();
 
-            let lockfile_or_prefix = if lockfile.is_empty() && prefix.is_empty() {
-                // test if pixi.lock exists next to config file, otherwise error
-                let default_lockfile_path = env::current_dir()?.join("pixi.lock");
-                if !default_lockfile_path.is_file() {
-                    Err(anyhow::anyhow!("No lockfiles or conda prefixes provided"))
-                } else {
-                    Ok(LockfileOrPrefix::Lockfile(vec![default_lockfile_path]))
-                }
-            } else {
-                if !lockfile.is_empty() && !prefix.is_empty() {
-                    Err(anyhow::anyhow!("Both lockfiles and conda prefixes provided. Please only provide either or."))
-                } else if !lockfile.is_empty() {
-                    Ok(LockfileOrPrefix::Lockfile(
-                        lockfile.iter().map(|s| s.into()).collect(),
-                    ))
-                } else {
-                    assert!(!prefix.is_empty());
-                    Ok(LockfileOrPrefix::Prefix(
-                        prefix.iter().map(|s| s.into()).collect(),
-                    ))
-                }
-            }?;
-
             let platform = if platform.is_some() {
                 platform
             } else {
@@ -156,6 +181,8 @@ pub fn get_config_options(
                     "Cannot specify platforms and conda prefixes at the same time"
                 ));
             }
+            // todo: fix unwrap
+            let platform = platform.map(|p| p.iter().map(|s| s.parse().unwrap()).collect());
 
             let environment = if environment.is_some() {
                 environment
@@ -167,6 +194,23 @@ pub fn get_config_options(
                     "Cannot specify environments and conda prefixes at the same time"
                 ));
             }
+
+            // defaults to false
+            // todo: fail if used in combination with prefix
+            let ignore_pypi = if ignore_pypi.is_some() {
+                ignore_pypi
+            } else {
+                toml_config.get_ignore_pypi()
+            }
+            .unwrap_or(false);
+
+            let lockfile_or_prefix = get_lockfile_or_prefix(
+                lockfile,
+                prefix.clone(),
+                platform,
+                environment,
+                ignore_pypi,
+            )?;
 
             let license_whitelist = toml_config.get_license_whitelists();
 
@@ -187,14 +231,6 @@ pub fn get_config_options(
                 return Err(anyhow::anyhow!("No license whitelist provided"));
             }
 
-            // defaults to false
-            let ignore_pypi = if ignore_pypi.is_some() {
-                ignore_pypi
-            } else {
-                toml_config.get_ignore_pypi()
-            }
-            .unwrap_or(false);
-
             // osi and safe-licenses are mutually exclusive
             // todo: throw an error here instead
             let (safe_licenses, ignore_packages) = if osi {
@@ -205,8 +241,6 @@ pub fn get_config_options(
 
             CondaDenyConfig::Check(CondaDenyCheckConfig {
                 lockfile_or_prefix,
-                platform,
-                environment,
                 include_safe,
                 osi,
                 ignore_pypi,
@@ -219,35 +253,12 @@ pub fn get_config_options(
             prefix,
             platform,
             environment,
+            ignore_pypi,
         } => {
             // todo: refactor with check
             // cli overrides toml configuration
             let lockfile = lockfile.unwrap_or(toml_config.get_lockfile_spec());
             let prefix = prefix.unwrap_or_default();
-
-            // todo: duplicate code
-            let lockfile_or_prefix = if lockfile.is_empty() && prefix.is_empty() {
-                // test if pixi.lock exists next to config file, otherwise error
-                let default_lockfile_path = env::current_dir()?.join("pixi.lock");
-                if !default_lockfile_path.is_file() {
-                    Err(anyhow::anyhow!("No lockfiles or conda prefixes provided"))
-                } else {
-                    Ok(LockfileOrPrefix::Lockfile(vec![default_lockfile_path]))
-                }
-            } else {
-                if !lockfile.is_empty() && !prefix.is_empty() {
-                    Err(anyhow::anyhow!("Both lockfiles and conda prefixes provided. Please only provide either or."))
-                } else if !lockfile.is_empty() {
-                    Ok(LockfileOrPrefix::Lockfile(
-                        lockfile.iter().map(|s| s.into()).collect(),
-                    ))
-                } else {
-                    assert!(!prefix.is_empty());
-                    Ok(LockfileOrPrefix::Prefix(
-                        prefix.iter().map(|s| s.into()).collect(),
-                    ))
-                }
-            }?;
 
             let platform = if platform.is_some() {
                 platform
@@ -259,6 +270,8 @@ pub fn get_config_options(
                     "Cannot specify platforms and conda prefixes at the same time"
                 ));
             }
+            // todo: fix unwrap
+            let platform = platform.map(|p| p.iter().map(|s| s.parse().unwrap()).collect());
 
             let environment = if environment.is_some() {
                 environment
@@ -271,11 +284,24 @@ pub fn get_config_options(
                 ));
             }
 
-            CondaDenyConfig::List(CondaDenyListConfig {
-                lockfile_or_prefix,
+            // defaults to false
+            // todo: fail if used in combination with prefix
+            let ignore_pypi = if ignore_pypi.is_some() {
+                ignore_pypi
+            } else {
+                toml_config.get_ignore_pypi()
+            }
+            .unwrap_or(false);
+
+            let lockfile_or_prefix = get_lockfile_or_prefix(
+                lockfile,
+                prefix.clone(),
                 platform,
                 environment,
-            })
+                ignore_pypi,
+            )?;
+
+            CondaDenyConfig::List(CondaDenyListConfig { lockfile_or_prefix })
         }
     };
 
@@ -303,23 +329,21 @@ pub fn check<W: Write>(check_config: CondaDenyCheckConfig, mut out: W) -> Result
 }
 
 pub fn list<W: Write>(config: &CondaDenyListConfig, mut out: W) -> Result<()> {
-    panic!("TODO");
-    // let license_infos =
-    //     fetch_license_infos(config).with_context(|| "Fetching license information failed.")?;
-    // license_infos.list();
-    Ok(())
+    let license_infos = fetch_license_infos(config.lockfile_or_prefix.clone())
+        .with_context(|| "Fetching license information failed.")?;
+    license_infos.list(&mut out)
 }
 
 pub fn check_license_infos(config: &CondaDenyCheckConfig) -> Result<CheckOutput> {
-    let license_infos =
-        fetch_license_infos(config).with_context(|| "Fetching license information failed.")?;
+    let license_infos = fetch_license_infos(config.lockfile_or_prefix.clone())
+        .with_context(|| "Fetching license information failed.")?;
 
     if config.osi {
         debug!("Checking licenses for OSI compliance");
         Ok(license_infos.osi_check())
     } else {
         debug!("Checking licenses against specified whitelist");
-        Ok(license_infos.check(&config))
+        Ok(license_infos.check(config))
     }
 }
 

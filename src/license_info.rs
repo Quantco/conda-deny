@@ -1,4 +1,7 @@
-use std::path::Path;
+use std::{
+    io::Write,
+    path::{Path, PathBuf},
+};
 
 use anyhow::{Context, Result};
 use rattler_conda_types::PackageRecord;
@@ -12,7 +15,7 @@ use crate::{
     license_whitelist::is_package_ignored_2,
     list,
     pixi_lock::get_conda_packages_for_pixi_lock,
-    CheckOutput, CondaDenyCheckConfig, LockfileOrPrefix,
+    CheckOutput, CondaDenyCheckConfig, LockfileSpec,
 };
 
 #[derive(Debug, Clone)]
@@ -137,42 +140,28 @@ impl LicenseInfos {
         self.license_infos.dedup();
     }
 
-    pub fn from_pixi_lockfiles(config: &CondaDenyCheckConfig) -> Result<LicenseInfos> {
+    pub fn from_pixi_lockfiles(lockfile_spec: LockfileSpec) -> Result<LicenseInfos> {
         let mut license_infos = Vec::new();
         let mut package_records = Vec::new();
 
-        // todo: assert Lockfile is type
-        if let LockfileOrPrefix::Lockfile(lockfiles) = &config.lockfile_or_prefix {
-            assert!(!lockfiles.is_empty());
-            for lockfile in lockfiles {
-                let path = Path::new(&lockfile);
-                let package_records_for_lockfile = get_conda_packages_for_pixi_lock(
-                    path,
-                    &config.environment,
-                    &config.platform,
-                    config.ignore_pypi,
+        assert!(!lockfile_spec.lockfiles.is_empty());
+        for lockfile in lockfile_spec.lockfiles {
+            let path: &Path = Path::new(&lockfile);
+            let package_records_for_lockfile = get_conda_packages_for_pixi_lock(
+                path,
+                &lockfile_spec.environments,
+                &lockfile_spec.platforms,
+                lockfile_spec.ignore_pypi,
+            )
+            .with_context(|| {
+                format!(
+                    "Failed to get package records from lockfile: {:?}",
+                    &lockfile.to_str()
                 )
-                .with_context(|| {
-                    format!(
-                        "Failed to get package records from lockfile: {:?}",
-                        &lockfile.to_str()
-                    )
-                })?;
-                package_records.extend(package_records_for_lockfile);
-            }
-
-            // let package_records_for_lockfile = get_conda_packages_for_pixi_lock(
-            //     None,
-            //     config.environment,
-            //     config.platform,
-            //     config.ignore_pypi,
-            // )
-            // .with_context(|| "Failed to get package records for pixi.lock")?;
-            // package_records.extend(package_records_for_lockfile);
-        } else {
-            // todo remove
-            panic!("unreachable");
+            })?;
+            package_records.extend(package_records_for_lockfile);
         }
+
         for package_record in package_records {
             let license_info = LicenseInfo::from_package_record(package_record);
             license_infos.push(license_info);
@@ -184,35 +173,28 @@ impl LicenseInfos {
         Ok(LicenseInfos { license_infos })
     }
 
-    pub fn from_conda_prefixes(config: &CondaDenyCheckConfig) -> Result<LicenseInfos> {
+    pub fn from_conda_prefixes(prefixes: &Vec<PathBuf>) -> Result<LicenseInfos> {
         let mut license_infos = Vec::new();
+        assert!(!prefixes.is_empty());
+        for conda_prefix in prefixes.clone() {
+            let conda_meta_path = conda_prefix.join("conda-meta");
+            let conda_meta_entries =
+                CondaMetaEntries::from_dir(&conda_meta_path).with_context(|| {
+                    format!(
+                        "Failed to parse conda meta entries from conda-meta: {:?}",
+                        conda_meta_path
+                    )
+                })?;
 
-        if let LockfileOrPrefix::Prefix(prefixes) = &config.lockfile_or_prefix {
-            assert!(!prefixes.is_empty());
-            for conda_prefix in prefixes.clone() {
-                let conda_meta_path = conda_prefix.join("conda-meta");
-                let conda_meta_entries = CondaMetaEntries::from_dir(&conda_meta_path)
-                    .with_context(|| {
-                        format!(
-                            "Failed to parse conda meta entries from conda-meta: {:?}",
-                            conda_meta_path
-                        )
-                    })?;
+            let license_infos_for_meta = LicenseInfos::from_conda_meta_entries(conda_meta_entries);
 
-                let license_infos_for_meta =
-                    LicenseInfos::from_conda_meta_entries(conda_meta_entries);
-
-                license_infos.extend(license_infos_for_meta.license_infos);
-            }
-
-            license_infos.sort();
-            license_infos.dedup();
-
-            Ok(LicenseInfos { license_infos })
-        } else {
-            // todo
-            panic!("unreachable");
+            license_infos.extend(license_infos_for_meta.license_infos);
         }
+
+        license_infos.sort();
+        license_infos.dedup();
+
+        Ok(LicenseInfos { license_infos })
     }
 
     pub fn from_conda_meta_entries(conda_meta_entries: CondaMetaEntries) -> Self {
@@ -223,22 +205,6 @@ impl LicenseInfos {
             .collect();
         LicenseInfos { license_infos }
     }
-
-    // pub fn get_license_infos_from_config(
-    //     config: CondaDenyCheckConfig
-    // ) -> Result<LicenseInfos> {
-    //     let platforms = if config.platform.is_some() {
-    //         config.platform
-    //     }
-    //     let mut platforms = config.get_platform_spec().map_or(vec![], |p| p);
-    //     let mut lockfiles = config.get_lockfile_spec();
-    //     let mut environment_specs = config.get_environment_spec().map_or(vec![], |e| e);
-
-    //     platforms.extend(cli_platforms.to_owned());
-    //     lockfiles.extend(cli_lockfiles.to_owned());
-    //     environment_specs.extend(cli_environments.to_owned());
-
-    // }
 
     pub fn check(&self, config: &CondaDenyCheckConfig) -> CheckOutput {
         let mut safe_dependencies = Vec::new();
@@ -310,9 +276,10 @@ impl LicenseInfos {
         (safe_dependencies, unsafe_dependencies)
     }
 
-    pub fn list(&self) {
+    pub fn list<W: Write>(&self, mut out: W) -> Result<()> {
         let output = list::list_license_infos(self, true);
-        println!("{}", output);
+        out.write_all(output.as_bytes())?;
+        Ok(())
     }
 }
 
@@ -327,7 +294,7 @@ pub enum LicenseState {
 mod tests {
 
     use super::*;
-    use crate::conda_meta_entry::CondaMetaEntry;
+    use crate::{conda_meta_entry::CondaMetaEntry, LockfileOrPrefix};
     use spdx::Expression;
 
     #[test]
@@ -409,9 +376,12 @@ mod tests {
         let ignore_packages = vec![];
 
         let config = CondaDenyCheckConfig {
-            lockfile_or_prefix: LockfileOrPrefix::Lockfile(vec!["pixi.lock".into()]),
-            platform: None,
-            environment: None,
+            lockfile_or_prefix: LockfileOrPrefix::Lockfile(LockfileSpec {
+                lockfiles: vec!["pixi.lock".into()],
+                platforms: None,
+                environments: None,
+                ignore_pypi: false,
+            }),
             include_safe: false,
             osi: false,
             ignore_pypi: false,

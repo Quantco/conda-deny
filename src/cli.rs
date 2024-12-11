@@ -62,6 +62,10 @@ pub enum CondaDenyCliConfig {
         /// Environment(s) to list
         #[arg(short, long)]
         environment: Option<Vec<String>>,
+
+        /// Ignore when encountering pypi packages instead of failing.
+        #[arg(long)]
+        ignore_pypi: Option<bool>,
     },
 }
 

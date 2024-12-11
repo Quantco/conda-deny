@@ -101,14 +101,14 @@ pub fn license_config_from_toml_file(
 
 #[async_trait]
 pub trait ReadRemoteConfig {
-    async fn read(&self, url: &str) -> Result<LicenseWhitelistConfig>;
+    async fn read(&self, url: &str) -> Result<String>;
 }
 
 pub struct RealRemoteConfigReader;
 
 #[async_trait]
 impl ReadRemoteConfig for RealRemoteConfigReader {
-    async fn read(&self, url: &str) -> Result<LicenseWhitelistConfig> {
+    async fn read(&self, url: &str) -> Result<String> {
         let client = reqwest::Client::new();
 
         // Add GitHub specific headers if GITHUB_TOKEN exists
@@ -125,22 +125,15 @@ impl ReadRemoteConfig for RealRemoteConfigReader {
             );
         }
 
-        let remote_config = client
+        let result = client
             .get(url)
             .headers(headers)
             .send()
             .await?
+            .error_for_status()?
             .text()
             .await?;
-
-        let value: LicenseWhitelistConfig = toml::from_str(&remote_config).with_context(|| {
-            format!(
-                "Failed to parse license whitelist to TOML for whitelist URL: {}",
-                url
-            )
-        })?;
-
-        Ok(value)
+        Ok(result)
     }
 }
 
@@ -154,31 +147,33 @@ pub fn fetch_safe_licenses(
         .unwrap();
     let url = remote_config;
     let read_config_task = reader.read(url);
+    let config_str = runtime.block_on(read_config_task).map_err(|e| {
+        anyhow::anyhow!(
+            "Failed to read remote license whitelist.\nPlease check the URL. If you need a GITHUB_TOKEN, please set it in your environment.\nError: {}",
+            e
+        )
+    })?;
 
-    match runtime.block_on(read_config_task) {
-        Ok(config) => {
-            let mut expressions = Vec::new();
-            if config.tool.conda_deny.safe_licenses.is_some() {
-                for license in config.tool.conda_deny.safe_licenses.unwrap() {
-                    let expr = parse_expression(&license).with_context(|| {
-                        format!("Failed to parse license expression: {}", license)
-                    })?;
-                    expressions.push(expr);
-                }
-            }
-            let mut ignore_packages = Vec::new();
-            if config.tool.conda_deny.ignore_packages.is_some() {
-                ignore_packages = config.tool.conda_deny.ignore_packages.unwrap();
-            }
-
-            Ok((expressions, ignore_packages))
+    let config: LicenseWhitelistConfig = toml::from_str(&config_str).with_context(|| {
+        format!(
+            "Failed to parse license whitelist to TOML for whitelist URL: {}",
+            url
+        )
+    })?;
+    let mut expressions = Vec::new();
+    if config.tool.conda_deny.safe_licenses.is_some() {
+        for license in config.tool.conda_deny.safe_licenses.unwrap() {
+            let expr = parse_expression(&license)
+                .with_context(|| format!("Failed to parse license expression: {}", license))?;
+            expressions.push(expr);
         }
-        Err(_) => Err(anyhow::anyhow!("Failed to read remote license whitelist.\nPlease check the URL. If you need a GITHUB_TOKEN, please set it in your environment.")),
     }
+    let ignore_packages = config.tool.conda_deny.ignore_packages.unwrap_or_default();
+    Ok((expressions, ignore_packages))
 }
 
 pub fn build_license_whitelist(
-    license_whitelist: &Vec<String>,
+    license_whitelist: &[String],
 ) -> Result<(Vec<Expression>, Vec<IgnorePackage>)> {
     let mut all_safe_licenses = Vec::new();
     let mut all_ignore_packages = Vec::new();
@@ -188,7 +183,7 @@ pub fn build_license_whitelist(
         if license_whitelist_path.starts_with("http") {
             let reader = RealRemoteConfigReader;
 
-            match fetch_safe_licenses(&license_whitelist_path, &reader) {
+            match fetch_safe_licenses(license_whitelist_path, &reader) {
                 Ok((safe_licenses, ignore_packages)) => {
                     all_safe_licenses.extend(safe_licenses);
                     all_ignore_packages.extend(ignore_packages);
@@ -203,7 +198,7 @@ pub fn build_license_whitelist(
                 }
             }
         } else {
-            match license_config_from_toml_file(&license_whitelist_path) {
+            match license_config_from_toml_file(license_whitelist_path) {
                 Ok((safe_licenses, ignore_packages)) => {
                     all_safe_licenses.extend(safe_licenses);
                     all_ignore_packages.extend(ignore_packages);
@@ -265,36 +260,19 @@ mod tests {
     use crate::conda_deny_config::CondaDenyTomlConfig;
 
     use super::*;
-    use async_trait::async_trait;
     use std::error::Error;
-
-    struct MockReader;
-
-    #[async_trait]
-    impl ReadRemoteConfig for MockReader {
-        async fn read(&self, _url: &str) -> Result<LicenseWhitelistConfig> {
-            Ok(LicenseWhitelistConfig {
-                tool: RemoteWhitelistTool {
-                    conda_deny: LicenseWhitelist {
-                        safe_licenses: Some(vec!["MIT".to_string(), "Apache-2.0".to_string()]),
-                        ignore_packages: Some(vec![]),
-                    },
-                },
-            })
-        }
-    }
 
     #[test]
     fn test_fetch_safe_licenses_success() {
-        let reader = MockReader;
-        // TODO: Change this to "https://raw.githubusercontent.com/QuantCo/conda-deny/main/tests/test_remote_base_configs/conda-deny-license_whitelist.toml"
-        let (safe_licenses, ignore_packages) = fetch_safe_licenses("https://raw.githubusercontent.com/PaulKMueller/conda-deny-test/main/conda-deny-license_whitelist.toml", &reader)
+        let reader = RealRemoteConfigReader;
+        let (safe_licenses, ignore_packages) = fetch_safe_licenses("https://raw.githubusercontent.com/quantco/conda-deny/main/tests/test_remote_base_configs/conda-deny-license_whitelist.toml", &reader)
             .unwrap();
 
         // Assert the result
-        assert_eq!(safe_licenses.len(), 2);
+        assert_eq!(safe_licenses.len(), 4);
         assert!(safe_licenses.iter().any(|e| e.to_string() == "MIT"));
         assert!(safe_licenses.iter().any(|e| e.to_string() == "Apache-2.0"));
+        assert_eq!(ignore_packages.len(), 1);
     }
 
     #[test]

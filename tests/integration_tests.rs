@@ -14,12 +14,14 @@ fn list_config(
     #[default(None)] prefix: Option<Vec<String>>,
     #[default(None)] platform: Option<Vec<String>>,
     #[default(None)] environment: Option<Vec<String>>,
+    #[default(None)] ignore_pypi: Option<bool>,
 ) -> CondaDenyListConfig {
     let cli = CondaDenyCliConfig::List {
-        lockfile: lockfile,
-        prefix: prefix,
-        platform: platform,
-        environment: environment,
+        lockfile,
+        prefix,
+        platform,
+        environment,
+        ignore_pypi,
     };
 
     let config = get_config_options(
@@ -88,7 +90,11 @@ fn test_default_use_case_pyproject(#[case] subcommand: &str, #[case] test_name: 
 
     let mut command = Command::cargo_bin("conda-deny").unwrap();
     command.arg(subcommand).current_dir(test_dir);
-    command.assert().failure();
+    if subcommand == "check" {
+        command.assert().failure();
+    } else {
+        command.assert().success();
+    }
 }
 
 #[rstest]
@@ -131,7 +137,7 @@ fn test_multiple_whitelists_check(
 
 #[rstest]
 fn test_multiple_whitelists_list(
-    #[with(Some(PathBuf::from("tests/test_end_to_end/test_multiple_whitelists/pixi.toml")))]
+    #[with(Some(PathBuf::from("tests/test_end_to_end/test_multiple_whitelists/pixi.toml")), Some(vec!["tests/test_end_to_end/test_multiple_whitelists/pixi.lock".into()]))]
     list_config: CondaDenyListConfig,
     mut out: Vec<u8>,
 ) {
@@ -176,7 +182,7 @@ fn test_osi_check(
 #[rstest]
 fn test_prefix_list(
     #[with(
-        Some(PathBuf::from("tests/test_end_to_end/test_prefix_list/pixi.toml")), None, Some(vec!["../../../tests/test_conda_prefixes/test-env".into()])
+        Some(PathBuf::from("tests/test_end_to_end/test_prefix_list/pixi.toml")), None, Some(vec!["tests/test_conda_prefixes/test-env".into()])
 )]
     list_config: CondaDenyListConfig,
     mut out: Vec<u8>,
@@ -184,7 +190,7 @@ fn test_prefix_list(
     // When --prefix is specified, only the license information for the conda-meta directory in the specified prefix should be listed
     // License information from pixi.lock should not be listed
     let result = list(&list_config, &mut out);
-    assert!(result.is_ok());
+    assert!(result.is_ok(), "{:?}", result.unwrap_err());
     let line_count = String::from_utf8(out).unwrap().split("\n").count();
     let expected_line_count = 50;
     assert_eq!(
