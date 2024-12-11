@@ -9,7 +9,7 @@ use std::process::Command;
 
 #[fixture]
 fn list_config(
-    #[default(PathBuf::from("examples/simple-python/pixi.toml"))] config: PathBuf,
+    #[default(None)] config: Option<PathBuf>,
     #[default(None)] lockfile: Option<Vec<String>>,
     #[default(None)] prefix: Option<Vec<String>>,
     #[default(None)] platform: Option<Vec<String>>,
@@ -23,7 +23,7 @@ fn list_config(
     };
 
     let config = get_config_options(
-        Some(config.to_str().unwrap().into()), // todo: prettier
+        config.map(|p| p.to_str().unwrap().to_string()), // todo: prettier
         cli,
     )
     .unwrap();
@@ -36,7 +36,7 @@ fn list_config(
 
 #[fixture]
 fn check_config(
-    #[default(PathBuf::from("examples/simple-python/pixi.toml"))] config: PathBuf,
+    #[default(None)] config: Option<PathBuf>,
     #[default(None)] lockfile: Option<Vec<String>>,
     #[default(None)] prefix: Option<Vec<String>>,
     #[default(None)] platform: Option<Vec<String>>,
@@ -56,7 +56,7 @@ fn check_config(
     };
 
     let config = get_config_options(
-        Some(config.to_str().unwrap().into()), // todo: prettier
+        config.map(|p| p.to_str().unwrap().to_string()), // todo: prettier
         cli,
     );
     let config = config.unwrap();
@@ -78,21 +78,13 @@ fn out() -> Vec<u8> {
 }
 
 #[rstest]
-#[case("check")]
-#[case("list")]
-fn test_default_use_case(#[case] subcommand: &str) {
-    let test_dir = Path::new("tests/test_end_to_end/test_default_use_case");
-
-    let mut command = Command::cargo_bin("conda-deny").unwrap();
-    command.arg(subcommand).current_dir(test_dir);
-    command.assert().success();
-}
-
-#[rstest]
-#[case("check")]
-#[case("list")]
-fn test_default_use_case_pyproject(#[case] subcommand: &str) {
-    let test_dir = Path::new("tests/test_end_to_end/test_default_use_case_pyproject");
+#[case("check", "test_default_use_case")]
+#[case("list", "test_default_use_case")]
+#[case("check", "test_default_use_case_pyproject")]
+#[case("list", "test_default_use_case_pyproject")]
+fn test_default_use_case_pyproject(#[case] subcommand: &str, #[case] test_name: &str) {
+    let path_string = format!("tests/test_end_to_end/{}", test_name);
+    let test_dir = Path::new(path_string.as_str());
 
     let mut command = Command::cargo_bin("conda-deny").unwrap();
     command.arg(subcommand).current_dir(test_dir);
@@ -101,7 +93,7 @@ fn test_default_use_case_pyproject(#[case] subcommand: &str) {
 
 #[rstest]
 fn test_remote_whitelist_check(
-    #[with(PathBuf::from("tests/test_end_to_end/test_remote_whitelist/pixi.toml"))]
+    #[with(Some(PathBuf::from("tests/test_end_to_end/test_remote_whitelist/pixi.toml")), Some(vec!["tests/test_end_to_end/test_remote_whitelist/pixi.lock".into()]))]
     check_config: CondaDenyCheckConfig,
     mut out: Vec<u8>,
 ) {
@@ -112,7 +104,7 @@ fn test_remote_whitelist_check(
 #[rstest]
 fn test_remote_whitelist_list(
     #[with(
-        PathBuf::from("tests/test_end_to_end/test_remote_whitelist/pixi.toml"),
+        Some(PathBuf::from("tests/test_end_to_end/test_remote_whitelist/pixi.toml")),
         None,
         Some(vec!["tests/test_conda_prefixes/test-env".into()]),
     )]
@@ -127,8 +119,10 @@ fn test_remote_whitelist_list(
 #[rstest]
 fn test_multiple_whitelists_check(
     #[with(
-        PathBuf::from("tests/test_end_to_end/test_multiple_whitelists/pixi.toml")
-    )] check_config: CondaDenyCheckConfig,
+        Some(PathBuf::from("tests/test_end_to_end/test_multiple_whitelists/pixi.toml")),
+        Some(vec!["tests/test_end_to_end/test_multiple_whitelists/pixi.lock".into()])
+    )]
+    check_config: CondaDenyCheckConfig,
     mut out: Vec<u8>,
 ) {
     let result = check(check_config, &mut out);
@@ -137,9 +131,8 @@ fn test_multiple_whitelists_check(
 
 #[rstest]
 fn test_multiple_whitelists_list(
-    #[with(
-        PathBuf::from("tests/test_end_to_end/test_multiple_whitelists/pixi.toml")
-    )] list_config: CondaDenyListConfig,
+    #[with(Some(PathBuf::from("tests/test_end_to_end/test_multiple_whitelists/pixi.toml")))]
+    list_config: CondaDenyListConfig,
     mut out: Vec<u8>,
 ) {
     // todo this test doesn't make sense
@@ -149,7 +142,10 @@ fn test_multiple_whitelists_list(
 
 #[rstest]
 fn test_config_with_platform_and_env(
-    #[with(PathBuf::from("tests/test_end_to_end/test_platform_env_spec/pixi.toml"))]
+    #[with(
+        Some(PathBuf::from("tests/test_end_to_end/test_platform_env_spec/pixi.toml")),
+        Some(vec!["tests/test_end_to_end/test_platform_env_spec/pixi.lock".into()])
+    )]
     check_config: CondaDenyCheckConfig,
     mut out: Vec<u8>,
 ) {
@@ -160,8 +156,8 @@ fn test_config_with_platform_and_env(
 #[rstest]
 fn test_osi_check(
     #[with(
-        PathBuf::from("tests/test_end_to_end/test_osi_check/pixi.toml"),
         None,
+        Some(vec!["tests/test_end_to_end/test_osi_check/pixi.toml".into()]),
         None,
         None,
         None,
@@ -180,7 +176,7 @@ fn test_osi_check(
 #[rstest]
 fn test_prefix_list(
     #[with(
-    PathBuf::from("tests/test_end_to_end/test_prefix_list/pixi.toml"), None, Some(vec!["../../../tests/test_conda_prefixes/test-env".into()])
+        Some(PathBuf::from("tests/test_end_to_end/test_prefix_list/pixi.toml")), None, Some(vec!["../../../tests/test_conda_prefixes/test-env".into()])
 )]
     list_config: CondaDenyListConfig,
     mut out: Vec<u8>,

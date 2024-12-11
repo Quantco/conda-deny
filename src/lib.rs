@@ -9,7 +9,7 @@ mod list;
 mod pixi_lock;
 mod read_remote;
 
-use std::{io::Write, path::PathBuf};
+use std::{env, io::Write, path::PathBuf};
 
 use cli::CondaDenyCliConfig;
 use colored::Colorize;
@@ -72,33 +72,37 @@ pub fn get_config_options(
     config: Option<String>,
     cli_config: CondaDenyCliConfig,
 ) -> Result<CondaDenyConfig> {
-    let (toml_config, toml_config_path): (CondaDenyTomlConfig, PathBuf) = if let Some(config_path) =
-        config
-    {
-        (
-            CondaDenyTomlConfig::from_path(config_path.as_str())
-                .with_context(|| format!("Failed to parse config file {}", config_path))?,
-            config_path.into(),
-        )
+    // if config provided, use config
+    // else, try to load pixi.toml, then pyproject.toml and if nothing helps, use empty config
+    let toml_config = if let Some(config_path) = config {
+        CondaDenyTomlConfig::from_path(config_path.as_str())
+            .with_context(|| format!("Failed to parse config file {}", config_path))?
     } else {
         match CondaDenyTomlConfig::from_path("pixi.toml")
             .with_context(|| "Failed to parse config file pixi.toml")
         {
             Ok(config) => {
                 debug!("Successfully loaded config from pixi.toml");
-                (config, "pixi.toml".into())
+                config
             }
             Err(e) => {
                 debug!(
                     "Error parsing config file: pixi.toml: {}. Attempting to use pyproject.toml instead...",
                     e
                 );
-                (
-                    CondaDenyTomlConfig::from_path("pyproject.toml")
-                        .context(e)
-                        .with_context(|| "Failed to parse config file pyproject.toml")?,
-                    "pyproject.toml".into(),
-                )
+                match CondaDenyTomlConfig::from_path("pyproject.toml")
+                    .context(e)
+                    .with_context(|| "Failed to parse config file pyproject.toml")
+                {
+                    Ok(config) => config,
+                    Err(e) => {
+                        debug!(
+                            "Error parsing config file: pyproject.toml: {}. Using empty config instead...",
+                            e
+                        );
+                        CondaDenyTomlConfig::empty()
+                    }
+                }
             }
         }
     };
@@ -121,10 +125,7 @@ pub fn get_config_options(
 
             let lockfile_or_prefix = if lockfile.is_empty() && prefix.is_empty() {
                 // test if pixi.lock exists next to config file, otherwise error
-                let default_lockfile_path = toml_config_path
-                    .parent()
-                    .context("could not get parent of toml config path")?
-                    .join("pixi.lock");
+                let default_lockfile_path = env::current_dir()?.join("pixi.lock");
                 if !default_lockfile_path.is_file() {
                     Err(anyhow::anyhow!("No lockfiles or conda prefixes provided"))
                 } else {
@@ -194,8 +195,13 @@ pub fn get_config_options(
             }
             .unwrap_or(false);
 
-            let (safe_licenses, ignore_packages) =
-                get_license_information_from_toml_config(toml_config)?;
+            // osi and safe-licenses are mutually exclusive
+            // todo: throw an error here instead
+            let (safe_licenses, ignore_packages) = if osi {
+                (vec![], vec![])
+            } else {
+                get_license_information_from_toml_config(toml_config)?
+            };
 
             CondaDenyConfig::Check(CondaDenyCheckConfig {
                 lockfile_or_prefix,
@@ -222,10 +228,7 @@ pub fn get_config_options(
             // todo: duplicate code
             let lockfile_or_prefix = if lockfile.is_empty() && prefix.is_empty() {
                 // test if pixi.lock exists next to config file, otherwise error
-                let default_lockfile_path = toml_config_path
-                    .parent()
-                    .context("could not get parent of toml config path")?
-                    .join("pixi.lock");
+                let default_lockfile_path = env::current_dir()?.join("pixi.lock");
                 if !default_lockfile_path.is_file() {
                     Err(anyhow::anyhow!("No lockfiles or conda prefixes provided"))
                 } else {
