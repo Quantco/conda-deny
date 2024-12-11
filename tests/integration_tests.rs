@@ -174,7 +174,6 @@ fn test_osi_check(
     let result = check(check_config, &mut out);
 
     assert!(result.is_err());
-    // todo assert lines
 }
 
 #[rstest]

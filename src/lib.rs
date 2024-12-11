@@ -36,7 +36,6 @@ pub struct CondaDenyCheckConfig {
     pub lockfile_or_prefix: LockfileOrPrefix,
     pub include_safe: bool,
     pub osi: bool,
-    pub ignore_pypi: bool,
     pub safe_licenses: Vec<Expression>,
     pub ignore_packages: Vec<IgnorePackage>,
 }
@@ -74,12 +73,14 @@ pub fn fetch_license_infos(lockfile_or_prefix: LockfileOrPrefix) -> Result<Licen
     }
 }
 
+const IGNORE_PYPI_DEFAULT: bool = false;
+
 fn get_lockfile_or_prefix(
     lockfile: Vec<String>,
     prefix: Vec<String>,
     platforms: Option<Vec<Platform>>,
     environments: Option<Vec<String>>,
-    ignore_pypi: bool,
+    ignore_pypi: Option<bool>,
 ) -> Result<LockfileOrPrefix> {
     if lockfile.is_empty() && prefix.is_empty() {
         // test if pixi.lock exists next to config file, otherwise error
@@ -91,7 +92,7 @@ fn get_lockfile_or_prefix(
                 lockfiles: vec![default_lockfile_path],
                 platforms,
                 environments,
-                ignore_pypi,
+                ignore_pypi: ignore_pypi.unwrap_or(IGNORE_PYPI_DEFAULT),
             }))
         }
     } else if !lockfile.is_empty() && !prefix.is_empty() {
@@ -103,13 +104,14 @@ fn get_lockfile_or_prefix(
             lockfiles: lockfile.iter().map(|s| s.into()).collect(),
             platforms,
             environments,
-            ignore_pypi,
+            ignore_pypi: ignore_pypi.unwrap_or(IGNORE_PYPI_DEFAULT),
         }))
     } else {
         // todo: throw errors instead
         assert!(!prefix.is_empty());
         assert!(platforms.is_none());
         assert!(environments.is_none());
+        assert!(ignore_pypi.is_none());
         Ok(LockfileOrPrefix::Prefix(
             prefix.iter().map(|s| s.into()).collect(),
         ))
@@ -157,63 +159,54 @@ pub fn get_config_options(
 
     debug!("Parsed TOML config: {:?}", toml_config);
 
+    // cli overrides toml configuration
+    let lockfile = cli_config.lockfile().unwrap_or(toml_config.get_lockfile_spec());
+    let prefix = cli_config.prefix().unwrap_or_default();
+
+    let platform = if cli_config.platform().is_some() {
+        cli_config.platform()
+    } else {
+        toml_config.get_platform_spec()
+    };
+    if platform.is_some() && !prefix.is_empty() {
+        return Err(anyhow::anyhow!(
+            "Cannot specify platforms and conda prefixes at the same time"
+        ));
+    }
+    // todo: fix unwrap
+    let platform = platform.clone().map(|p| p.iter().map(|s| s.parse().unwrap()).collect());
+
+    let environment = if cli_config.environment().is_some() {
+        cli_config.environment()
+    } else {
+        toml_config.get_environment_spec()
+    };
+    if environment.is_some() && !prefix.is_empty() {
+        return Err(anyhow::anyhow!(
+            "Cannot specify environments and conda prefixes at the same time"
+        ));
+    }
+
+    let ignore_pypi = if cli_config.ignore_pypi().is_some() {
+        cli_config.ignore_pypi()
+    } else {
+        toml_config.get_ignore_pypi()
+    };
+
+    let lockfile_or_prefix = get_lockfile_or_prefix(
+        lockfile,
+        prefix.clone(),
+        platform,
+        environment.clone(),
+        ignore_pypi.clone(),
+    )?;
+
     let config = match cli_config {
         CondaDenyCliConfig::Check {
-            lockfile,
-            prefix,
-            platform,
-            environment,
             include_safe,
             osi,
-            ignore_pypi,
+            ..
         } => {
-            // cli overrides toml configuration
-            let lockfile = lockfile.unwrap_or(toml_config.get_lockfile_spec());
-            let prefix = prefix.unwrap_or_default();
-
-            let platform = if platform.is_some() {
-                platform
-            } else {
-                toml_config.get_platform_spec()
-            };
-            if platform.is_some() && !prefix.is_empty() {
-                return Err(anyhow::anyhow!(
-                    "Cannot specify platforms and conda prefixes at the same time"
-                ));
-            }
-            // todo: fix unwrap
-            let platform = platform.map(|p| p.iter().map(|s| s.parse().unwrap()).collect());
-
-            let environment = if environment.is_some() {
-                environment
-            } else {
-                toml_config.get_environment_spec()
-            };
-            if environment.is_some() && !prefix.is_empty() {
-                return Err(anyhow::anyhow!(
-                    "Cannot specify environments and conda prefixes at the same time"
-                ));
-            }
-
-            // defaults to false
-            // todo: fail if used in combination with prefix
-            let ignore_pypi = if ignore_pypi.is_some() {
-                ignore_pypi
-            } else {
-                toml_config.get_ignore_pypi()
-            }
-            .unwrap_or(false);
-
-            let lockfile_or_prefix = get_lockfile_or_prefix(
-                lockfile,
-                prefix.clone(),
-                platform,
-                environment,
-                ignore_pypi,
-            )?;
-
-            let license_whitelist = toml_config.get_license_whitelists();
-
             // defaults to false
             let osi = if osi.is_some() {
                 osi
@@ -221,86 +214,27 @@ pub fn get_config_options(
                 toml_config.get_osi()
             }
             .unwrap_or(false);
-            if osi && !license_whitelist.is_empty() {
+
+            let (safe_licenses, ignore_packages) = get_license_information_from_toml_config(&toml_config)?;            
+            if osi && !safe_licenses.is_empty() {
                 return Err(anyhow::anyhow!(
-                    "Cannot use OSI mode and license whitelists at the same time"
+                    "Cannot use OSI mode and safe-licenses at the same time"
                 ));
             }
 
-            if !osi && license_whitelist.is_empty() {
+            if !osi && safe_licenses.is_empty() {
                 return Err(anyhow::anyhow!("No license whitelist provided"));
             }
-
-            // osi and safe-licenses are mutually exclusive
-            // todo: throw an error here instead
-            let (safe_licenses, ignore_packages) = if osi {
-                (vec![], vec![])
-            } else {
-                get_license_information_from_toml_config(toml_config)?
-            };
 
             CondaDenyConfig::Check(CondaDenyCheckConfig {
                 lockfile_or_prefix,
                 include_safe,
                 osi,
-                ignore_pypi,
                 safe_licenses,
                 ignore_packages,
             })
         }
-        CondaDenyCliConfig::List {
-            lockfile,
-            prefix,
-            platform,
-            environment,
-            ignore_pypi,
-        } => {
-            // todo: refactor with check
-            // cli overrides toml configuration
-            let lockfile = lockfile.unwrap_or(toml_config.get_lockfile_spec());
-            let prefix = prefix.unwrap_or_default();
-
-            let platform = if platform.is_some() {
-                platform
-            } else {
-                toml_config.get_platform_spec()
-            };
-            if platform.is_some() && !prefix.is_empty() {
-                return Err(anyhow::anyhow!(
-                    "Cannot specify platforms and conda prefixes at the same time"
-                ));
-            }
-            // todo: fix unwrap
-            let platform = platform.map(|p| p.iter().map(|s| s.parse().unwrap()).collect());
-
-            let environment = if environment.is_some() {
-                environment
-            } else {
-                toml_config.get_environment_spec()
-            };
-            if environment.is_some() && !prefix.is_empty() {
-                return Err(anyhow::anyhow!(
-                    "Cannot specify environments and conda prefixes at the same time"
-                ));
-            }
-
-            // defaults to false
-            // todo: fail if used in combination with prefix
-            let ignore_pypi = if ignore_pypi.is_some() {
-                ignore_pypi
-            } else {
-                toml_config.get_ignore_pypi()
-            }
-            .unwrap_or(false);
-
-            let lockfile_or_prefix = get_lockfile_or_prefix(
-                lockfile,
-                prefix.clone(),
-                platform,
-                environment,
-                ignore_pypi,
-            )?;
-
+        CondaDenyCliConfig::List {..} => {
             CondaDenyConfig::List(CondaDenyListConfig { lockfile_or_prefix })
         }
     };

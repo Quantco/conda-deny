@@ -215,15 +215,12 @@ pub fn build_license_whitelist(
         }
     }
 
-    if all_safe_licenses.is_empty() {
-        anyhow::bail!("Your license whitelist is empty.\nIf you want to use the OSI license whitelist, use the --osi flag.");
-    }
     debug!("License whitelist built successfully.");
     Ok((all_safe_licenses, all_ignore_packages))
 }
 
 pub fn get_license_information_from_toml_config(
-    toml_config: CondaDenyTomlConfig,
+    toml_config: &CondaDenyTomlConfig,
 ) -> Result<(Vec<Expression>, Vec<IgnorePackage>)> {
     let safe_licenses_from_toml = toml_config
         .tool
@@ -354,7 +351,7 @@ mod tests {
             CondaDenyTomlConfig::from_path("tests/test_remote_base_configs/valid_config.toml")
                 .unwrap();
         let (safe_licenses, ignored_packages) =
-            get_license_information_from_toml_config(toml_config).unwrap();
+            get_license_information_from_toml_config(&toml_config).unwrap();
         assert_eq!(safe_licenses.len(), 5);
         assert_eq!(
             safe_licenses,

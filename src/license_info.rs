@@ -384,7 +384,6 @@ mod tests {
             }),
             include_safe: false,
             osi: false,
-            ignore_pypi: false,
             safe_licenses,
             ignore_packages,
         };

@@ -69,6 +69,43 @@ pub enum CondaDenyCliConfig {
     },
 }
 
+impl CondaDenyCliConfig {
+    pub fn lockfile(&self) -> Option<Vec<String>> {
+        match self {
+            CondaDenyCliConfig::Check { lockfile, .. } => lockfile.clone(),
+            CondaDenyCliConfig::List { lockfile, .. } => lockfile.clone(),
+        }
+    }
+
+    pub fn prefix(&self) -> Option<Vec<String>> {
+        match self {
+            CondaDenyCliConfig::Check { prefix, .. } => prefix.clone(),
+            CondaDenyCliConfig::List { prefix, .. } => prefix.clone(),
+        }
+    }
+
+    pub fn platform(&self) -> Option<Vec<String>> {
+        match self {
+            CondaDenyCliConfig::Check { platform, .. } => platform.clone(),
+            CondaDenyCliConfig::List { platform, .. } => platform.clone(),
+        }
+    }
+
+    pub fn environment(&self) -> Option<Vec<String>> {
+        match self {
+            CondaDenyCliConfig::Check { environment, .. } => environment.clone(),
+            CondaDenyCliConfig::List { environment, .. } => environment.clone(),
+        }
+    }
+
+    pub fn ignore_pypi(&self) -> Option<bool> {
+        match self {
+            CondaDenyCliConfig::Check { ignore_pypi, .. } => ignore_pypi.clone(),
+            CondaDenyCliConfig::List { ignore_pypi, .. } => ignore_pypi.clone(),
+        }
+    }
+}
+
 #[cfg(test)]
 mod tests {
     use super::*;
