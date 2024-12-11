@@ -102,7 +102,7 @@ mod tests {
     #[test]
     fn test_get_packages_for_pixi_lock() {
         let path = Path::new("tests/test_pixi_lock_files/valid1_pixi.lock");
-        let package_records = get_conda_packages_for_pixi_lock(&path, &None, &None, false);
+        let package_records = get_conda_packages_for_pixi_lock(path, &None, &None, false);
         assert_eq!(package_records.unwrap().len(), 758);
 
         let package_records =

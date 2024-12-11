@@ -43,7 +43,6 @@ fn check_config(
     #[default(None)] prefix: Option<Vec<String>>,
     #[default(None)] platform: Option<Vec<String>>,
     #[default(None)] environment: Option<Vec<String>>,
-    #[default(true)] include_safe: bool,
     #[default(None)] osi: Option<bool>,
     #[default(None)] ignore_pypi: Option<bool>,
 ) -> CondaDenyCheckConfig {
@@ -52,7 +51,7 @@ fn check_config(
         prefix,
         platform,
         environment,
-        include_safe,
+        include_safe: true,
         osi,
         ignore_pypi,
     };
@@ -167,7 +166,6 @@ fn test_osi_check(
         None,
         None,
         None,
-        true,
         Some(true)
     )]
     check_config: CondaDenyCheckConfig,
