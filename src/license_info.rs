@@ -173,10 +173,10 @@ impl LicenseInfos {
         Ok(LicenseInfos { license_infos })
     }
 
-    pub fn from_conda_prefixes(prefixes: &Vec<PathBuf>) -> Result<LicenseInfos> {
+    pub fn from_conda_prefixes(prefixes: &[PathBuf]) -> Result<LicenseInfos> {
         let mut license_infos = Vec::new();
         assert!(!prefixes.is_empty());
-        for conda_prefix in prefixes.clone() {
+        for conda_prefix in prefixes {
             let conda_meta_path = conda_prefix.join("conda-meta");
             let conda_meta_entries =
                 CondaMetaEntries::from_dir(&conda_meta_path).with_context(|| {

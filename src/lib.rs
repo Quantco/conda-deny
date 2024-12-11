@@ -101,8 +101,8 @@ fn get_lockfile_or_prefix(
     } else if !lockfile.is_empty() {
         Ok(LockfileOrPrefix::Lockfile(LockfileSpec {
             lockfiles: lockfile.iter().map(|s| s.into()).collect(),
-            platforms: platforms,
-            environments: environments,
+            platforms,
+            environments,
             ignore_pypi,
         }))
     } else {
