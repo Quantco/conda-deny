@@ -1,19 +1,16 @@
-use std::{
-    io::Write,
-    path::{Path, PathBuf},
-};
+use std::path::{Path, PathBuf};
 
 use anyhow::{Context, Result};
+use colored::Colorize;
 use rattler_conda_types::PackageRecord;
 use spdx::Expression;
 
-use colored::*;
+
 
 use crate::{
     conda_meta_entry::{CondaMetaEntries, CondaMetaEntry},
     expression_utils::{check_expression_safety, extract_license_texts, parse_expression},
     license_whitelist::is_package_ignored,
-    list,
     pixi_lock::get_conda_packages_for_pixi_lock,
     CheckOutput, CondaDenyCheckConfig, LockfileSpec,
 };
@@ -22,10 +19,7 @@ use crate::{
 pub struct LicenseInfo {
     pub package_name: String,
     pub version: String,
-    #[allow(dead_code)]
-    pub timestamp: Option<u64>,
     pub license: LicenseState,
-    #[allow(dead_code)]
     pub platform: Option<String>,
     pub build: String,
 }
@@ -35,7 +29,6 @@ impl LicenseInfo {
         LicenseInfo {
             package_name: entry.name.clone(),
             version: entry.version.clone(),
-            timestamp: Some(entry.timestamp),
             license: entry.license.clone(),
             platform: Some(entry.platform.clone()),
             build: entry.build.clone(),
@@ -55,14 +48,13 @@ impl LicenseInfo {
         LicenseInfo {
             package_name: package_record.name.as_source().to_string(),
             version: package_record.version.version().to_string(),
-            timestamp: None,
             license: license_for_package,
             platform: Some(package_record.subdir),
             build: package_record.build,
         }
     }
 
-    pub fn pretty_print(&self, colored: bool) -> String {
+    pub fn pretty_print(&self) -> String {
         let license_str = match &self.license {
             LicenseState::Valid(license) => license.to_string(),
             LicenseState::Invalid(license) => license.to_string(),
@@ -72,31 +64,19 @@ impl LicenseInfo {
             LicenseState::Valid(_) => "",
             LicenseState::Invalid(_) => "(Non-SPDX)",
         };
-        if colored {
-            format!(
-                "{} {}-{} ({}): {} {}\n",
-                &self.package_name.blue(),
-                &self.version.cyan(),
-                &self.build.bright_cyan().italic(),
-                &self
-                    .platform
-                    .as_ref()
-                    .unwrap_or(&"Unknown".to_string())
-                    .bright_purple(),
-                license_str.yellow(),
-                recognized.bright_black(),
-            )
-        } else {
-            format!(
-                "{} {}-{} ({}): {} {}\n",
-                &self.package_name,
-                &self.version,
-                &self.build.italic(),
-                &self.platform.as_ref().unwrap_or(&"Unknown".to_string()),
-                license_str,
-                recognized,
-            )
-        }
+        format!(
+            "{} {}-{} ({}): {} {}\n",
+            &self.package_name.blue(),
+            &self.version.cyan(),
+            &self.build.bright_cyan().italic(),
+            &self
+                .platform
+                .as_ref()
+                .unwrap_or(&"Unknown".to_string())
+                .bright_purple(),
+            license_str.yellow(),
+            recognized.bright_black(),
+        )
     }
 }
 
@@ -272,12 +252,6 @@ impl LicenseInfos {
 
         (safe_dependencies, unsafe_dependencies)
     }
-
-    pub fn list<W: Write>(&self, mut out: W) -> Result<()> {
-        let output = list::list_license_infos(self, true);
-        out.write_all(output.as_bytes())?;
-        Ok(())
-    }
 }
 
 #[derive(Debug, Clone, PartialEq)]
@@ -293,29 +267,6 @@ mod tests {
     use super::*;
     use crate::{conda_meta_entry::CondaMetaEntry, LockfileOrPrefix};
     use spdx::Expression;
-
-    #[test]
-    fn test_license_info_creation() {
-        let license_info = LicenseInfo {
-            package_name: "test".to_string(),
-            version: "1.0".to_string(),
-            timestamp: Some(1234567890),
-            license: LicenseState::Invalid("Invalid-MIT".to_string()),
-            platform: Some("linux-64".to_string()),
-            build: "py_0".to_string(),
-        };
-
-        assert_eq!(license_info.package_name, "test");
-        assert_eq!(license_info.version, "1.0");
-        assert_eq!(license_info.timestamp, Some(1234567890));
-        assert_eq!(
-            license_info.license,
-            LicenseState::Invalid("Invalid-MIT".to_string())
-        );
-        assert_eq!(license_info.platform, Some("linux-64".to_string()));
-        assert_eq!(license_info.build, "py_0".to_string());
-    }
-
     #[test]
     fn test_license_info_from_conda_meta_entry() {
         let entry = CondaMetaEntry {
@@ -332,7 +283,6 @@ mod tests {
 
         assert_eq!(license_info.package_name, "test");
         assert_eq!(license_info.version, "1.0");
-        assert_eq!(license_info.timestamp, Some(1234567890));
         assert_eq!(
             license_info.license,
             super::LicenseState::Invalid("Invalid-MIT".to_string())
@@ -347,7 +297,6 @@ mod tests {
         let unsafe_license_info = LicenseInfo {
             package_name: "test".to_string(),
             version: "0.1.0".to_string(),
-            timestamp: Some(1234567890),
             license: LicenseState::Invalid("Invalid-MIT".to_string()),
             platform: Some("linux-64".to_string()),
             build: "py_0".to_string(),
@@ -355,7 +304,6 @@ mod tests {
         let safe_license_info = LicenseInfo {
             package_name: "test".to_string(),
             version: "0.1.0".to_string(),
-            timestamp: Some(1234567890),
             license: LicenseState::Valid(Expression::parse("MIT").unwrap()),
             platform: Some("linux-64".to_string()),
             build: "py_0".to_string(),
@@ -397,7 +345,6 @@ mod tests {
         let license_info1 = LicenseInfo {
             package_name: "test".to_string(),
             version: "0.1.0".to_string(),
-            timestamp: Some(1234567890),
             license: LicenseState::Invalid("Invalid-MIT".to_string()),
             platform: Some("linux-64".to_string()),
             build: "py_0".to_string(),
@@ -405,7 +352,6 @@ mod tests {
         let license_info2 = LicenseInfo {
             package_name: "test2".to_string(),
             version: "0.1.0".to_string(),
-            timestamp: Some(1234567890),
             license: LicenseState::Invalid("Invalid-MIT".to_string()),
             platform: Some("linux-64".to_string()),
             build: "py_0".to_string(),
@@ -426,7 +372,6 @@ mod tests {
         let license_info1 = LicenseInfo {
             package_name: "test".to_string(),
             version: "0.1.0".to_string(),
-            timestamp: Some(1234567890),
             license: LicenseState::Invalid("Invalid-MIT".to_string()),
             platform: Some("linux-64".to_string()),
             build: "py_0".to_string(),
@@ -434,7 +379,6 @@ mod tests {
         let license_info2 = LicenseInfo {
             package_name: "test".to_string(),
             version: "0.1.0".to_string(),
-            timestamp: Some(1234567890),
             license: LicenseState::Invalid("Invalid-MIT".to_string()),
             platform: Some("linux-64".to_string()),
             build: "py_0".to_string(),

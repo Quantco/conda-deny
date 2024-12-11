@@ -75,7 +75,7 @@ pub fn is_package_ignored(
     Ok(false)
 }
 
-pub fn license_config_from_toml_file(
+pub fn license_config_from_toml_str(
     toml_file: &str,
 ) -> Result<(Vec<Expression>, Vec<IgnorePackage>)> {
     let config_content = fs::read_to_string(toml_file)
@@ -195,7 +195,7 @@ pub fn build_license_whitelist(
                 }
             }
         } else {
-            match license_config_from_toml_file(license_whitelist_path) {
+            match license_config_from_toml_str(license_whitelist_path) {
                 Ok((safe_licenses, ignore_packages)) => {
                     all_safe_licenses.extend(safe_licenses);
                     all_ignore_packages.extend(ignore_packages);
@@ -272,7 +272,7 @@ mod tests {
     #[test]
     fn test_valid_remote_base_config() {
         let (safe_licenses, ignored_packages) =
-            license_config_from_toml_file("tests/test_remote_base_configs/valid_config.toml")
+            license_config_from_toml_str("tests/test_remote_base_configs/valid_config.toml")
                 .unwrap();
         assert_eq!(safe_licenses.len(), 2);
         assert_eq!(ignored_packages.len(), 1);
@@ -281,13 +281,13 @@ mod tests {
     #[test]
     fn test_invalid_remote_base_config() {
         let result =
-            license_config_from_toml_file("tests/test_remote_base_configs/invalid_config.toml");
+            license_config_from_toml_str("tests/test_remote_base_configs/invalid_config.toml");
         assert!(result.is_err());
     }
 
     #[test]
     fn test_different_versions_in_remote_base_config() {
-        let (safe_licenses, ignored_packages) = license_config_from_toml_file(
+        let (safe_licenses, ignored_packages) = license_config_from_toml_str(
             "tests/test_remote_base_configs/version_test_config.toml",
         )
         .unwrap();
@@ -319,7 +319,7 @@ mod tests {
 
     #[test]
     fn test_is_package_ignored() {
-        let (_, ignored_packages) = license_config_from_toml_file(
+        let (_, ignored_packages) = license_config_from_toml_str(
             "tests/test_remote_base_configs/version_test_config.toml",
         )
         .unwrap();

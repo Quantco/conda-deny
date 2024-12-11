@@ -53,7 +53,7 @@ pub fn format_check_output(
             .as_str(),
         );
         for license_info in &safe_dependencies {
-            output.push_str(&license_info.pretty_print(true))
+            output.push_str(&license_info.pretty_print())
         }
     }
 
@@ -66,7 +66,7 @@ pub fn format_check_output(
             .as_str(),
         );
         for license_info in &unsafe_dependencies {
-            output.push_str(&license_info.pretty_print(true))
+            output.push_str(&license_info.pretty_print())
         }
     }
 
