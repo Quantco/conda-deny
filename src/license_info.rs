@@ -12,7 +12,7 @@ use colored::*;
 use crate::{
     conda_meta_entry::{CondaMetaEntries, CondaMetaEntry},
     expression_utils::{check_expression_safety, extract_license_texts, parse_expression},
-    license_whitelist::is_package_ignored_2,
+    license_whitelist::is_package_ignored,
     list,
     pixi_lock::get_conda_packages_for_pixi_lock,
     CheckOutput, CondaDenyCheckConfig, LockfileSpec,
@@ -214,7 +214,7 @@ impl LicenseInfos {
             match &license_info.license {
                 LicenseState::Valid(license) => {
                     if check_expression_safety(license, &config.safe_licenses)
-                        || is_package_ignored_2(
+                        || is_package_ignored(
                             &config.ignore_packages,
                             &license_info.package_name,
                             &license_info.version,
@@ -226,12 +226,11 @@ impl LicenseInfos {
                     }
                 }
                 LicenseState::Invalid(_) => {
-                    if is_package_ignored_2(
+                    if is_package_ignored(
                         &config.ignore_packages,
                         &license_info.package_name,
                         &license_info.version,
-                    )?
-                    {
+                    )? {
                         safe_dependencies.push(license_info.clone());
                     } else {
                         unsafe_dependencies.push(license_info.clone());

@@ -2,9 +2,11 @@ use std::io;
 
 use anyhow::Result;
 use clap::Parser;
+use conda_deny::check::check;
 use conda_deny::cli::Cli;
+use conda_deny::get_config_options;
+use conda_deny::list::list;
 use conda_deny::CondaDenyConfig;
-use conda_deny::{check, get_config_options, list};
 use log::{debug, info};
 
 fn main() -> Result<()> {

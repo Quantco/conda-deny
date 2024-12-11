@@ -1,3 +1,5 @@
+use std::path::PathBuf;
+
 use clap::ArgAction;
 use clap_verbosity_flag::{ErrorLevel, Verbosity};
 
@@ -15,7 +17,7 @@ pub struct Cli {
 
     /// Path to the conda-deny config file
     #[arg(short, long, global = true)]
-    pub config: Option<String>,
+    pub config: Option<PathBuf>,
 }
 
 #[derive(clap::Subcommand, Debug)]
@@ -23,11 +25,11 @@ pub enum CondaDenyCliConfig {
     Check {
         /// Path to the pixi lockfile(s)
         #[arg(short, long)]
-        lockfile: Option<Vec<String>>,
+        lockfile: Option<Vec<PathBuf>>,
 
         /// Path to the conda prefix(es)
         #[arg(long, global = true)]
-        prefix: Option<Vec<String>>,
+        prefix: Option<Vec<PathBuf>>,
 
         /// Platform(s) to check
         #[arg(short, long)]
@@ -50,11 +52,11 @@ pub enum CondaDenyCliConfig {
     List {
         /// Path to the pixi lockfile(s)
         #[arg(short, long)]
-        lockfile: Option<Vec<String>>,
+        lockfile: Option<Vec<PathBuf>>,
 
         /// Path to the conda prefix(es)
         #[arg(long, global = true)]
-        prefix: Option<Vec<String>>,
+        prefix: Option<Vec<PathBuf>>,
 
         /// Platform(s) to list
         #[arg(short, long)]
@@ -71,14 +73,14 @@ pub enum CondaDenyCliConfig {
 }
 
 impl CondaDenyCliConfig {
-    pub fn lockfile(&self) -> Option<Vec<String>> {
+    pub fn lockfile(&self) -> Option<Vec<PathBuf>> {
         match self {
             CondaDenyCliConfig::Check { lockfile, .. } => lockfile.clone(),
             CondaDenyCliConfig::List { lockfile, .. } => lockfile.clone(),
         }
     }
 
-    pub fn prefix(&self) -> Option<Vec<String>> {
+    pub fn prefix(&self) -> Option<Vec<PathBuf>> {
         match self {
             CondaDenyCliConfig::Check { prefix, .. } => prefix.clone(),
             CondaDenyCliConfig::List { prefix, .. } => prefix.clone(),
@@ -126,14 +128,14 @@ mod tests {
     fn test_cli_with_config() {
         let cli =
             Cli::try_parse_from(vec!["conda-deny", "list", "--config", "custom.toml"]).unwrap();
-        assert_eq!(cli.config.as_deref(), Some("custom.toml"));
+        assert_eq!(cli.config, Some("custom.toml".into()));
     }
 
     #[test]
     fn test_cli_with_config_new_order() {
         let cli =
             Cli::try_parse_from(vec!["conda-deny", "check", "--config", "custom.toml"]).unwrap();
-        assert_eq!(cli.config.as_deref(), Some("custom.toml"));
+        assert_eq!(cli.config, Some("custom.toml".into()));
         match cli.command {
             CondaDenyCliConfig::Check { include_safe, .. } => {
                 assert!(!include_safe);

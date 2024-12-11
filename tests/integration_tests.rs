@@ -1,7 +1,8 @@
 use assert_cmd::prelude::*;
 use conda_deny::cli::CondaDenyCliConfig;
 use conda_deny::{
-    check, get_config_options, list, CondaDenyCheckConfig, CondaDenyConfig, CondaDenyListConfig,
+    check::check, get_config_options, list::list, CondaDenyCheckConfig, CondaDenyConfig,
+    CondaDenyListConfig,
 };
 use rattler_conda_types::Platform;
 use rstest::{fixture, rstest};
@@ -11,8 +12,8 @@ use std::process::Command;
 #[fixture]
 fn list_config(
     #[default(None)] config: Option<PathBuf>,
-    #[default(None)] lockfile: Option<Vec<String>>,
-    #[default(None)] prefix: Option<Vec<String>>,
+    #[default(None)] lockfile: Option<Vec<PathBuf>>,
+    #[default(None)] prefix: Option<Vec<PathBuf>>,
     #[default(None)] platform: Option<Vec<Platform>>,
     #[default(None)] environment: Option<Vec<String>>,
     #[default(None)] ignore_pypi: Option<bool>,
@@ -25,11 +26,7 @@ fn list_config(
         ignore_pypi,
     };
 
-    let config = get_config_options(
-        config.map(|p| p.to_str().unwrap().to_string()),
-        cli,
-    )
-    .unwrap();
+    let config = get_config_options(config, cli).unwrap();
 
     match config {
         CondaDenyConfig::List(list_config) => list_config,
@@ -40,8 +37,8 @@ fn list_config(
 #[fixture]
 fn check_config(
     #[default(None)] config: Option<PathBuf>,
-    #[default(None)] lockfile: Option<Vec<String>>,
-    #[default(None)] prefix: Option<Vec<String>>,
+    #[default(None)] lockfile: Option<Vec<PathBuf>>,
+    #[default(None)] prefix: Option<Vec<PathBuf>>,
     #[default(None)] platform: Option<Vec<Platform>>,
     #[default(None)] environment: Option<Vec<String>>,
     #[default(None)] osi: Option<bool>,
@@ -57,10 +54,7 @@ fn check_config(
         ignore_pypi,
     };
 
-    let config = get_config_options(
-        config.map(|p| p.to_str().unwrap().to_string()),
-        cli,
-    );
+    let config = get_config_options(config, cli);
     let config = config.unwrap();
 
     match config {
@@ -192,5 +186,9 @@ fn test_exception_check() {
 
     assert!(config.is_err());
     let err_string = config.unwrap_err().to_string();
-    assert!(err_string.contains("No lockfiles or conda prefixes provided"), "{}", err_string);
+    assert!(
+        err_string.contains("No lockfiles or conda prefixes provided"),
+        "{}",
+        err_string
+    );
 }

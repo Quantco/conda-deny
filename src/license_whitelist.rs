@@ -35,7 +35,7 @@ struct LicenseWhitelist {
     ignore_packages: Option<Vec<IgnorePackage>>,
 }
 
-pub fn is_package_ignored_2(
+pub fn is_package_ignored(
     ignore_packages: &Vec<IgnorePackage>,
     package_name: &str,
     package_version: &str,
@@ -323,9 +323,9 @@ mod tests {
             "tests/test_remote_base_configs/version_test_config.toml",
         )
         .unwrap();
-        assert!(is_package_ignored_2(&ignored_packages, "package1", "4.2.1").unwrap());
-        assert!(!is_package_ignored_2(&ignored_packages, "package1", "4.3.0").unwrap());
-        assert!(!is_package_ignored_2(&ignored_packages, "package1", "4.3.2").unwrap());
+        assert!(is_package_ignored(&ignored_packages, "package1", "4.2.1").unwrap());
+        assert!(!is_package_ignored(&ignored_packages, "package1", "4.3.0").unwrap());
+        assert!(!is_package_ignored(&ignored_packages, "package1", "4.3.2").unwrap());
     }
 
     // Mock the read_remote_config function
@@ -344,9 +344,10 @@ mod tests {
 
     #[test]
     fn test_get_safe_licenses_local() {
-        let toml_config =
-            CondaDenyTomlConfig::from_path("tests/test_remote_base_configs/valid_config.toml")
-                .unwrap();
+        let toml_config = CondaDenyTomlConfig::from_path(
+            "tests/test_remote_base_configs/valid_config.toml".into(),
+        )
+        .unwrap();
         let (safe_licenses, ignored_packages) =
             get_license_information_from_toml_config(&toml_config).unwrap();
         assert_eq!(safe_licenses.len(), 5);

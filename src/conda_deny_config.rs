@@ -2,6 +2,7 @@ use anyhow::{Context, Result};
 use log::debug;
 use rattler_conda_types::Platform;
 use serde::Deserialize;
+use std::path::PathBuf;
 use std::vec;
 use std::{fs::File, io::Read};
 
@@ -10,8 +11,6 @@ use crate::license_whitelist::IgnorePackage;
 #[derive(Debug, Deserialize)]
 pub struct CondaDenyTomlConfig {
     pub tool: Tool,
-    #[serde(skip)]
-    pub path: String,
 }
 
 #[derive(Debug, Deserialize)]
@@ -44,8 +43,8 @@ pub enum EnviromentSpec {
 #[derive(Debug, Deserialize, Clone)]
 #[serde(untagged)]
 pub enum LockfileSpec {
-    Single(String),
-    Multiple(Vec<String>),
+    Single(PathBuf),
+    Multiple(Vec<PathBuf>),
 }
 
 #[derive(Debug, Deserialize)]
@@ -75,20 +74,16 @@ pub struct CondaDeny {
 }
 
 impl CondaDenyTomlConfig {
-    pub fn from_path(filepath: &str) -> Result<Self> {
-        let mut file =
-            File::open(filepath).with_context(|| format!("Failed to open file: {}", filepath))?;
+    pub fn from_path(filepath: PathBuf) -> Result<Self> {
+        let mut file = File::open(filepath.clone())?;
 
         let mut contents = String::new();
-        file.read_to_string(&mut contents)
-            .with_context(|| format!("Failed to read file contents: {}", filepath))?;
+        file.read_to_string(&mut contents)?;
 
-        let mut config: CondaDenyTomlConfig = toml::from_str(&contents)
-            .with_context(|| format!("Failed to parse TOML from the file: {}", filepath))?;
+        let config: CondaDenyTomlConfig = toml::from_str(&contents)
+            .with_context(|| format!("Failed to parse TOML from the file: {:?}", filepath))?;
 
-        config.path = filepath.to_string();
-
-        debug!("Loaded config from file: {}", filepath);
+        debug!("Loaded config from file: {:?}", filepath.clone());
 
         Ok(config)
     }
@@ -121,7 +116,7 @@ impl CondaDenyTomlConfig {
         }
     }
 
-    pub fn get_lockfile_spec(&self) -> Vec<String> {
+    pub fn get_lockfile_spec(&self) -> Vec<PathBuf> {
         match &self.tool.conda_deny.lockfile_spec {
             Some(LockfileSpec::Single(name)) => vec![name.clone()],
             Some(LockfileSpec::Multiple(names)) => names.clone(),
@@ -151,7 +146,6 @@ impl CondaDenyTomlConfig {
                     ignore_packages: None,
                 },
             },
-            path: "".to_string(),
         }
     }
 }
@@ -160,14 +154,19 @@ impl CondaDenyTomlConfig {
 mod tests {
     use std::vec;
 
+    use rstest::{fixture, rstest};
+
     use super::*;
 
-    const TEST_FILES: &str = "tests/test_pyproject_toml_files/";
+    #[fixture]
+    fn test_files() -> PathBuf {
+        PathBuf::from("tests/test_pyproject_toml_files/")
+    }
 
-    #[test]
-    fn test_valid_config_multiple_urls() {
-        let test_file_path = format!("{}valid_config_multiple_urls.toml", TEST_FILES);
-        let config = CondaDenyTomlConfig::from_path(&test_file_path).unwrap();
+    #[rstest]
+    fn test_valid_config_multiple_urls(test_files: PathBuf) {
+        let test_file_path = test_files.join("valid_config_multiple_urls.toml");
+        let config = CondaDenyTomlConfig::from_path(test_file_path).unwrap();
 
         let license_config_paths = config.get_license_whitelists();
         assert_eq!(
@@ -179,10 +178,10 @@ mod tests {
         );
     }
 
-    #[test]
-    fn test_missing_optional_fields() {
-        let test_file_path = format!("{}missing_optional_fields.toml", TEST_FILES);
-        let config = CondaDenyTomlConfig::from_path(&test_file_path).unwrap();
+    #[rstest]
+    fn test_missing_optional_fields(test_files: PathBuf) {
+        let test_file_path = test_files.join("missing_optional_fields.toml");
+        let config = CondaDenyTomlConfig::from_path(test_file_path).unwrap();
 
         let license_config_paths = config.get_license_whitelists();
         assert_eq!(
@@ -191,26 +190,26 @@ mod tests {
         );
     }
 
-    #[test]
-    fn test_invalid_toml() {
-        let test_file_path = format!("{}invalid.toml", TEST_FILES);
-        let result = CondaDenyTomlConfig::from_path(&test_file_path);
+    #[rstest]
+    fn test_invalid_toml(test_files: PathBuf) {
+        let test_file_path = test_files.join("invalid.toml");
+        let result = CondaDenyTomlConfig::from_path(test_file_path);
 
         assert!(result.is_err());
     }
 
-    #[test]
-    fn test_get_license_config_paths() {
-        let test_file_path = format!("{}/valid_config_single_url.toml", TEST_FILES);
-        let config = CondaDenyTomlConfig::from_path(&test_file_path).unwrap();
+    #[rstest]
+    fn test_get_license_config_paths(test_files: PathBuf) {
+        let test_file_path = test_files.join("valid_config_single_url.toml");
+        let config = CondaDenyTomlConfig::from_path(test_file_path).unwrap();
 
         assert_eq!(
             config.get_license_whitelists(),
             vec!["https://example.org/conda-deny/base_config.toml".to_string()]
         );
 
-        let test_file_path = format!("{}/valid_config_multiple_urls.toml", TEST_FILES);
-        let config = CondaDenyTomlConfig::from_path(&test_file_path).unwrap();
+        let test_file_path = test_files.join("valid_config_multiple_urls.toml");
+        let config = CondaDenyTomlConfig::from_path(test_file_path).unwrap();
 
         assert_eq!(
             config.get_license_whitelists(),

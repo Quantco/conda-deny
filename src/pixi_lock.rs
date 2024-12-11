@@ -30,7 +30,11 @@ pub fn get_conda_packages_for_pixi_lock(
         match lock_file.environment(&environment_name) {
             Some(environment) => {
                 for platform in environment.platforms() {
-                    if platform_spec.as_ref().map(|all| all.contains(&platform)).unwrap_or(true) {
+                    if platform_spec
+                        .as_ref()
+                        .map(|all| all.contains(&platform))
+                        .unwrap_or(true)
+                    {
                         let packages = match environment.packages(platform) {
                             Some(pkgs) => pkgs,
                             None => continue,
@@ -55,7 +59,7 @@ pub fn get_conda_packages_for_pixi_lock(
                         }
                     }
                 }
-            },
+            }
             None => {
                 return Err(anyhow::anyhow!(
                     "Environment not found in lock file: {}",

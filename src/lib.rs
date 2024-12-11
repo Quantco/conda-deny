@@ -1,3 +1,4 @@
+pub mod check;
 pub mod cli;
 pub mod conda_deny_config;
 mod conda_meta_entry;
@@ -5,14 +6,13 @@ mod conda_meta_package;
 pub mod expression_utils;
 mod license_info;
 pub mod license_whitelist;
-mod list;
+pub mod list;
 mod pixi_lock;
 mod read_remote;
 
-use std::{env, io::Write, path::PathBuf};
+use std::{env, path::PathBuf};
 
 use cli::CondaDenyCliConfig;
-use colored::Colorize;
 use conda_deny_config::CondaDenyTomlConfig;
 use license_info::LicenseInfo;
 use license_whitelist::{get_license_information_from_toml_config, IgnorePackage};
@@ -76,8 +76,8 @@ pub fn fetch_license_infos(lockfile_or_prefix: LockfileOrPrefix) -> Result<Licen
 const IGNORE_PYPI_DEFAULT: bool = false;
 
 fn get_lockfile_or_prefix(
-    lockfile: Vec<String>,
-    prefix: Vec<String>,
+    lockfile: Vec<PathBuf>,
+    prefix: Vec<PathBuf>,
     platforms: Option<Vec<Platform>>,
     environments: Option<Vec<String>>,
     ignore_pypi: Option<bool>,
@@ -131,16 +131,16 @@ fn get_lockfile_or_prefix(
 
 pub fn get_config_options(
     // todo: make this a PathBuf
-    config: Option<String>,
+    config: Option<PathBuf>,
     cli_config: CondaDenyCliConfig,
 ) -> Result<CondaDenyConfig> {
     // if config provided, use config
     // else, try to load pixi.toml, then pyproject.toml and if nothing helps, use empty config
     let toml_config = if let Some(config_path) = config {
-        CondaDenyTomlConfig::from_path(config_path.as_str())
-            .with_context(|| format!("Failed to parse config file {}", config_path))?
+        CondaDenyTomlConfig::from_path(config_path.clone())
+            .with_context(|| format!("Failed to parse config file {:?}", config_path))?
     } else {
-        match CondaDenyTomlConfig::from_path("pixi.toml")
+        match CondaDenyTomlConfig::from_path("pixi.toml".into())
             .with_context(|| "Failed to parse config file pixi.toml")
         {
             Ok(config) => {
@@ -152,7 +152,7 @@ pub fn get_config_options(
                     "Error parsing config file: pixi.toml: {}. Attempting to use pyproject.toml instead...",
                     e
                 );
-                match CondaDenyTomlConfig::from_path("pyproject.toml")
+                match CondaDenyTomlConfig::from_path("pyproject.toml".into())
                     .context(e)
                     .with_context(|| "Failed to parse config file pyproject.toml")
                 {
@@ -246,99 +246,4 @@ pub fn get_config_options(
     };
 
     Ok(config)
-}
-
-pub fn check<W: Write>(check_config: CondaDenyCheckConfig, mut out: W) -> Result<()> {
-    let (safe_dependencies, unsafe_dependencies) = check_license_infos(&check_config)?;
-
-    writeln!(
-        out,
-        "{}",
-        format_check_output(
-            safe_dependencies,
-            unsafe_dependencies.clone(),
-            check_config.include_safe,
-        )
-    )?;
-
-    if !unsafe_dependencies.is_empty() {
-        Err(anyhow::anyhow!("Unsafe licenses found"))
-    } else {
-        Ok(())
-    }
-}
-
-pub fn list<W: Write>(config: &CondaDenyListConfig, mut out: W) -> Result<()> {
-    let license_infos = fetch_license_infos(config.lockfile_or_prefix.clone())
-        .with_context(|| "Fetching license information failed.")?;
-    license_infos.list(&mut out)
-}
-
-pub fn check_license_infos(config: &CondaDenyCheckConfig) -> Result<CheckOutput> {
-    let license_infos = fetch_license_infos(config.lockfile_or_prefix.clone())
-        .with_context(|| "Fetching license information failed.")?;
-
-    if config.osi {
-        debug!("Checking licenses for OSI compliance");
-        Ok(license_infos.osi_check())
-    } else {
-        debug!("Checking licenses against specified whitelist");
-        license_infos.check(config)
-    }
-}
-
-pub fn format_check_output(
-    safe_dependencies: Vec<LicenseInfo>,
-    unsafe_dependencies: Vec<LicenseInfo>,
-    include_safe_dependencies: bool,
-) -> String {
-    let mut output = String::new();
-
-    if include_safe_dependencies && !safe_dependencies.is_empty() {
-        output.push_str(
-            format!(
-                "\n✅ {}:\n\n",
-                "The following dependencies are safe".green()
-            )
-            .as_str(),
-        );
-        for license_info in &safe_dependencies {
-            output.push_str(&license_info.pretty_print(true))
-        }
-    }
-
-    if !unsafe_dependencies.is_empty() {
-        output.push_str(
-            format!(
-                "\n❌ {}:\n\n",
-                "The following dependencies are unsafe".red()
-            )
-            .as_str(),
-        );
-        for license_info in &unsafe_dependencies {
-            output.push_str(&license_info.pretty_print(true))
-        }
-    }
-
-    if unsafe_dependencies.is_empty() {
-        output.push_str(&format!(
-            "\n{}",
-            "✅ No unsafe licenses found! ✅".to_string().green()
-        ));
-    } else {
-        output.push_str(&format!(
-            "\n{}",
-            "❌ Unsafe licenses found! ❌".to_string().red()
-        ));
-    }
-
-    output.push_str(&format!(
-        "\nThere were {} safe licenses and {} unsafe licenses.\n",
-        safe_dependencies.len().to_string().green(),
-        unsafe_dependencies.len().to_string().red()
-    ));
-
-    output.push('\n');
-
-    output
 }
