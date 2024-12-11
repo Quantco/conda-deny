@@ -153,11 +153,14 @@ impl LicenseInfos {
                     config.ignore_pypi,
                 )
                 .with_context(|| {
-                    format!("Failed to get package records from lockfile: {:?}", &lockfile.to_str())
+                    format!(
+                        "Failed to get package records from lockfile: {:?}",
+                        &lockfile.to_str()
+                    )
                 })?;
                 package_records.extend(package_records_for_lockfile);
             }
-            
+
             // let package_records_for_lockfile = get_conda_packages_for_pixi_lock(
             //     None,
             //     config.environment,
@@ -188,15 +191,16 @@ impl LicenseInfos {
             assert!(!prefixes.is_empty());
             for conda_prefix in prefixes.clone() {
                 let conda_meta_path = conda_prefix.join("conda-meta");
-                let conda_meta_entries =
-                    CondaMetaEntries::from_dir(&conda_meta_path).with_context(|| {
+                let conda_meta_entries = CondaMetaEntries::from_dir(&conda_meta_path)
+                    .with_context(|| {
                         format!(
                             "Failed to parse conda meta entries from conda-meta: {:?}",
                             conda_meta_path
                         )
                     })?;
 
-                let license_infos_for_meta = LicenseInfos::from_conda_meta_entries(conda_meta_entries);
+                let license_infos_for_meta =
+                    LicenseInfos::from_conda_meta_entries(conda_meta_entries);
 
                 license_infos.extend(license_infos_for_meta.license_infos);
             }

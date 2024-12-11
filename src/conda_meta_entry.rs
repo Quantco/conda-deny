@@ -105,8 +105,10 @@ mod tests {
 
     #[test]
     pub fn test_non_json_in_conda_meta() {
-        let conda_meta_entries =
-            CondaMetaEntries::from_dir(&PathBuf::from_str("tests/test_conda_metas/non-json-in-conda-meta").unwrap()).unwrap();
+        let conda_meta_entries = CondaMetaEntries::from_dir(
+            &PathBuf::from_str("tests/test_conda_metas/non-json-in-conda-meta").unwrap(),
+        )
+        .unwrap();
         assert_eq!(conda_meta_entries.entries.len(), 1);
         assert_eq!(conda_meta_entries.entries[0].name, "xz");
         assert_eq!(conda_meta_entries.entries[0].version, "5.2.6");
@@ -114,9 +116,10 @@ mod tests {
 
     #[test]
     pub fn test_non_existent_conda_meta() {
-        assert!(
-            CondaMetaEntries::from_dir(&PathBuf::from_str("tests/test_conda_metas/non-existent-conda-meta").unwrap()).is_err()
-        );
+        assert!(CondaMetaEntries::from_dir(
+            &PathBuf::from_str("tests/test_conda_metas/non-existent-conda-meta").unwrap()
+        )
+        .is_err());
     }
 
     #[test]
