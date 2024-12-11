@@ -26,11 +26,15 @@ pub fn get_conda_packages_for_pixi_lock(
         .unwrap_or_else(|| _get_environment_names(&lock_file));
     let mut package_records = Vec::new();
 
-    if platform_spec.is_none() {
-        for environment_name in environment_spec {
-            if let Some(environment) = lock_file.environment(&environment_name) {
+    for environment_name in environment_spec {
+        match lock_file.environment(&environment_name) {
+            Some(environment) => {
                 for platform in environment.platforms() {
-                    if let Some(packages) = environment.packages(platform) {
+                    if platform_spec.as_ref().map(|all| all.contains(&platform)).unwrap_or(true) {
+                        let packages = match environment.packages(platform) {
+                            Some(pkgs) => pkgs,
+                            None => continue,
+                        };
                         for package in packages {
                             match package {
                                 LockedPackageRef::Conda(conda_package) => {
@@ -51,33 +55,12 @@ pub fn get_conda_packages_for_pixi_lock(
                         }
                     }
                 }
-            }
-        }
-    } else {
-        for platform_name in &platform_spec.clone().unwrap() {
-            for environment_name in environment_spec.clone() {
-                if let Some(environment) = lock_file.environment(&environment_name) {
-                    if let Some(packages) = environment.packages(*platform_name) {
-                        for package in packages {
-                            match package {
-                                LockedPackageRef::Conda(conda_package) => {
-                                    let package_record = conda_package.record();
-                                    package_records.push(package_record.to_owned());
-                                }
-                                LockedPackageRef::Pypi(package_data, _) => {
-                                    if !ignore_pypi {
-                                        return Err(anyhow::anyhow!(
-                                            "Pypi packages are not supported: {}",
-                                            package_data.name
-                                        ));
-                                    } else {
-                                        warn!("Ignoring pypi package: {}", package_data.name);
-                                    }
-                                }
-                            }
-                        }
-                    }
-                }
+            },
+            None => {
+                return Err(anyhow::anyhow!(
+                    "Environment not found in lock file: {}",
+                    environment_name
+                ));
             }
         }
     }

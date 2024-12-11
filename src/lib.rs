@@ -283,7 +283,7 @@ pub fn check_license_infos(config: &CondaDenyCheckConfig) -> Result<CheckOutput>
         Ok(license_infos.osi_check())
     } else {
         debug!("Checking licenses against specified whitelist");
-        Ok(license_infos.check(config))
+        license_infos.check(config)
     }
 }
 

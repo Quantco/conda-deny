@@ -143,8 +143,7 @@ pub fn fetch_safe_licenses(
 ) -> Result<(Vec<Expression>, Vec<IgnorePackage>)> {
     let runtime = tokio::runtime::Builder::new_current_thread()
         .enable_all()
-        .build()
-        .unwrap();
+        .build()?;
     let url = remote_config;
     let read_config_task = reader.read(url);
     let config_str = runtime.block_on(read_config_task).map_err(|e| {
@@ -161,12 +160,10 @@ pub fn fetch_safe_licenses(
         )
     })?;
     let mut expressions = Vec::new();
-    if config.tool.conda_deny.safe_licenses.is_some() {
-        for license in config.tool.conda_deny.safe_licenses.unwrap() {
-            let expr = parse_expression(&license)
-                .with_context(|| format!("Failed to parse license expression: {}", license))?;
-            expressions.push(expr);
-        }
+    for license in config.tool.conda_deny.safe_licenses.unwrap_or_default() {
+        let expr = parse_expression(&license)
+            .with_context(|| format!("Failed to parse license expression: {}", license))?;
+        expressions.push(expr);
     }
     let ignore_packages = config.tool.conda_deny.ignore_packages.unwrap_or_default();
     Ok((expressions, ignore_packages))

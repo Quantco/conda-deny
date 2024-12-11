@@ -97,9 +97,10 @@ impl CondaDenyTomlConfig {
         if self.tool.conda_deny.license_whitelist.is_none() {
             Vec::<String>::new()
         } else {
-            match &self.tool.conda_deny.license_whitelist.as_ref().unwrap() {
-                LicenseWhitelist::Single(path) => vec![path.clone()],
-                LicenseWhitelist::Multiple(path) => path.clone(),
+            match &self.tool.conda_deny.license_whitelist {
+                None => vec![],
+                Some(LicenseWhitelist::Single(path)) => vec![path.clone()],
+                Some(LicenseWhitelist::Multiple(path)) => path.clone(),
             }
         }
     }

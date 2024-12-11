@@ -206,7 +206,7 @@ impl LicenseInfos {
         LicenseInfos { license_infos }
     }
 
-    pub fn check(&self, config: &CondaDenyCheckConfig) -> CheckOutput {
+    pub fn check(&self, config: &CondaDenyCheckConfig) -> Result<CheckOutput> {
         let mut safe_dependencies = Vec::new();
         let mut unsafe_dependencies = Vec::new();
 
@@ -218,8 +218,7 @@ impl LicenseInfos {
                             &config.ignore_packages,
                             &license_info.package_name,
                             &license_info.version,
-                        )
-                        .unwrap()
+                        )?
                     {
                         safe_dependencies.push(license_info.clone());
                     } else {
@@ -231,8 +230,7 @@ impl LicenseInfos {
                         &config.ignore_packages,
                         &license_info.package_name,
                         &license_info.version,
-                    )
-                    .unwrap()
+                    )?
                     {
                         safe_dependencies.push(license_info.clone());
                     } else {
@@ -242,7 +240,7 @@ impl LicenseInfos {
             }
         }
 
-        (safe_dependencies, unsafe_dependencies)
+        Ok((safe_dependencies, unsafe_dependencies))
     }
 
     pub fn osi_check(&self) -> CheckOutput {
@@ -388,11 +386,11 @@ mod tests {
             ignore_packages,
         };
 
-        let (_safe_dependencies, _unsafe_dependencies) = unsafe_license_infos.check(&config);
-        assert!(!_unsafe_dependencies.is_empty());
+        let (_, unsafe_dependencies) = unsafe_license_infos.check(&config).unwrap();
+        assert!(!unsafe_dependencies.is_empty());
 
-        let (_safe_dependencies, _unsafe_dependencies) = safe_license_infos.check(&config);
-        assert!(_unsafe_dependencies.is_empty());
+        let (_, unsafe_dependencies) = safe_license_infos.check(&config).unwrap();
+        assert!(unsafe_dependencies.is_empty());
     }
 
     #[test]
