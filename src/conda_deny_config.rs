@@ -106,7 +106,7 @@ impl CondaDenyTomlConfig {
 
     pub fn get_platform_spec(&self) -> Option<Vec<Platform>> {
         match &self.tool.conda_deny.platform_spec {
-            Some(PlatformSpec::Single(name)) => Some(vec![name.clone()]),
+            Some(PlatformSpec::Single(name)) => Some(vec![*name]),
             Some(PlatformSpec::Multiple(names)) => Some(names.clone()),
             None => None,
         }

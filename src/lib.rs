@@ -109,11 +109,11 @@ fn get_lockfile_or_prefix(
     } else {
         assert!(!prefix.is_empty());
 
-        if !platforms.is_none() {
+        if platforms.is_some() {
             Err(anyhow::anyhow!(
                 "Cannot specify platforms and conda prefixes at the same time"
             ))
-        } else if !environments.is_none() {
+        } else if environments.is_some() {
             Err(anyhow::anyhow!(
                 "Cannot specify environments and conda prefixes at the same time"
             ))
