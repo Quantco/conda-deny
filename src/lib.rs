@@ -8,7 +8,6 @@ mod license_info;
 pub mod license_whitelist;
 pub mod list;
 mod pixi_lock;
-mod read_remote;
 
 use std::{env, path::PathBuf};
 
