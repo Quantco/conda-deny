@@ -39,6 +39,7 @@ pub enum CondaDenyCliConfig {
         #[arg(short, long)]
         environment: Option<Vec<String>>,
 
+        /// Check against OSI licenses instead of custom license whitelists.
         #[arg(short, long, action = ArgAction::SetTrue)]
         osi: Option<bool>,
 
