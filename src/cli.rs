@@ -35,18 +35,18 @@ pub enum CondaDenyCliConfig {
         #[arg(short, long)]
         platform: Option<Vec<Platform>>,
 
-        /// Environment(s) to check
+        /// Pixi environment(s) to check
         #[arg(short, long)]
         environment: Option<Vec<String>>,
 
         #[arg(short, long, action = ArgAction::SetTrue)]
         include_safe: bool,
 
-        #[arg(short, long)]
+        #[arg(short, long, action = ArgAction::SetTrue)]
         osi: Option<bool>,
 
         /// Ignore when encountering pypi packages instead of failing.
-        #[arg(long)]
+        #[arg(long, action = ArgAction::SetTrue)]
         ignore_pypi: Option<bool>,
     },
     List {
