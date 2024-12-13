@@ -78,7 +78,7 @@ fn out() -> Vec<u8> {
 #[case("list", "test_default_use_case")]
 #[case("check", "test_default_use_case_pyproject")]
 #[case("list", "test_default_use_case_pyproject")]
-fn test_default_use_case_pyproject(#[case] subcommand: &str, #[case] test_name: &str) {
+fn test_default_use_case(#[case] subcommand: &str, #[case] test_name: &str) {
     let path_string = format!("tests/test_end_to_end/{}", test_name);
     let test_dir = Path::new(path_string.as_str());
 
