@@ -62,7 +62,7 @@ pub enum CondaDenyCliConfig {
         #[arg(short, long)]
         platform: Option<Vec<Platform>>,
 
-        /// Environment(s) to list
+        /// Pixi environment(s) to list
         #[arg(short, long)]
         environment: Option<Vec<String>>,
 
