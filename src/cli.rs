@@ -40,9 +40,6 @@ pub enum CondaDenyCliConfig {
         environment: Option<Vec<String>>,
 
         #[arg(short, long, action = ArgAction::SetTrue)]
-        include_safe: bool,
-
-        #[arg(short, long, action = ArgAction::SetTrue)]
         osi: Option<bool>,
 
         /// Ignore when encountering pypi packages instead of failing.
@@ -114,17 +111,6 @@ mod tests {
     use super::*;
 
     #[test]
-    fn test_cli_check_include_safe() {
-        let cli = Cli::try_parse_from(vec!["conda-deny", "check", "--include-safe"]).unwrap();
-        match cli.command {
-            CondaDenyCliConfig::Check { include_safe, .. } => {
-                assert!(include_safe);
-            }
-            _ => panic!("Expected check subcommand with --include-safe"),
-        }
-    }
-
-    #[test]
     fn test_cli_with_config() {
         let cli =
             Cli::try_parse_from(vec!["conda-deny", "list", "--config", "custom.toml"]).unwrap();
@@ -137,9 +123,7 @@ mod tests {
             Cli::try_parse_from(vec!["conda-deny", "check", "--config", "custom.toml"]).unwrap();
         assert_eq!(cli.config, Some("custom.toml".into()));
         match cli.command {
-            CondaDenyCliConfig::Check { include_safe, .. } => {
-                assert!(!include_safe);
-            }
+            CondaDenyCliConfig::Check { .. } => {}
             _ => panic!("Expected check subcommand with --config"),
         }
     }
@@ -148,9 +132,7 @@ mod tests {
     fn test_cli_with_check_arguments() {
         let cli = Cli::try_parse_from(vec!["conda-deny", "check", "--include-safe"]).unwrap();
         match cli.command {
-            CondaDenyCliConfig::Check { include_safe, .. } => {
-                assert!(include_safe);
-            }
+            CondaDenyCliConfig::Check { .. } => {}
             _ => panic!("Expected check subcommand with --include-safe"),
         }
     }

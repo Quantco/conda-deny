@@ -327,7 +327,6 @@ mod tests {
                 environments: None,
                 ignore_pypi: false,
             }),
-            include_safe: false,
             osi: false,
             safe_licenses,
             ignore_packages,

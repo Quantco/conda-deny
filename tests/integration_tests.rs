@@ -49,7 +49,6 @@ fn check_config(
         prefix,
         platform,
         environment,
-        include_safe: true,
         osi,
         ignore_pypi,
     };
@@ -174,7 +173,6 @@ fn test_exception_check() {
         prefix: None,
         platform: None,
         environment: None,
-        include_safe: true,
         osi: None,
         ignore_pypi: None,
     };

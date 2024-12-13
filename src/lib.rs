@@ -33,7 +33,6 @@ pub enum CondaDenyConfig {
 #[derive(Debug)]
 pub struct CondaDenyCheckConfig {
     pub lockfile_or_prefix: LockfileOrPrefix,
-    pub include_safe: bool,
     pub osi: bool,
     pub safe_licenses: Vec<Expression>,
     pub ignore_packages: Vec<IgnorePackage>,
@@ -208,7 +207,7 @@ pub fn get_config_options(
 
     let config = match cli_config {
         CondaDenyCliConfig::Check {
-            include_safe, osi, ..
+            osi, ..
         } => {
             // defaults to false
             let osi = if osi.is_some() {
@@ -232,7 +231,6 @@ pub fn get_config_options(
 
             CondaDenyConfig::Check(CondaDenyCheckConfig {
                 lockfile_or_prefix,
-                include_safe,
                 osi,
                 safe_licenses,
                 ignore_packages,

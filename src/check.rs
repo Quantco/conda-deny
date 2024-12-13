@@ -26,7 +26,6 @@ pub fn check<W: Write>(check_config: CondaDenyCheckConfig, mut out: W) -> Result
         format_check_output(
             safe_dependencies,
             unsafe_dependencies.clone(),
-            check_config.include_safe,
         )
     )?;
 
@@ -40,22 +39,8 @@ pub fn check<W: Write>(check_config: CondaDenyCheckConfig, mut out: W) -> Result
 pub fn format_check_output(
     safe_dependencies: Vec<LicenseInfo>,
     unsafe_dependencies: Vec<LicenseInfo>,
-    include_safe_dependencies: bool,
 ) -> String {
     let mut output = String::new();
-
-    if include_safe_dependencies && !safe_dependencies.is_empty() {
-        output.push_str(
-            format!(
-                "\n✅ {}:\n\n",
-                "The following dependencies are safe".green()
-            )
-            .as_str(),
-        );
-        for license_info in &safe_dependencies {
-            output.push_str(&license_info.pretty_print())
-        }
-    }
 
     if !unsafe_dependencies.is_empty() {
         output.push_str(
