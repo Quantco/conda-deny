@@ -1,140 +1,192 @@
-#[cfg(test)]
-mod tests {
-    use assert_cmd::prelude::*;
-    use core::str;
-    use std::path::Path;
-    use std::process::Command;
+use assert_cmd::prelude::*;
+use conda_deny::cli::CondaDenyCliConfig;
+use conda_deny::{
+    check::check, get_config_options, list::list, CondaDenyCheckConfig, CondaDenyConfig,
+    CondaDenyListConfig,
+};
+use rattler_conda_types::Platform;
+use rstest::{fixture, rstest};
+use std::path::{Path, PathBuf};
+use std::process::Command;
 
-    #[test]
-    fn test_default_use_case_check() {
-        let test_dir = Path::new("tests/test_end_to_end/test_default_use_case");
+#[fixture]
+fn list_config(
+    #[default(None)] config: Option<PathBuf>,
+    #[default(None)] lockfile: Option<Vec<PathBuf>>,
+    #[default(None)] prefix: Option<Vec<PathBuf>>,
+    #[default(None)] platform: Option<Vec<Platform>>,
+    #[default(None)] environment: Option<Vec<String>>,
+    #[default(None)] ignore_pypi: Option<bool>,
+) -> CondaDenyListConfig {
+    let cli = CondaDenyCliConfig::List {
+        lockfile,
+        prefix,
+        platform,
+        environment,
+        ignore_pypi,
+    };
 
-        let mut command = Command::cargo_bin("conda-deny").unwrap();
-        command.arg("check").current_dir(test_dir);
-        command.assert().failure();
+    let config = get_config_options(config, cli).unwrap();
+
+    match config {
+        CondaDenyConfig::List(list_config) => list_config,
+        _ => panic!(),
     }
+}
 
-    #[test]
-    fn test_default_use_case_list() {
-        let test_dir = Path::new("tests/test_end_to_end/test_default_use_case");
+#[fixture]
+fn check_config(
+    #[default(None)] config: Option<PathBuf>,
+    #[default(None)] lockfile: Option<Vec<PathBuf>>,
+    #[default(None)] prefix: Option<Vec<PathBuf>>,
+    #[default(None)] platform: Option<Vec<Platform>>,
+    #[default(None)] environment: Option<Vec<String>>,
+    #[default(None)] osi: Option<bool>,
+    #[default(None)] ignore_pypi: Option<bool>,
+) -> CondaDenyCheckConfig {
+    let cli = CondaDenyCliConfig::Check {
+        lockfile,
+        prefix,
+        platform,
+        environment,
+        osi,
+        ignore_pypi,
+    };
 
-        let mut command = Command::cargo_bin("conda-deny").unwrap();
-        command.arg("list").current_dir(test_dir);
+    let config = get_config_options(config, cli);
+    let config = config.unwrap();
+
+    match config {
+        CondaDenyConfig::Check(check_config) => check_config,
+        _ => panic!(),
+    }
+}
+
+#[fixture]
+fn change_directory(#[default(PathBuf::from("examples/simple-python"))] path: PathBuf) {
+    std::env::set_current_dir(path).unwrap();
+}
+
+#[fixture]
+fn out() -> Vec<u8> {
+    Vec::new()
+}
+
+#[rstest]
+#[case("check", "test_default_use_case")]
+#[case("list", "test_default_use_case")]
+#[case("check", "test_default_use_case_pyproject")]
+#[case("list", "test_default_use_case_pyproject")]
+fn test_default_use_case(#[case] subcommand: &str, #[case] test_name: &str) {
+    let path_string = format!("tests/test_end_to_end/{}", test_name);
+    let test_dir = Path::new(path_string.as_str());
+
+    let mut command = Command::cargo_bin("conda-deny").unwrap();
+    command.arg(subcommand).current_dir(test_dir);
+    if subcommand == "check" {
+        command.assert().failure();
+    } else {
         command.assert().success();
     }
+}
 
-    #[test]
-    fn test_default_use_case_pyproject_check() {
-        let test_dir = Path::new("tests/test_end_to_end/test_default_use_case_pyproject");
+#[rstest]
+fn test_remote_whitelist_check(
+    #[with(Some(PathBuf::from("tests/test_end_to_end/test_remote_whitelist/pixi.toml")), Some(vec!["tests/test_end_to_end/test_remote_whitelist/pixi.lock".into()]))]
+    check_config: CondaDenyCheckConfig,
+    mut out: Vec<u8>,
+) {
+    let result = check(check_config, &mut out);
+    assert!(result.is_err());
+}
 
-        let mut command = Command::cargo_bin("conda-deny").unwrap();
-        command.arg("check").current_dir(test_dir);
-        command.assert().failure();
-    }
+#[rstest]
+fn test_multiple_whitelists_check(
+    #[with(
+        Some(PathBuf::from("tests/test_end_to_end/test_multiple_whitelists/pixi.toml")),
+        Some(vec!["tests/test_end_to_end/test_multiple_whitelists/pixi.lock".into()])
+    )]
+    check_config: CondaDenyCheckConfig,
+    mut out: Vec<u8>,
+) {
+    let result = check(check_config, &mut out);
+    assert!(result.is_err());
+}
 
-    #[test]
-    fn test_default_use_case_pyproject_list() {
-        let test_dir = Path::new("tests/test_end_to_end/test_default_use_case_pyproject");
+#[rstest]
+fn test_config_with_platform_and_env(
+    #[with(
+        Some(PathBuf::from("tests/test_end_to_end/test_platform_env_spec/pixi.toml")),
+        Some(vec!["tests/test_end_to_end/test_platform_env_spec/pixi.lock".into()])
+    )]
+    check_config: CondaDenyCheckConfig,
+    mut out: Vec<u8>,
+) {
+    let result = check(check_config, &mut out);
+    assert!(result.is_err());
+}
 
-        let mut command = Command::cargo_bin("conda-deny").unwrap();
-        command.arg("list").current_dir(test_dir);
-        command.assert().success();
-    }
+#[rstest]
+fn test_osi_check(
+    #[with(
+        None,
+        Some(vec!["tests/test_end_to_end/test_osi_check/pixi.toml".into()]),
+        None,
+        None,
+        None,
+        Some(true)
+    )]
+    check_config: CondaDenyCheckConfig,
+    mut out: Vec<u8>,
+) {
+    let result = check(check_config, &mut out);
 
-    #[test]
-    fn test_remote_whitelist_check() {
-        let test_dir = Path::new("tests/test_end_to_end/test_remote_whitelist");
+    assert!(result.is_err());
+}
 
-        let mut command = Command::cargo_bin("conda-deny").unwrap();
-        command.arg("check").current_dir(test_dir);
-        command.assert().failure();
-    }
+#[rstest]
+fn test_prefix_list(
+    #[with(
+        Some(PathBuf::from("tests/test_end_to_end/test_prefix_list/pixi.toml")), None, Some(vec!["tests/test_conda_prefixes/test-env".into()])
+)]
+    list_config: CondaDenyListConfig,
+    mut out: Vec<u8>,
+) {
+    // When --prefix is specified, only the license information for the conda-meta directory in the specified prefix should be listed
+    // License information from pixi.lock should not be listed
+    let result = list(list_config, &mut out);
+    assert!(result.is_ok(), "{:?}", result.unwrap_err());
+    let line_count = String::from_utf8(out).unwrap().split("\n").count();
+    let expected_line_count = 50;
+    assert_eq!(
+        line_count, expected_line_count,
+        "Unexpected number of output lines"
+    );
 
-    #[test]
-    fn test_remote_whitelist_list() {
-        let test_dir = Path::new("tests/test_end_to_end/test_remote_whitelist");
+    println!("Output has {} lines", line_count);
+}
 
-        let mut command = Command::cargo_bin("conda-deny").unwrap();
-        command.arg("list").current_dir(test_dir);
-        command.assert().success();
-    }
+#[test]
+fn test_exception_check() {
+    let cli = CondaDenyCliConfig::Check {
+        lockfile: None,
+        prefix: None,
+        platform: None,
+        environment: None,
+        osi: None,
+        ignore_pypi: None,
+    };
 
-    #[test]
-    fn test_multiple_whitelists_check() {
-        let test_dir = Path::new("tests/test_end_to_end/test_multiple_whitelists");
+    let config = get_config_options(
+        Some("tests/test_end_to_end/test_exception_use_case/pixi.toml".into()),
+        cli,
+    );
 
-        let mut command = Command::cargo_bin("conda-deny").unwrap();
-        command.arg("check").current_dir(test_dir);
-        command.assert().failure();
-    }
-
-    #[test]
-    fn test_multiple_whitelists_list() {
-        let test_dir = Path::new("tests/test_end_to_end/test_multiple_whitelists");
-
-        let mut command = Command::cargo_bin("conda-deny").unwrap();
-        command.arg("list").current_dir(test_dir);
-        command.assert().success();
-    }
-
-    #[test]
-    fn test_config_with_platform_and_env() {
-        let test_dir = Path::new("tests/test_end_to_end/test_platform_env_spec");
-
-        let mut command = Command::cargo_bin("conda-deny").unwrap();
-        command.arg("check").current_dir(test_dir);
-        command.assert().failure();
-    }
-
-    #[test]
-    fn test_osi_check() {
-        let test_dir = Path::new("tests/test_end_to_end/test_osi_check");
-
-        let mut command = Command::cargo_bin("conda-deny").unwrap();
-        command.arg("check --osi").current_dir(test_dir);
-        command.assert().failure();
-    }
-
-    #[test]
-    fn test_prefix_list() {
-        // When --prefix is specified, only the license information for the conda-meta directory in the specified prefix should be listed
-        // License information from pixi.lock should not be listed
-
-        let test_dir = Path::new("tests/test_end_to_end/test_prefix_list");
-
-        let output = Command::cargo_bin("conda-deny")
-            .unwrap()
-            .arg("list")
-            .arg("--prefix")
-            .arg("../../../tests/test_conda_prefixes/test-env")
-            .current_dir(test_dir)
-            .output()
-            .expect("Failed to execute command");
-
-        assert!(
-            output.status.success(),
-            "Command did not execute successfully"
-        );
-
-        let stdout = str::from_utf8(&output.stdout).expect("Failed to convert output to string");
-
-        let line_count = stdout.lines().count();
-
-        let expected_line_count = 50;
-        assert_eq!(
-            line_count, expected_line_count,
-            "Unexpected number of output lines"
-        );
-
-        println!("Output has {} lines", line_count);
-    }
-
-    #[test]
-    fn test_exception_check() {
-        let test_dir = Path::new("tests/test_end_to_end/test_exception_use_case");
-
-        let mut command = Command::cargo_bin("conda-deny").unwrap();
-        command.arg("check").current_dir(test_dir);
-        command.assert().failure();
-    }
+    assert!(config.is_err());
+    let err_string = config.unwrap_err().to_string();
+    assert!(
+        err_string.contains("No lockfiles or conda prefixes provided"),
+        "{}",
+        err_string
+    );
 }

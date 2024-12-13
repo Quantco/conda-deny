@@ -1,29 +1,25 @@
-use std::path::Path;
+use std::path::{Path, PathBuf};
 
 use anyhow::{Context, Result};
+use colored::Colorize;
 use rattler_conda_types::PackageRecord;
 use spdx::Expression;
 
-use colored::*;
+
 
 use crate::{
-    conda_deny_config::CondaDenyConfig,
     conda_meta_entry::{CondaMetaEntries, CondaMetaEntry},
     expression_utils::{check_expression_safety, extract_license_texts, parse_expression},
-    license_whitelist::ParsedLicenseWhitelist,
-    list,
+    license_whitelist::is_package_ignored,
     pixi_lock::get_conda_packages_for_pixi_lock,
-    CheckOutput,
+    CheckOutput, CondaDenyCheckConfig, LockfileSpec,
 };
 
 #[derive(Debug, Clone)]
 pub struct LicenseInfo {
     pub package_name: String,
     pub version: String,
-    #[allow(dead_code)]
-    pub timestamp: Option<u64>,
     pub license: LicenseState,
-    #[allow(dead_code)]
     pub platform: Option<String>,
     pub build: String,
 }
@@ -33,7 +29,6 @@ impl LicenseInfo {
         LicenseInfo {
             package_name: entry.name.clone(),
             version: entry.version.clone(),
-            timestamp: Some(entry.timestamp),
             license: entry.license.clone(),
             platform: Some(entry.platform.clone()),
             build: entry.build.clone(),
@@ -53,14 +48,13 @@ impl LicenseInfo {
         LicenseInfo {
             package_name: package_record.name.as_source().to_string(),
             version: package_record.version.version().to_string(),
-            timestamp: None,
             license: license_for_package,
             platform: Some(package_record.subdir),
             build: package_record.build,
         }
     }
 
-    pub fn pretty_print(&self, colored: bool) -> String {
+    pub fn pretty_print(&self) -> String {
         let license_str = match &self.license {
             LicenseState::Valid(license) => license.to_string(),
             LicenseState::Invalid(license) => license.to_string(),
@@ -70,31 +64,19 @@ impl LicenseInfo {
             LicenseState::Valid(_) => "",
             LicenseState::Invalid(_) => "(Non-SPDX)",
         };
-        if colored {
-            format!(
-                "{} {}-{} ({}): {} {}\n",
-                &self.package_name.blue(),
-                &self.version.cyan(),
-                &self.build.bright_cyan().italic(),
-                &self
-                    .platform
-                    .as_ref()
-                    .unwrap_or(&"Unknown".to_string())
-                    .bright_purple(),
-                license_str.yellow(),
-                recognized.bright_black(),
-            )
-        } else {
-            format!(
-                "{} {}-{} ({}): {} {}\n",
-                &self.package_name,
-                &self.version,
-                &self.build.italic(),
-                &self.platform.as_ref().unwrap_or(&"Unknown".to_string()),
-                license_str,
-                recognized,
-            )
-        }
+        format!(
+            "{} {}-{} ({}): {} {}\n",
+            &self.package_name.blue(),
+            &self.version.cyan(),
+            &self.build.bright_cyan().italic(),
+            &self
+                .platform
+                .as_ref()
+                .unwrap_or(&"Unknown".to_string())
+                .bright_purple(),
+            license_str.yellow(),
+            recognized.bright_black(),
+        )
     }
 }
 
@@ -138,42 +120,28 @@ impl LicenseInfos {
         self.license_infos.dedup();
     }
 
-    pub fn from_pixi_lockfiles(
-        lockfiles: Vec<String>,
-        platforms: Vec<String>,
-        environment_specs: Vec<String>,
-        ignore_pypi: bool,
-    ) -> Result<LicenseInfos> {
+    pub fn from_pixi_lockfiles(lockfile_spec: LockfileSpec) -> Result<LicenseInfos> {
         let mut license_infos = Vec::new();
-
         let mut package_records = Vec::new();
 
-        if lockfiles.is_empty() {
+        assert!(!lockfile_spec.lockfiles.is_empty());
+        for lockfile in lockfile_spec.lockfiles {
+            let path: &Path = Path::new(&lockfile);
             let package_records_for_lockfile = get_conda_packages_for_pixi_lock(
-                None,
-                environment_specs.clone(),
-                platforms.clone(),
-                ignore_pypi,
+                path,
+                &lockfile_spec.environments,
+                &lockfile_spec.platforms,
+                lockfile_spec.ignore_pypi,
             )
-            .with_context(|| "Failed to get package records for pixi.lock")?;
-
-            package_records.extend(package_records_for_lockfile);
-        } else {
-            for lockfile in lockfiles {
-                let path = Path::new(&lockfile);
-                let package_records_for_lockfile = get_conda_packages_for_pixi_lock(
-                    Some(path),
-                    environment_specs.clone(),
-                    platforms.clone(),
-                    ignore_pypi,
+            .with_context(|| {
+                format!(
+                    "Failed to get package records from lockfile: {:?}",
+                    &lockfile.to_str()
                 )
-                .with_context(|| {
-                    format!("Failed to get package records from lockfile: {}", &lockfile)
-                })?;
-
-                package_records.extend(package_records_for_lockfile);
-            }
+            })?;
+            package_records.extend(package_records_for_lockfile);
         }
+
         for package_record in package_records {
             let license_info = LicenseInfo::from_package_record(package_record);
             license_infos.push(license_info);
@@ -185,15 +153,15 @@ impl LicenseInfos {
         Ok(LicenseInfos { license_infos })
     }
 
-    pub fn from_conda_prefixes(conda_prefixes: &Vec<String>) -> Result<LicenseInfos> {
+    pub fn from_conda_prefixes(prefixes: &[PathBuf]) -> Result<LicenseInfos> {
         let mut license_infos = Vec::new();
-
-        for conda_prefix in conda_prefixes {
-            let conda_meta_path = format!("{}/conda-meta", conda_prefix);
+        assert!(!prefixes.is_empty());
+        for conda_prefix in prefixes {
+            let conda_meta_path = conda_prefix.join("conda-meta");
             let conda_meta_entries =
                 CondaMetaEntries::from_dir(&conda_meta_path).with_context(|| {
                     format!(
-                        "Failed to parse conda meta entries from conda-meta: {}",
+                        "Failed to parse conda meta entries from conda-meta: {:?}",
                         conda_meta_path
                     )
                 })?;
@@ -218,35 +186,19 @@ impl LicenseInfos {
         LicenseInfos { license_infos }
     }
 
-    pub fn get_license_infos_from_config(
-        config: &CondaDenyConfig,
-        cli_lockfiles: &[String],
-        cli_platforms: &[String],
-        cli_environments: &[String],
-        cli_ignore_pypi: bool,
-    ) -> Result<LicenseInfos> {
-        let mut platforms = config.get_platform_spec().map_or(vec![], |p| p);
-        let mut lockfiles = config.get_lockfile_spec();
-        let mut environment_specs = config.get_environment_spec().map_or(vec![], |e| e);
-
-        platforms.extend(cli_platforms.to_owned());
-        lockfiles.extend(cli_lockfiles.to_owned());
-        environment_specs.extend(cli_environments.to_owned());
-
-        LicenseInfos::from_pixi_lockfiles(lockfiles, platforms, environment_specs, cli_ignore_pypi)
-    }
-
-    pub fn check(&self, license_whitelist: &ParsedLicenseWhitelist) -> CheckOutput {
+    pub fn check(&self, config: &CondaDenyCheckConfig) -> Result<CheckOutput> {
         let mut safe_dependencies = Vec::new();
         let mut unsafe_dependencies = Vec::new();
 
         for license_info in &self.license_infos {
             match &license_info.license {
                 LicenseState::Valid(license) => {
-                    if check_expression_safety(license, &license_whitelist.safe_licenses)
-                        || license_whitelist
-                            .is_package_ignored(&license_info.package_name, &license_info.version)
-                            .unwrap()
+                    if check_expression_safety(license, &config.safe_licenses)
+                        || is_package_ignored(
+                            &config.ignore_packages,
+                            &license_info.package_name,
+                            &license_info.version,
+                        )?
                     {
                         safe_dependencies.push(license_info.clone());
                     } else {
@@ -254,10 +206,11 @@ impl LicenseInfos {
                     }
                 }
                 LicenseState::Invalid(_) => {
-                    if license_whitelist
-                        .is_package_ignored(&license_info.package_name, &license_info.version)
-                        .unwrap()
-                    {
+                    if is_package_ignored(
+                        &config.ignore_packages,
+                        &license_info.package_name,
+                        &license_info.version,
+                    )? {
                         safe_dependencies.push(license_info.clone());
                     } else {
                         unsafe_dependencies.push(license_info.clone());
@@ -266,7 +219,7 @@ impl LicenseInfos {
             }
         }
 
-        (safe_dependencies, unsafe_dependencies)
+        Ok((safe_dependencies, unsafe_dependencies))
     }
 
     pub fn osi_check(&self) -> CheckOutput {
@@ -299,11 +252,6 @@ impl LicenseInfos {
 
         (safe_dependencies, unsafe_dependencies)
     }
-
-    pub fn list(&self) {
-        let output = list::list_license_infos(self, true);
-        println!("{}", output);
-    }
 }
 
 #[derive(Debug, Clone, PartialEq)]
@@ -317,31 +265,8 @@ pub enum LicenseState {
 mod tests {
 
     use super::*;
-    use crate::conda_meta_entry::CondaMetaEntry;
+    use crate::{conda_meta_entry::CondaMetaEntry, LockfileOrPrefix};
     use spdx::Expression;
-
-    #[test]
-    fn test_license_info_creation() {
-        let license_info = LicenseInfo {
-            package_name: "test".to_string(),
-            version: "1.0".to_string(),
-            timestamp: Some(1234567890),
-            license: LicenseState::Invalid("Invalid-MIT".to_string()),
-            platform: Some("linux-64".to_string()),
-            build: "py_0".to_string(),
-        };
-
-        assert_eq!(license_info.package_name, "test");
-        assert_eq!(license_info.version, "1.0");
-        assert_eq!(license_info.timestamp, Some(1234567890));
-        assert_eq!(
-            license_info.license,
-            LicenseState::Invalid("Invalid-MIT".to_string())
-        );
-        assert_eq!(license_info.platform, Some("linux-64".to_string()));
-        assert_eq!(license_info.build, "py_0".to_string());
-    }
-
     #[test]
     fn test_license_info_from_conda_meta_entry() {
         let entry = CondaMetaEntry {
@@ -358,7 +283,6 @@ mod tests {
 
         assert_eq!(license_info.package_name, "test");
         assert_eq!(license_info.version, "1.0");
-        assert_eq!(license_info.timestamp, Some(1234567890));
         assert_eq!(
             license_info.license,
             super::LicenseState::Invalid("Invalid-MIT".to_string())
@@ -373,7 +297,6 @@ mod tests {
         let unsafe_license_info = LicenseInfo {
             package_name: "test".to_string(),
             version: "0.1.0".to_string(),
-            timestamp: Some(1234567890),
             license: LicenseState::Invalid("Invalid-MIT".to_string()),
             platform: Some("linux-64".to_string()),
             build: "py_0".to_string(),
@@ -381,7 +304,6 @@ mod tests {
         let safe_license_info = LicenseInfo {
             package_name: "test".to_string(),
             version: "0.1.0".to_string(),
-            timestamp: Some(1234567890),
             license: LicenseState::Valid(Expression::parse("MIT").unwrap()),
             platform: Some("linux-64".to_string()),
             build: "py_0".to_string(),
@@ -395,18 +317,26 @@ mod tests {
             license_infos: vec![safe_license_info.clone(), safe_license_info.clone()],
         };
 
-        let license_whitelist = ParsedLicenseWhitelist {
-            safe_licenses: vec![Expression::parse("MIT").unwrap()],
-            ignore_packages: vec![],
+        let safe_licenses = vec![Expression::parse("MIT").unwrap()];
+        let ignore_packages = vec![];
+
+        let config = CondaDenyCheckConfig {
+            lockfile_or_prefix: LockfileOrPrefix::Lockfile(LockfileSpec {
+                lockfiles: vec!["pixi.lock".into()],
+                platforms: None,
+                environments: None,
+                ignore_pypi: false,
+            }),
+            osi: false,
+            safe_licenses,
+            ignore_packages,
         };
 
-        let (_safe_dependencies, _unsafe_dependencies) =
-            unsafe_license_infos.check(&license_whitelist);
-        assert!(!_unsafe_dependencies.is_empty());
+        let (_, unsafe_dependencies) = unsafe_license_infos.check(&config).unwrap();
+        assert!(!unsafe_dependencies.is_empty());
 
-        let (_safe_dependencies, _unsafe_dependencies) =
-            safe_license_infos.check(&license_whitelist);
-        assert!(_unsafe_dependencies.is_empty());
+        let (_, unsafe_dependencies) = safe_license_infos.check(&config).unwrap();
+        assert!(unsafe_dependencies.is_empty());
     }
 
     #[test]
@@ -414,7 +344,6 @@ mod tests {
         let license_info1 = LicenseInfo {
             package_name: "test".to_string(),
             version: "0.1.0".to_string(),
-            timestamp: Some(1234567890),
             license: LicenseState::Invalid("Invalid-MIT".to_string()),
             platform: Some("linux-64".to_string()),
             build: "py_0".to_string(),
@@ -422,7 +351,6 @@ mod tests {
         let license_info2 = LicenseInfo {
             package_name: "test2".to_string(),
             version: "0.1.0".to_string(),
-            timestamp: Some(1234567890),
             license: LicenseState::Invalid("Invalid-MIT".to_string()),
             platform: Some("linux-64".to_string()),
             build: "py_0".to_string(),
@@ -443,7 +371,6 @@ mod tests {
         let license_info1 = LicenseInfo {
             package_name: "test".to_string(),
             version: "0.1.0".to_string(),
-            timestamp: Some(1234567890),
             license: LicenseState::Invalid("Invalid-MIT".to_string()),
             platform: Some("linux-64".to_string()),
             build: "py_0".to_string(),
@@ -451,7 +378,6 @@ mod tests {
         let license_info2 = LicenseInfo {
             package_name: "test".to_string(),
             version: "0.1.0".to_string(),
-            timestamp: Some(1234567890),
             license: LicenseState::Invalid("Invalid-MIT".to_string()),
             platform: Some("linux-64".to_string()),
             build: "py_0".to_string(),
@@ -464,16 +390,5 @@ mod tests {
         license_infos.dedup();
 
         assert_eq!(license_infos.license_infos.len(), 1);
-    }
-
-    #[test]
-    fn test_license_infos_from_config() {
-        let test_file_path = format!(
-            "{}test_config_for_license_infos.toml",
-            "tests/test_pyproject_toml_files/"
-        );
-        let config = CondaDenyConfig::from_path(&test_file_path).expect("Failed to read config");
-        let license_infos = LicenseInfos::get_license_infos_from_config(&config, &[], &[], &[], false);
-        assert_eq!(license_infos.unwrap().license_infos.len(), 396);
     }
 }

@@ -4,7 +4,7 @@ use serde_json::Value;
 use std::fs;
 use std::fs::File;
 use std::io::Read;
-use std::path::Path;
+use std::path::{Path, PathBuf};
 
 use crate::license_info::LicenseState;
 
@@ -68,7 +68,7 @@ pub struct CondaMetaEntries {
 }
 
 impl CondaMetaEntries {
-    pub fn from_dir(conda_meta_path: &str) -> Result<Self> {
+    pub fn from_dir(conda_meta_path: &PathBuf) -> Result<Self> {
         let mut conda_meta_entries: Vec<CondaMetaEntry> = Vec::new();
 
         for entry in fs::read_dir(conda_meta_path)? {
@@ -99,12 +99,16 @@ impl CondaMetaEntries {
 
 #[cfg(test)]
 mod tests {
+    use std::str::FromStr;
+
     use super::*;
 
     #[test]
     pub fn test_non_json_in_conda_meta() {
-        let conda_meta_entries =
-            CondaMetaEntries::from_dir("tests/test_conda_metas/non-json-in-conda-meta").unwrap();
+        let conda_meta_entries = CondaMetaEntries::from_dir(
+            &PathBuf::from_str("tests/test_conda_metas/non-json-in-conda-meta").unwrap(),
+        )
+        .unwrap();
         assert_eq!(conda_meta_entries.entries.len(), 1);
         assert_eq!(conda_meta_entries.entries[0].name, "xz");
         assert_eq!(conda_meta_entries.entries[0].version, "5.2.6");
@@ -112,9 +116,10 @@ mod tests {
 
     #[test]
     pub fn test_non_existent_conda_meta() {
-        assert!(
-            CondaMetaEntries::from_dir("tests/test_conda_metas/non-existent-conda-meta").is_err()
-        );
+        assert!(CondaMetaEntries::from_dir(
+            &PathBuf::from_str("tests/test_conda_metas/non-existent-conda-meta").unwrap()
+        )
+        .is_err());
     }
 
     #[test]
@@ -131,7 +136,7 @@ mod tests {
 
     #[test]
     pub fn test_from_dir_nonexistent_dir() {
-        let entries = CondaMetaEntries::from_dir("non-existent-dir");
+        let entries = CondaMetaEntries::from_dir(&PathBuf::from_str("non-existent-dir").unwrap());
         assert!(entries.is_err());
         assert!(entries
             .err()
