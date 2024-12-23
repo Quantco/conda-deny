@@ -1,26 +1,4 @@
 [tool.conda-deny]
-safe-licenses = [
-    "GPL-2.0-only WITH GCC-exception-2.0",
-    "bzip2-1.0.6",
-    "MIT",
-    "ISC ",
-    "LGPL-2.1-only",
-    "MPL-1.1",
-    "BSD-3-Clause",
-    "OFL-1.1",
-    "LicenseRef-Ubuntu-Font-Licence-Version-1.0",
-    "Apache-2.0",
-    "curl",
-    "Apache-2.0 WITH LLVM-exception",
-    "BSD-2-Clause",
-    "LGPL-2.1-or-later",
-    "IJG",
-    "Zlib",
-    "zlib-acknowledgement",
-    "Unlicense",
-    "HPND",
-    "MPL-2.0",
-    "X11"
-]
+safe-licenses = ["GPL-2.0-only"]
 
 ignore-packages = [{ package = "xz", version = "<=5.2.6" }]
