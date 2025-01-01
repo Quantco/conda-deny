@@ -105,7 +105,7 @@ fn test_remote_whitelist_check(
         // CONFIG PATH
         Some(PathBuf::from("tests/test_end_to_end/test_remote_whitelist/pixi.toml")), 
         // LOCKFILE PATHS
-        Some(vec!["tests/test_end_to_end/test_remote_whitelist/pixi.lock".into()])
+        Some(vec!["tests/pixi.lock".into()])
     )]
     check_config: CondaDenyCheckConfig,
     mut out: Vec<u8>,
@@ -125,7 +125,7 @@ fn test_multiple_whitelists_check(
         // CONFIG PATH
         Some(PathBuf::from("tests/test_end_to_end/test_multiple_whitelists/pixi.toml")),
         // LOCKFILE PATHS
-        Some(vec!["tests/test_end_to_end/test_multiple_whitelists/pixi.lock".into()])
+        Some(vec!["tests/pixi.lock".into()])
     )]
     check_config: CondaDenyCheckConfig,
     mut out: Vec<u8>,
@@ -145,7 +145,7 @@ fn test_config_with_platform_and_env(
         // CONFIG PATH
         Some(PathBuf::from("tests/test_end_to_end/test_platform_env_spec/pixi.toml")),
         // LOCKFILE PATHS
-        Some(vec!["tests/test_end_to_end/test_platform_env_spec/pixi.lock".into()])
+        Some(vec!["tests/pixi.lock".into()])
     )]
     check_config: CondaDenyCheckConfig,
     mut out: Vec<u8>,
@@ -165,7 +165,7 @@ fn test_osi_check(
         // CONFIG PATH
         None,
         // LOCKFILE PATHS
-        Some(vec!["tests/test_end_to_end/test_osi_check/pixi.lock".into()]),
+        Some(vec!["tests/pixi.lock".into()]),
         // PREFIXES
         None,
         // PLATFORM
@@ -219,7 +219,7 @@ fn test_exception_check(
         // CONFIG PATH
         "tests/test_end_to_end/test_exception_use_case/config_with_exception.toml")),
         // LOCKFILE PATHS
-        Some(vec!["tests/test_end_to_end/test_exception_use_case/pixi.lock".into()])
+        Some(vec!["tests/pixi.lock".into()])
     )]
     check_config: CondaDenyCheckConfig,
     mut out: Vec<u8>,
@@ -229,7 +229,7 @@ fn test_exception_check(
     let output = String::from_utf8(out).unwrap();
 
     assert!(output.contains(
-        "There were \u{1b}[32m45\u{1b}[0m safe licenses and \u{1b}[31m1\u{1b}[0m unsafe licenses."
+        "There were \u{1b}[32m528\u{1b}[0m safe licenses and \u{1b}[31m14\u{1b}[0m unsafe licenses."
     ));
     assert!(result.is_err());
 }
