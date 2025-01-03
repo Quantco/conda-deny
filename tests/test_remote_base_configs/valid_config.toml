@@ -1,5 +1,5 @@
 [tool.conda-deny]
-license-whitelist = "tests/test_remote_base_configs/valid_license_config.toml"
+license-whitelist = "tests/test_remote_base_configs/valid_license_whitelist.toml"
 safe-licenses = [
     # Licenses by their SPDX identifier, see https://spdx.org/licenses/
     "MIT",

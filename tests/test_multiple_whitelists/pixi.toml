@@ -1,5 +1,5 @@
 [tool.conda-deny]
 license-whitelist = [
-    "tests/test_end_to_end/test_multiple_whitelists/license_whitelist.toml",
+    "tests/test_multiple_whitelists/license_whitelist.toml",
     "https://raw.githubusercontent.com/PaulKMueller/conda-deny-test/main/conda-deny-license_whitelist.toml",
 ]

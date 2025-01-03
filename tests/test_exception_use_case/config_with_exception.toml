@@ -12,4 +12,4 @@ version = "0.1.0"
 poppler = ">=24.8.0,<25"
 
 [tool.conda-deny]
-license-whitelist = "tests/test_end_to_end/test_exception_use_case/whitelist_with_exception.toml"
+license-whitelist = "tests/test_exception_use_case/whitelist_with_exception.toml"
