@@ -1,9 +1,0 @@
-[tool.conda-deny]
-safe-licenses = 
-    # Licenses by their SPDX identifier, see https://spdx.org/licenses/
-    "MIT",
-    "PSF-2.0",
-]
-ignore-packages = 
-    {package="make",
-]

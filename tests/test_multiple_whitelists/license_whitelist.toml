@@ -1,9 +1,6 @@
 [tool.conda-deny]
 safe-licenses = [
-    "Apache-2.0",
-    "Unlicense",
-    "WTFPL",
-    "MIT",
+    "BSD-3-Clause"
 ]
 ignore-packages = [
     {package="_libgcc_mutex"}

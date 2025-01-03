@@ -1,2 +1,0 @@
-[tool.conda-deny]
-license-whitelist = "https://raw.githubusercontent.com/PaulKMueller/conda-deny-test/main/conda-deny-license_whitelist.toml"

@@ -8,7 +8,7 @@ Set Width 1920
 Set Height 750
 
 Hide
-Type "cd tests/test_end_to_end/test_default_use_case" Enter
+Type "cd tests/test_default_use_case" Enter
 Type "clear" Enter
 
 Show
