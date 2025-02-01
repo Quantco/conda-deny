@@ -18,7 +18,7 @@ jobs:
     steps:
       - name: Checkout source code
         uses: actions/checkout@v4
-      - uses: Quantco/ui-actions/version-metadata@8c5c674fd27fb05a436387a14e98b386e0a01d78
+      - uses: Quantco/ui-actions/version-metadata@cd71d2a0e30b25569f6d723e57acca83347e58fc
         id: version-metadata
         with:
           file: ./Cargo.toml
@@ -120,7 +120,7 @@ jobs:
           git tag v${{ needs.metadata.outputs.version }}
           git push origin v${{ needs.metadata.outputs.version }}
       - name: Create Release
-        uses: softprops/action-gh-release@7b4da11513bf3f43f9999e90eabced41ab8bb048
+        uses: softprops/action-gh-release@c95fe1489396fe8a9eb87c0abf8aa5b2ef267fda
         with:
           generate_release_notes: true
           tag_name: v${{ needs.metadata.outputs.version }}
