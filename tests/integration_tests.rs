@@ -89,6 +89,7 @@ fn test_default_use_case(#[case] subcommand: &str, #[case] test_name: &str) {
 
     let stdout = str::from_utf8(&output.stdout).unwrap();
     if subcommand == "check" {
+        println!("{:?}", stdout);
         assert!(stdout.contains("There were 242 safe licenses and 300 unsafe licenses."));
         output.assert().failure();
     } else {
