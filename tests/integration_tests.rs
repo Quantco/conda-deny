@@ -233,3 +233,64 @@ fn test_exception_check(
     ));
     assert!(result.is_err());
 }
+
+#[rstest]
+fn test_pypi_ignore_check(
+    #[with(
+        // CONFIG PATH
+        Some(PathBuf::from("tests/test_pypi_ignore/pixi.toml")),
+        // LOCKFILE PATHS
+        Some(vec!["tests/test_pypi_ignore/lockfile_with_pypi_packages.lock".into()]),
+        // PREFIXES
+        None,
+        // PLATFORM
+        None,
+        // ENVIRONMENT
+        None,
+        // OSI FLAG
+        None,
+        // IGNORE PYPI
+        Some(true)
+    )]
+    check_config: CondaDenyCheckConfig,
+    mut out: Vec<u8>,
+) {
+    let result = check(check_config, &mut out);
+
+    let output = String::from_utf8(out).unwrap();
+
+    assert!(output.contains(
+        "There were \u{1b}[32m5\u{1b}[0m safe licenses and \u{1b}[31m17\u{1b}[0m unsafe licenses."
+    ));
+    assert!(result.is_err());
+}
+
+#[rstest]
+fn test_pypi_ignore_error(
+    #[with(
+        // CONFIG PATH
+        Some(PathBuf::from("tests/test_pypi_ignore/pixi.toml")),
+        // LOCKFILE PATHS
+        Some(vec!["tests/test_pypi_ignore/lockfile_with_pypi_packages.lock".into()]),
+        // PREFIXES
+        None,
+        // PLATFORM
+        None,
+        // ENVIRONMENT
+        None,
+        // OSI FLAG
+        None,
+        // IGNORE PYPI
+        Some(false)
+    )]
+    check_config: CondaDenyCheckConfig,
+    mut out: Vec<u8>,
+) {
+    let result = check(check_config, &mut out);
+    if let Err(e) = &result {
+        println!("Actual error: {}", e);
+    }
+    assert!(result.is_err());
+    assert!(format!("{:?}", result).contains("Pypi packages are not supported: beautifulsoup4"));
+    assert_eq!(out, b"");
+}
