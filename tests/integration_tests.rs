@@ -84,18 +84,18 @@ fn test_default_use_case(#[case] subcommand: &str, #[case] test_name: &str) {
         .unwrap()
         .arg(subcommand)
         .current_dir(test_dir)
+        .env("CLICOLOR_FORCE", "1")
         .output()
         .expect("Failed to execute command");
 
     let stdout = str::from_utf8(&output.stdout).unwrap();
     if subcommand == "check" {
-        println!("{:?}", stdout);
-        assert!(stdout.contains("There were 242 safe licenses and 300 unsafe licenses."));
+        assert!(stdout.contains("There were \u{1b}[32m242\u{1b}[0m safe licenses and \u{1b}[31m300\u{1b}[0m unsafe licenses."));
         output.assert().failure();
     } else {
-        assert!(stdout.contains("zstandard 0.22.0-py312h721a963_1 (osx-arm64): BSD-3-Clause "));
-        assert!(stdout.contains("zlib 1.3.1-hfb2fe0b_1 (osx-arm64): Zlib"));
-        assert!(stdout.contains("xz 5.2.6-h166bdaf_0 (linux-64): LGPL-2.1 and GPL-2.0"));
+        assert!(stdout.contains("\u{1b}[34mzstandard\u{1b}[0m \u{1b}[36m0.22.0\u{1b}[0m-\u{1b}[3;96mpy312h721a963_1\u{1b}[0m (\u{1b}[95mosx-arm64\u{1b}[0m): \u{1b}[33mBSD-3-Clause"));
+        assert!(stdout.contains("\u{1b}[34mzlib\u{1b}[0m \u{1b}[36m1.3.1\u{1b}[0m-\u{1b}[3;96mh4ab18f5_1\u{1b}[0m (\u{1b}[95mlinux-64\u{1b}[0m): \u{1b}[33mZlib"));
+        assert!(stdout.contains("\u{1b}[34mxz\u{1b}[0m \u{1b}[36m5.2.6\u{1b}[0m-\u{1b}[3;96mh166bdaf_0\u{1b}[0m (\u{1b}[95mlinux-64\u{1b}[0m): \u{1b}[33mLGPL-2.1 and GPL-2.0"));
         output.assert().success();
     }
 }
