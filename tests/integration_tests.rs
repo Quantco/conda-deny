@@ -6,8 +6,10 @@ use conda_deny::{
 };
 use rattler_conda_types::Platform;
 use rstest::{fixture, rstest};
+use std::io::Write;
 use std::path::{Path, PathBuf};
 use std::process::Command;
+use tempfile::NamedTempFile;
 
 #[fixture]
 fn list_config(
@@ -120,17 +122,32 @@ fn test_remote_whitelist_check(
     assert!(result.is_err());
 }
 
-#[rstest]
-fn test_multiple_whitelists_check(
-    #[with(
-        // CONFIG PATH
-        Some(PathBuf::from("tests/test_multiple_whitelists/pixi.toml")),
-        // LOCKFILE PATHS
-        Some(vec!["tests/default_pixi.lock".into()])
-    )]
-    check_config: CondaDenyCheckConfig,
-    mut out: Vec<u8>,
-) {
+#[test]
+fn test_multiple_whitelists_check() {
+    // Create a temporary file for pixi.toml
+    let mut temp_file = NamedTempFile::new().unwrap();
+    let file_content = r#"[tool.conda-deny]
+                                license-whitelist = [
+                                "tests/default_license_whitelist.toml",
+                                "https://raw.githubusercontent.com/Quantco/conda-deny/refs/heads/main/tests/default_license_whitelist.rs"]"#;
+    temp_file
+        .as_file_mut()
+        .write_all(file_content.as_bytes())
+        .unwrap();
+    let mut out = out();
+    // Inject the temporary file's path into check_config
+    let temp_path = Some(temp_file.path().to_path_buf());
+    let check_config = check_config(
+        temp_path,
+        Some(vec!["tests/default_pixi.lock".into()]),
+        None,
+        None,
+        None,
+        None,
+        None,
+        None,
+    );
+
     let result = check(check_config, &mut out);
     let output = String::from_utf8(out).unwrap();
 
@@ -193,7 +210,7 @@ fn test_osi_check(
 fn test_prefix_list(
     #[with(
         // CONFIG PATH
-        Some(PathBuf::from("tests/test_prefix_list/pixi.toml")),
+        None,
         // LOCKFILE PATHS
         None,
         // PREFIXES

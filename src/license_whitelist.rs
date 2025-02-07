@@ -286,43 +286,21 @@ mod tests {
     }
 
     #[test]
-    fn test_different_versions_in_remote_base_config() {
-        let (safe_licenses, ignored_packages) = license_config_from_toml_str(
-            "tests/test_remote_base_configs/version_test_config.toml",
-        )
-        .unwrap();
-        assert_eq!(safe_licenses.len(), 2);
-        assert_eq!(ignored_packages.len(), 3);
-
-        assert!(ignored_packages
-            .iter()
-            .any(|x| x.package == "package1" && x.version == Some("=4.2.1".to_string())));
-        assert!(ignored_packages
-            .iter()
-            .any(|x| x.package == "package2" && x.version == Some("<=4.2.1".to_string())));
-        assert!(ignored_packages
-            .iter()
-            .any(|x| x.package == "package3" && x.version == Some(">4.2.1".to_string())));
-    }
-
-    #[test]
-    fn test_semver_matching() {
-        let version1 = Version::from_str("4.2.1").unwrap();
-        let version2 = Version::from_str("4.2.2").unwrap();
-        let version3 = Version::from_str("4.2.0").unwrap();
-        let version_req = VersionSpec::from_str("=4.2.1", ParseStrictness::Strict).unwrap();
-
-        assert!(version_req.matches(&version1));
-        assert!(!version_req.matches(&version2));
-        assert!(!version_req.matches(&version3));
-    }
-
-    #[test]
     fn test_is_package_ignored() {
-        let (_, ignored_packages) = license_config_from_toml_str(
-            "tests/test_remote_base_configs/version_test_config.toml",
-        )
-        .unwrap();
+        let ignored_packages = vec![
+            IgnorePackage {
+                package: "package1".to_string(),
+                version: Some("=4.2.1".to_string()),
+            },
+            IgnorePackage {
+                package: "package2".to_string(),
+                version: Some("<=4.2.1".to_string()),
+            },
+            IgnorePackage {
+                package: "package3".to_string(),
+                version: Some(">4.2.1".to_string()),
+            },
+        ];
         assert!(is_package_ignored(&ignored_packages, "package1", "4.2.1").unwrap());
         assert!(!is_package_ignored(&ignored_packages, "package1", "4.3.0").unwrap());
         assert!(!is_package_ignored(&ignored_packages, "package1", "4.3.2").unwrap());

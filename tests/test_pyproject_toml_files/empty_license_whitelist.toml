@@ -1,2 +1,0 @@
-[tool.conda-deny]
-license-whitelist = "tests/test_remote_base_configs/empty_config.toml"

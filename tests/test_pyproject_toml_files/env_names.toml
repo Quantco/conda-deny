@@ -1,3 +1,0 @@
-[tool.conda-deny]
-license-whitelist = "https://example.org/conda-deny/base_config.toml"
-conda-environment_name = ["testenv1", "testenv2", "testenv3"]

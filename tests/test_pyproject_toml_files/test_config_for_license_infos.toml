@@ -1,4 +1,0 @@
-[tool.conda-deny]
-license-whitelist = "https://example.org/conda-deny/base_config.toml"
-environment = "default"
-lockfile = "tests/test_pixi_lock_files/valid1_pixi.lock"
