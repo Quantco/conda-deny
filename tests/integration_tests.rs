@@ -122,19 +122,32 @@ fn test_remote_whitelist_check(
 
 #[test]
 fn test_multiple_whitelists_check() {
-    // Create a temporary file for pixi.toml
-    let mut temp_file = NamedTempFile::new().unwrap();
+    // Create a temporary file for the license_whitelist.toml
+    let mut temp_license_whitelist = NamedTempFile::new().unwrap();
     let file_content = r#"[tool.conda-deny]
-                                license-whitelist = [
-                                "tests/default_license_whitelist.toml",
-                                "https://raw.githubusercontent.com/Quantco/conda-deny/refs/heads/main/tests/default_license_whitelist.toml"]"#;
-    temp_file
+                                safe-licenses = ["BSD-3-Clause"]"#;
+    temp_license_whitelist
         .as_file_mut()
         .write_all(file_content.as_bytes())
         .unwrap();
+
+    let temp_whitelist_path = temp_license_whitelist.path().to_path_buf();
+
+    // Create a temporary file for pixi.toml
+    let mut temp_pixi_toml = NamedTempFile::new().unwrap();
+    let file_content = "[tool.conda-deny]
+        license-whitelist = [
+        \"https://raw.githubusercontent.com/Quantco/conda-deny/refs/heads/main/tests/default_license_whitelist.toml\",
+        \"".to_string() + temp_whitelist_path.to_str().unwrap() + "\"]";
+
+    temp_pixi_toml
+        .as_file_mut()
+        .write_all(file_content.as_bytes())
+        .unwrap();
+
     let mut out = out();
     // Inject the temporary file's path into check_config
-    let temp_path = Some(temp_file.path().to_path_buf());
+    let temp_path = Some(temp_pixi_toml.path().to_path_buf());
     let check_config = check_config(
         temp_path,
         Some(vec!["tests/default_pixi.lock".into()]),
