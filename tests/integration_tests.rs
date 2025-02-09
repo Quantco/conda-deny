@@ -161,6 +161,77 @@ fn test_multiple_whitelists_check() {
     let result = check(check_config, &mut out);
     let output = String::from_utf8(out).unwrap();
 
+    assert!(output.contains(
+        "There were \u{1b}[32m344\u{1b}[0m safe licenses and \u{1b}[31m198\u{1b}[0m unsafe licenses."
+    ));
+    assert!(result.is_err());
+}
+
+#[test]
+fn test_pixi_env_restrictions_check() {
+    // Create a temporary file for pixi.toml
+    let mut temp_pixi_toml = NamedTempFile::new().unwrap();
+    let file_content = r#"[tool.conda-deny]
+license-whitelist = "tests/default_license_whitelist.toml"
+platform = "linux-64"
+environment = "lint""#;
+
+    temp_pixi_toml
+        .as_file_mut()
+        .write_all(file_content.as_bytes())
+        .unwrap();
+
+    let mut out = out();
+    // Inject the temporary file's path into check_config
+    let temp_path = Some(temp_pixi_toml.path().to_path_buf());
+    let check_config = check_config(
+        temp_path,
+        Some(vec!["tests/default_pixi.lock".into()]),
+        None,
+        None,
+        None,
+        None,
+        None,
+    );
+
+    let result = check(check_config, &mut out);
+    let output = String::from_utf8(out).unwrap();
+
+    assert!(output.contains(
+        "There were \u{1b}[32m27\u{1b}[0m safe licenses and \u{1b}[31m21\u{1b}[0m unsafe licenses."
+    ));
+    assert!(result.is_err());
+}
+
+#[test]
+fn test_safe_licenses_in_config_check() {
+    // Create a temporary file for pixi.toml
+    let mut temp_pixi_toml = NamedTempFile::new().unwrap();
+    let file_content = r#"[tool.conda-deny]
+license-whitelist = "tests/default_license_whitelist.toml"
+safe-licenses = ["BSD-3-Clause"]"#;
+
+    temp_pixi_toml
+        .as_file_mut()
+        .write_all(file_content.as_bytes())
+        .unwrap();
+
+    let mut out = out();
+    // Inject the temporary file's path into check_config
+    let temp_path = Some(temp_pixi_toml.path().to_path_buf());
+    let check_config = check_config(
+        temp_path,
+        Some(vec!["tests/default_pixi.lock".into()]),
+        None,
+        None,
+        None,
+        None,
+        None,
+    );
+
+    let result = check(check_config, &mut out);
+    let output = String::from_utf8(out).unwrap();
+
     println!("{}", output);
 
     assert!(output.contains(
