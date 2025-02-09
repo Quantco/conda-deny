@@ -1,2 +1,0 @@
-[tool.conda-deny]
-license-whitelist = "https://raw.githubusercontent.com/Quantco/conda-deny/refs/heads/main/tests/default_license_whitelist.toml"

@@ -100,17 +100,31 @@ fn test_default_use_case(#[case] subcommand: &str, #[case] test_name: &str) {
     }
 }
 
-#[rstest]
-fn test_remote_whitelist_check(
-    #[with(
-        // CONFIG PATH
-        Some(PathBuf::from("tests/test_remote_whitelist/pixi.toml")), 
-        // LOCKFILE PATHS
-        Some(vec!["tests/default_pixi.lock".into()])
-    )]
-    check_config: CondaDenyCheckConfig,
-    mut out: Vec<u8>,
-) {
+#[test]
+fn test_remote_whitelist_check() {
+    // Create a temporary file for the license_whitelist.toml
+    let mut temp_config_file = NamedTempFile::new().unwrap();
+    let file_content = r#"[tool.conda-deny]
+license-whitelist = "https://raw.githubusercontent.com/Quantco/conda-deny/refs/heads/main/tests/default_license_whitelist.toml""#;
+
+    temp_config_file
+        .as_file_mut()
+        .write_all(file_content.as_bytes())
+        .unwrap();
+
+    let temp_config_file_path = temp_config_file.path().to_path_buf();
+
+    let mut out = out();
+    let check_config = check_config(
+        Some(temp_config_file_path),
+        Some(vec!["tests/default_pixi.lock".into()]),
+        None,
+        None,
+        None,
+        None,
+        None,
+    );
+
     let result = check(check_config, &mut out);
     let output = String::from_utf8(out).unwrap();
 
