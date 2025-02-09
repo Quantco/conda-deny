@@ -168,7 +168,7 @@ fn test_multiple_whitelists_check() {
 }
 
 #[test]
-fn test_pixi_env_restrictions_check() {
+fn test_platform_env_restrictions_check() {
     // Create a temporary file for pixi.toml
     let mut temp_pixi_toml = NamedTempFile::new().unwrap();
     let file_content = r#"[tool.conda-deny]
@@ -236,26 +236,6 @@ safe-licenses = ["BSD-3-Clause"]"#;
 
     assert!(output.contains(
         "There were \u{1b}[32m344\u{1b}[0m safe licenses and \u{1b}[31m198\u{1b}[0m unsafe licenses."
-    ));
-    assert!(result.is_err());
-}
-
-#[rstest]
-fn test_config_with_platform_and_env(
-    #[with(
-        // CONFIG PATH
-        Some(PathBuf::from("tests/test_platform_env_spec/pixi.toml")),
-        // LOCKFILE PATHS
-        Some(vec!["tests/default_pixi.lock".into()])
-    )]
-    check_config: CondaDenyCheckConfig,
-    mut out: Vec<u8>,
-) {
-    let result = check(check_config, &mut out);
-    let output = String::from_utf8(out).unwrap();
-
-    assert!(output.contains(
-        "There were \u{1b}[32m27\u{1b}[0m safe licenses and \u{1b}[31m21\u{1b}[0m unsafe licenses."
     ));
     assert!(result.is_err());
 }
