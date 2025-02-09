@@ -143,7 +143,6 @@ fn test_multiple_whitelists_check() {
         None,
         None,
         None,
-        None,
     );
 
     let result = check(check_config, &mut out);
