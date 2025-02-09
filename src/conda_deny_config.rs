@@ -71,8 +71,6 @@ pub struct CondaDeny {
     pub safe_licenses: Option<Vec<String>>,
     #[serde(rename = "ignore-packages")]
     pub ignore_packages: Option<Vec<IgnorePackage>>,
-    #[serde(rename = "exclude-environment")]
-    pub exclude_environment: Option<Vec<String>>,
 }
 
 impl CondaDenyTomlConfig {
@@ -146,7 +144,6 @@ impl CondaDenyTomlConfig {
                     ignore_pypi: None,
                     safe_licenses: None,
                     ignore_packages: None,
-                    exclude_environment: None,
                 },
             },
         }

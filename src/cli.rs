@@ -47,10 +47,6 @@ pub enum CondaDenyCliConfig {
         /// Ignore when encountering pypi packages instead of failing.
         #[arg(long, action = ArgAction::SetTrue)]
         ignore_pypi: Option<bool>,
-
-        /// Environments to exclude when checking
-        #[arg(long)]
-        exclude_environment: Option<Vec<String>>,
     },
     /// List all packages and their licenses in your conda or pixi environment
     List {

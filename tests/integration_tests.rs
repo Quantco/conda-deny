@@ -45,7 +45,6 @@ fn check_config(
     #[default(None)] environment: Option<Vec<String>>,
     #[default(None)] osi: Option<bool>,
     #[default(None)] ignore_pypi: Option<bool>,
-    #[default(None)] exclude_environment: Option<Vec<String>>,
 ) -> CondaDenyCheckConfig {
     let cli = CondaDenyCliConfig::Check {
         lockfile,
@@ -54,7 +53,6 @@ fn check_config(
         environment,
         osi,
         ignore_pypi,
-        exclude_environment,
     };
 
     let config = get_config_options(config, cli);
@@ -129,7 +127,7 @@ fn test_multiple_whitelists_check() {
     let file_content = r#"[tool.conda-deny]
                                 license-whitelist = [
                                 "tests/default_license_whitelist.toml",
-                                "https://raw.githubusercontent.com/Quantco/conda-deny/refs/heads/main/tests/default_license_whitelist.rs"]"#;
+                                "https://raw.githubusercontent.com/Quantco/conda-deny/refs/heads/main/tests/default_license_whitelist.toml"]"#;
     temp_file
         .as_file_mut()
         .write_all(file_content.as_bytes())
@@ -150,6 +148,8 @@ fn test_multiple_whitelists_check() {
 
     let result = check(check_config, &mut out);
     let output = String::from_utf8(out).unwrap();
+
+    println!("{}", output);
 
     assert!(output.contains(
         "There were \u{1b}[32m344\u{1b}[0m safe licenses and \u{1b}[31m198\u{1b}[0m unsafe licenses."
