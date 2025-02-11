@@ -18,7 +18,7 @@ jobs:
     steps:
       - name: Checkout source code
         uses: actions/checkout@v4
-      - uses: Quantco/ui-actions/version-metadata@a0653e9fc0ee3c4be9f7cc88e509e40536e9f3c1
+      - uses: Quantco/ui-actions/version-metadata@cd71d2a0e30b25569f6d723e57acca83347e58fc
         id: version-metadata
         with:
           file: ./Cargo.toml
@@ -82,7 +82,7 @@ jobs:
           targets: ${{ matrix.target }}
 
       - name: Rust cache
-        uses: Swatinem/rust-cache@82a92a6e8fbeee089604da2575dc567ae9ddeaab
+        uses: Swatinem/rust-cache@f0deed1e0edfc6a9be95417288c0e1099b1eeec3
         with:
           key: build-${{ matrix.target }}-${{ needs.metadata.outputs.optimize-build }}-${{ matrix.cross }}-${{ matrix.os }}
 
@@ -120,7 +120,7 @@ jobs:
           git tag v${{ needs.metadata.outputs.version }}
           git push origin v${{ needs.metadata.outputs.version }}
       - name: Create Release
-        uses: softprops/action-gh-release@01570a1f39cb168c169c802c3bceb9e93fb10974
+        uses: softprops/action-gh-release@c95fe1489396fe8a9eb87c0abf8aa5b2ef267fda
         with:
           generate_release_notes: true
           tag_name: v${{ needs.metadata.outputs.version }}
