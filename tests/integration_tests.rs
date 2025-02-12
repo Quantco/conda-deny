@@ -6,8 +6,10 @@ use conda_deny::{
 };
 use rattler_conda_types::Platform;
 use rstest::{fixture, rstest};
+use std::io::Write;
 use std::path::{Path, PathBuf};
 use std::process::Command;
+use tempfile::NamedTempFile;
 
 #[fixture]
 fn list_config(
@@ -63,11 +65,6 @@ fn check_config(
 }
 
 #[fixture]
-fn change_directory(#[default(PathBuf::from("examples/simple-python"))] path: PathBuf) {
-    std::env::set_current_dir(path).unwrap();
-}
-
-#[fixture]
 fn out() -> Vec<u8> {
     Vec::new()
 }
@@ -78,62 +75,199 @@ fn out() -> Vec<u8> {
 #[case("check", "test_default_use_case_pyproject")]
 #[case("list", "test_default_use_case_pyproject")]
 fn test_default_use_case(#[case] subcommand: &str, #[case] test_name: &str) {
-    let path_string = format!("tests/test_end_to_end/{}", test_name);
+    use core::str;
+
+    let path_string = format!("tests/{}", test_name);
     let test_dir = Path::new(path_string.as_str());
 
-    let mut command = Command::cargo_bin("conda-deny").unwrap();
-    command.arg(subcommand).current_dir(test_dir);
+    let output = Command::cargo_bin("conda-deny")
+        .unwrap()
+        .arg(subcommand)
+        .current_dir(test_dir)
+        .env("CLICOLOR_FORCE", "1")
+        .output()
+        .expect("Failed to execute command");
+
+    let stdout = str::from_utf8(&output.stdout).unwrap();
     if subcommand == "check" {
-        command.assert().failure();
+        assert!(stdout.contains("There were \u{1b}[32m242\u{1b}[0m safe licenses and \u{1b}[31m300\u{1b}[0m unsafe licenses."));
+        output.assert().failure();
     } else {
-        command.assert().success();
+        assert!(stdout.contains("\u{1b}[34mzstandard\u{1b}[0m \u{1b}[36m0.22.0\u{1b}[0m-\u{1b}[3;96mpy312h721a963_1\u{1b}[0m (\u{1b}[95mosx-arm64\u{1b}[0m): \u{1b}[33mBSD-3-Clause"));
+        assert!(stdout.contains("\u{1b}[34mzlib\u{1b}[0m \u{1b}[36m1.3.1\u{1b}[0m-\u{1b}[3;96mh4ab18f5_1\u{1b}[0m (\u{1b}[95mlinux-64\u{1b}[0m): \u{1b}[33mZlib"));
+        assert!(stdout.contains("\u{1b}[34mxz\u{1b}[0m \u{1b}[36m5.2.6\u{1b}[0m-\u{1b}[3;96mh166bdaf_0\u{1b}[0m (\u{1b}[95mlinux-64\u{1b}[0m): \u{1b}[33mLGPL-2.1 and GPL-2.0"));
+        output.assert().success();
     }
 }
 
-#[rstest]
-fn test_remote_whitelist_check(
-    #[with(Some(PathBuf::from("tests/test_end_to_end/test_remote_whitelist/pixi.toml")), Some(vec!["tests/test_end_to_end/test_remote_whitelist/pixi.lock".into()]))]
-    check_config: CondaDenyCheckConfig,
-    mut out: Vec<u8>,
-) {
+#[test]
+fn test_remote_whitelist_check() {
+    // Create a temporary file for the license_whitelist.toml
+    let mut temp_config_file = NamedTempFile::new().unwrap();
+    let file_content = r#"[tool.conda-deny]
+license-whitelist = "https://raw.githubusercontent.com/Quantco/conda-deny/refs/heads/main/tests/default_license_whitelist.toml""#;
+
+    temp_config_file
+        .as_file_mut()
+        .write_all(file_content.as_bytes())
+        .unwrap();
+
+    let temp_config_file_path = temp_config_file.path().to_path_buf();
+
+    let mut out = out();
+    let check_config = check_config(
+        Some(temp_config_file_path),
+        Some(vec!["tests/default_pixi.lock".into()]),
+        None,
+        None,
+        None,
+        None,
+        None,
+    );
+
     let result = check(check_config, &mut out);
+    let output = String::from_utf8(out).unwrap();
+
+    assert!(output.contains(
+        "There were \u{1b}[32m242\u{1b}[0m safe licenses and \u{1b}[31m300\u{1b}[0m unsafe licenses."
+    ));
     assert!(result.is_err());
 }
 
-#[rstest]
-fn test_multiple_whitelists_check(
-    #[with(
-        Some(PathBuf::from("tests/test_end_to_end/test_multiple_whitelists/pixi.toml")),
-        Some(vec!["tests/test_end_to_end/test_multiple_whitelists/pixi.lock".into()])
-    )]
-    check_config: CondaDenyCheckConfig,
-    mut out: Vec<u8>,
-) {
+#[test]
+fn test_multiple_whitelists_check() {
+    // Create a temporary file for the license_whitelist.toml
+    let mut temp_license_whitelist = NamedTempFile::new().unwrap();
+    let file_content = r#"[tool.conda-deny]
+                                safe-licenses = ["BSD-3-Clause"]"#;
+    temp_license_whitelist
+        .as_file_mut()
+        .write_all(file_content.as_bytes())
+        .unwrap();
+
+    let temp_whitelist_path = temp_license_whitelist.path().to_path_buf();
+
+    // Create a temporary file for pixi.toml
+    let mut temp_pixi_toml = NamedTempFile::new().unwrap();
+    let file_content = "[tool.conda-deny]
+        license-whitelist = [
+        \"https://raw.githubusercontent.com/Quantco/conda-deny/refs/heads/main/tests/default_license_whitelist.toml\",
+        \"".to_string() + temp_whitelist_path.to_str().unwrap() + "\"]";
+
+    temp_pixi_toml
+        .as_file_mut()
+        .write_all(file_content.as_bytes())
+        .unwrap();
+
+    let mut out = out();
+    // Inject the temporary file's path into check_config
+    let temp_path = Some(temp_pixi_toml.path().to_path_buf());
+    let check_config = check_config(
+        temp_path,
+        Some(vec!["tests/default_pixi.lock".into()]),
+        None,
+        None,
+        None,
+        None,
+        None,
+    );
+
     let result = check(check_config, &mut out);
+    let output = String::from_utf8(out).unwrap();
+
+    assert!(output.contains(
+        "There were \u{1b}[32m344\u{1b}[0m safe licenses and \u{1b}[31m198\u{1b}[0m unsafe licenses."
+    ));
     assert!(result.is_err());
 }
 
-#[rstest]
-fn test_config_with_platform_and_env(
-    #[with(
-        Some(PathBuf::from("tests/test_end_to_end/test_platform_env_spec/pixi.toml")),
-        Some(vec!["tests/test_end_to_end/test_platform_env_spec/pixi.lock".into()])
-    )]
-    check_config: CondaDenyCheckConfig,
-    mut out: Vec<u8>,
-) {
+#[test]
+fn test_platform_env_restrictions_check() {
+    // Create a temporary file for pixi.toml
+    let mut temp_pixi_toml = NamedTempFile::new().unwrap();
+    let file_content = r#"[tool.conda-deny]
+license-whitelist = "tests/default_license_whitelist.toml"
+platform = "linux-64"
+environment = "lint""#;
+
+    temp_pixi_toml
+        .as_file_mut()
+        .write_all(file_content.as_bytes())
+        .unwrap();
+
+    let mut out = out();
+    // Inject the temporary file's path into check_config
+    let temp_path = Some(temp_pixi_toml.path().to_path_buf());
+    let check_config = check_config(
+        temp_path,
+        Some(vec!["tests/default_pixi.lock".into()]),
+        None,
+        None,
+        None,
+        None,
+        None,
+    );
+
     let result = check(check_config, &mut out);
+    let output = String::from_utf8(out).unwrap();
+
+    assert!(output.contains(
+        "There were \u{1b}[32m27\u{1b}[0m safe licenses and \u{1b}[31m21\u{1b}[0m unsafe licenses."
+    ));
+    assert!(result.is_err());
+}
+
+#[test]
+fn test_safe_licenses_in_config_check() {
+    // Create a temporary file for pixi.toml
+    let mut temp_pixi_toml = NamedTempFile::new().unwrap();
+    let file_content = r#"[tool.conda-deny]
+license-whitelist = "tests/default_license_whitelist.toml"
+safe-licenses = ["BSD-3-Clause"]"#;
+
+    temp_pixi_toml
+        .as_file_mut()
+        .write_all(file_content.as_bytes())
+        .unwrap();
+
+    let mut out = out();
+    // Inject the temporary file's path into check_config
+    let temp_path = Some(temp_pixi_toml.path().to_path_buf());
+    let check_config = check_config(
+        temp_path,
+        Some(vec!["tests/default_pixi.lock".into()]),
+        None,
+        None,
+        None,
+        None,
+        None,
+    );
+
+    let result = check(check_config, &mut out);
+    let output = String::from_utf8(out).unwrap();
+
+    println!("{}", output);
+
+    assert!(output.contains(
+        "There were \u{1b}[32m344\u{1b}[0m safe licenses and \u{1b}[31m198\u{1b}[0m unsafe licenses."
+    ));
     assert!(result.is_err());
 }
 
 #[rstest]
 fn test_osi_check(
     #[with(
+        // CONFIG PATH
         None,
-        Some(vec!["tests/test_end_to_end/test_osi_check/pixi.toml".into()]),
+        // LOCKFILE PATHS
+        Some(vec!["tests/default_pixi.lock".into()]),
+        // PREFIXES
         None,
+        // PLATFORM
         None,
+        // ENVIRONMENT
         None,
+        // OSI FLAG
         Some(true)
     )]
     check_config: CondaDenyCheckConfig,
@@ -141,13 +275,23 @@ fn test_osi_check(
 ) {
     let result = check(check_config, &mut out);
 
+    let output = String::from_utf8(out).unwrap();
+
+    assert!(output.contains(
+        "There were \u{1b}[32m458\u{1b}[0m safe licenses and \u{1b}[31m84\u{1b}[0m unsafe licenses."
+    ));
     assert!(result.is_err());
 }
 
 #[rstest]
 fn test_prefix_list(
     #[with(
-        Some(PathBuf::from("tests/test_end_to_end/test_prefix_list/pixi.toml")), None, Some(vec!["tests/test_conda_prefixes/test-env".into()])
+        // CONFIG PATH
+        None,
+        // LOCKFILE PATHS
+        None,
+        // PREFIXES
+        Some(vec!["tests/test_conda_prefixes/test-env".into()])
 )]
     list_config: CondaDenyListConfig,
     mut out: Vec<u8>,
@@ -162,31 +306,86 @@ fn test_prefix_list(
         line_count, expected_line_count,
         "Unexpected number of output lines"
     );
-
-    println!("Output has {} lines", line_count);
 }
 
-#[test]
-fn test_exception_check() {
-    let cli = CondaDenyCliConfig::Check {
-        lockfile: None,
-        prefix: None,
-        platform: None,
-        environment: None,
-        osi: None,
-        ignore_pypi: None,
-    };
+#[rstest]
+fn test_exception_check(
+    #[with(Some(PathBuf::from(
+        // CONFIG PATH
+        "tests/test_exception_use_case/config_with_exception.toml")),
+        // LOCKFILE PATHS
+        Some(vec!["tests/default_pixi.lock".into()])
+    )]
+    check_config: CondaDenyCheckConfig,
+    mut out: Vec<u8>,
+) {
+    let result = check(check_config, &mut out);
 
-    let config = get_config_options(
-        Some("tests/test_end_to_end/test_exception_use_case/pixi.toml".into()),
-        cli,
-    );
+    let output = String::from_utf8(out).unwrap();
 
-    assert!(config.is_err());
-    let err_string = config.unwrap_err().to_string();
-    assert!(
-        err_string.contains("No lockfiles or conda prefixes provided"),
-        "{}",
-        err_string
-    );
+    assert!(output.contains(
+        "There were \u{1b}[32m528\u{1b}[0m safe licenses and \u{1b}[31m14\u{1b}[0m unsafe licenses."
+    ));
+    assert!(result.is_err());
+}
+
+#[rstest]
+fn test_pypi_ignore_check(
+    #[with(
+        // CONFIG PATH
+        Some(PathBuf::from("tests/test_pypi_ignore/pixi.toml")),
+        // LOCKFILE PATHS
+        Some(vec!["tests/test_pypi_ignore/lockfile_with_pypi_packages.lock".into()]),
+        // PREFIXES
+        None,
+        // PLATFORM
+        None,
+        // ENVIRONMENT
+        None,
+        // OSI FLAG
+        None,
+        // IGNORE PYPI
+        Some(true)
+    )]
+    check_config: CondaDenyCheckConfig,
+    mut out: Vec<u8>,
+) {
+    let result = check(check_config, &mut out);
+
+    let output = String::from_utf8(out).unwrap();
+
+    assert!(output.contains(
+        "There were \u{1b}[32m5\u{1b}[0m safe licenses and \u{1b}[31m17\u{1b}[0m unsafe licenses."
+    ));
+    assert!(result.is_err());
+}
+
+#[rstest]
+fn test_pypi_ignore_error(
+    #[with(
+        // CONFIG PATH
+        Some(PathBuf::from("tests/test_pypi_ignore/pixi.toml")),
+        // LOCKFILE PATHS
+        Some(vec!["tests/test_pypi_ignore/lockfile_with_pypi_packages.lock".into()]),
+        // PREFIXES
+        None,
+        // PLATFORM
+        None,
+        // ENVIRONMENT
+        None,
+        // OSI FLAG
+        None,
+        // IGNORE PYPI
+        Some(false)
+    )]
+    check_config: CondaDenyCheckConfig,
+    mut out: Vec<u8>,
+) {
+    let result = check(check_config, &mut out);
+    if let Err(e) = &result {
+        println!("Actual error: {}", e);
+    }
+    assert!(result.is_err());
+    assert!(format!("{:?}", result).contains("Pypi packages are not supported: beautifulsoup4"));
+    assert_eq!(out, b"");
 }

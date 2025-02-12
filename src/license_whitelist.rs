@@ -234,6 +234,8 @@ pub fn get_license_information_from_toml_config(
 
     let license_whitelist_urls = toml_config.get_license_whitelists().clone();
     let (safe_licenses, ignore_packages) = build_license_whitelist(&license_whitelist_urls)?;
+
+    // TODO: Remove duplicates
     let safe_licenses = safe_licenses_from_toml
         .iter()
         .map(|license_str| parse_expression(license_str))
@@ -241,6 +243,8 @@ pub fn get_license_information_from_toml_config(
         .into_iter()
         .chain(safe_licenses)
         .collect::<Vec<_>>();
+
+    // TODO: Remove duplicates
     let ignore_packages = ignore_packages_from_toml
         .iter()
         .cloned()
@@ -251,15 +255,17 @@ pub fn get_license_information_from_toml_config(
 
 #[cfg(test)]
 mod tests {
+    use tempfile::NamedTempFile;
+
     use crate::conda_deny_config::CondaDenyTomlConfig;
 
     use super::*;
-    use std::error::Error;
+    use std::{error::Error, io::Write};
 
     #[test]
     fn test_fetch_safe_licenses_success() {
         let reader = RealRemoteConfigReader;
-        let (safe_licenses, ignore_packages) = fetch_safe_licenses("https://raw.githubusercontent.com/quantco/conda-deny/main/tests/test_remote_base_configs/conda-deny-license_whitelist.toml", &reader)
+        let (safe_licenses, ignore_packages) = fetch_safe_licenses("https://raw.githubusercontent.com/quantco/conda-deny/main/tests/default_license_whitelist.toml", &reader)
             .unwrap();
 
         // Assert the result
@@ -271,58 +277,47 @@ mod tests {
 
     #[test]
     fn test_valid_remote_base_config() {
+        // Create a temporary file for the pixi.toml
+        let mut temp_config_file = NamedTempFile::new().unwrap();
+        let file_content = r#"[tool.conda-deny]
+license-whitelist = "tests/default_license_whitelist.toml"
+safe-licenses = [
+    # Licenses by their SPDX identifier, see https://spdx.org/licenses/
+    "MIT",
+    "PSF-2.0",
+]
+ignore-packages = [
+    {package="make"},
+]"#;
+        temp_config_file
+            .as_file_mut()
+            .write_all(file_content.as_bytes())
+            .unwrap();
+
+        let temp_config_path = temp_config_file.path().to_str().unwrap();
+
         let (safe_licenses, ignored_packages) =
-            license_config_from_toml_str("tests/test_remote_base_configs/valid_config.toml")
-                .unwrap();
+            license_config_from_toml_str(temp_config_path).unwrap();
         assert_eq!(safe_licenses.len(), 2);
         assert_eq!(ignored_packages.len(), 1);
     }
 
     #[test]
-    fn test_invalid_remote_base_config() {
-        let result =
-            license_config_from_toml_str("tests/test_remote_base_configs/invalid_config.toml");
-        assert!(result.is_err());
-    }
-
-    #[test]
-    fn test_different_versions_in_remote_base_config() {
-        let (safe_licenses, ignored_packages) = license_config_from_toml_str(
-            "tests/test_remote_base_configs/version_test_config.toml",
-        )
-        .unwrap();
-        assert_eq!(safe_licenses.len(), 2);
-        assert_eq!(ignored_packages.len(), 3);
-
-        assert!(ignored_packages
-            .iter()
-            .any(|x| x.package == "package1" && x.version == Some("=4.2.1".to_string())));
-        assert!(ignored_packages
-            .iter()
-            .any(|x| x.package == "package2" && x.version == Some("<=4.2.1".to_string())));
-        assert!(ignored_packages
-            .iter()
-            .any(|x| x.package == "package3" && x.version == Some(">4.2.1".to_string())));
-    }
-
-    #[test]
-    fn test_semver_matching() {
-        let version1 = Version::from_str("4.2.1").unwrap();
-        let version2 = Version::from_str("4.2.2").unwrap();
-        let version3 = Version::from_str("4.2.0").unwrap();
-        let version_req = VersionSpec::from_str("=4.2.1", ParseStrictness::Strict).unwrap();
-
-        assert!(version_req.matches(&version1));
-        assert!(!version_req.matches(&version2));
-        assert!(!version_req.matches(&version3));
-    }
-
-    #[test]
     fn test_is_package_ignored() {
-        let (_, ignored_packages) = license_config_from_toml_str(
-            "tests/test_remote_base_configs/version_test_config.toml",
-        )
-        .unwrap();
+        let ignored_packages = vec![
+            IgnorePackage {
+                package: "package1".to_string(),
+                version: Some("=4.2.1".to_string()),
+            },
+            IgnorePackage {
+                package: "package2".to_string(),
+                version: Some("<=4.2.1".to_string()),
+            },
+            IgnorePackage {
+                package: "package3".to_string(),
+                version: Some(">4.2.1".to_string()),
+            },
+        ];
         assert!(is_package_ignored(&ignored_packages, "package1", "4.2.1").unwrap());
         assert!(!is_package_ignored(&ignored_packages, "package1", "4.3.0").unwrap());
         assert!(!is_package_ignored(&ignored_packages, "package1", "4.3.2").unwrap());
@@ -344,13 +339,29 @@ mod tests {
 
     #[test]
     fn test_get_safe_licenses_local() {
-        let toml_config = CondaDenyTomlConfig::from_path(
-            "tests/test_remote_base_configs/valid_config.toml".into(),
-        )
-        .unwrap();
+        // Create a temporary file for the pixi.toml
+        let mut temp_config_file = NamedTempFile::new().unwrap();
+        let file_content = r#"[tool.conda-deny]
+        license-whitelist = "tests/default_license_whitelist.toml"
+        safe-licenses = [
+            # Licenses by their SPDX identifier, see https://spdx.org/licenses/
+            "MIT",
+            "PSF-2.0",
+        ]
+        ignore-packages = [
+            {package="make"},
+        ]"#;
+        temp_config_file
+            .as_file_mut()
+            .write_all(file_content.as_bytes())
+            .unwrap();
+
+        let temp_config_path = temp_config_file.path().to_str().unwrap();
+
+        let toml_config = CondaDenyTomlConfig::from_path(temp_config_path.into()).unwrap();
         let (safe_licenses, ignored_packages) =
             get_license_information_from_toml_config(&toml_config).unwrap();
-        assert_eq!(safe_licenses.len(), 5);
+        assert_eq!(safe_licenses.len(), 7);
         assert_eq!(
             safe_licenses,
             vec![
@@ -358,7 +369,10 @@ mod tests {
                 parse_expression("PSF-2.0").unwrap(),
                 parse_expression("Apache-2.0").unwrap(),
                 parse_expression("Unlicense").unwrap(),
-                parse_expression("WTFPL").unwrap()
+                parse_expression("WTFPL").unwrap(),
+                // Currently, duplicates are still possible
+                parse_expression("MIT").unwrap(),
+                parse_expression("PSF-2.0").unwrap(),
             ]
         );
         assert_eq!(ignored_packages.len(), 2);

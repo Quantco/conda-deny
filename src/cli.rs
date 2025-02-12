@@ -22,6 +22,7 @@ pub struct Cli {
 
 #[derive(clap::Subcommand, Debug)]
 pub enum CondaDenyCliConfig {
+    /// Check licenses of pixi or conda environment against a whitelist
     Check {
         /// Path to the pixi lockfile(s)
         #[arg(short, long)]
@@ -47,6 +48,7 @@ pub enum CondaDenyCliConfig {
         #[arg(long, action = ArgAction::SetTrue)]
         ignore_pypi: Option<bool>,
     },
+    /// List all packages and their licenses in your conda or pixi environment
     List {
         /// Path to the pixi lockfile(s)
         #[arg(short, long)]

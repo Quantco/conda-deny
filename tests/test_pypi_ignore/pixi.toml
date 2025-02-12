@@ -10,4 +10,4 @@
 	conda-forge-metadata = ">=0.11.0,<0.12"
 	
 	[tool.conda-deny]
-	license-whitelist = "license_whitelist.toml"
+	license-whitelist = "tests/default_license_whitelist.toml"

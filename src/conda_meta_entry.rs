@@ -63,6 +63,7 @@ impl CondaMetaEntry {
     }
 }
 
+// TODO: Use rattler struct: PrefixRecord
 pub struct CondaMetaEntries {
     pub entries: Vec<CondaMetaEntry>,
 }

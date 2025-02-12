@@ -1,3 +1,0 @@
-[tool.conda-deny]
-license-whitelist = "license_whitelist.toml"
-safe-licenses = ["MIT"]
