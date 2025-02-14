@@ -269,7 +269,7 @@ mod tests {
             .unwrap();
 
         // Assert the result
-        assert_eq!(safe_licenses.len(), 4);
+        assert_eq!(safe_licenses.len(), 5);
         assert!(safe_licenses.iter().any(|e| e.to_string() == "MIT"));
         assert!(safe_licenses.iter().any(|e| e.to_string() == "Apache-2.0"));
         assert_eq!(ignore_packages.len(), 1);

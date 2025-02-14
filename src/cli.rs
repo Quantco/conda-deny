@@ -1,6 +1,5 @@
 use std::path::PathBuf;
 
-use clap::ArgAction;
 use clap_verbosity_flag::{ErrorLevel, Verbosity};
 
 use clap::Parser;
@@ -41,11 +40,11 @@ pub enum CondaDenyCliConfig {
         environment: Option<Vec<String>>,
 
         /// Check against OSI licenses instead of custom license whitelists.
-        #[arg(short, long, action = ArgAction::SetTrue)]
+        #[arg(short, long)]
         osi: Option<bool>,
 
         /// Ignore when encountering pypi packages instead of failing.
-        #[arg(long, action = ArgAction::SetTrue)]
+        #[arg(long)]
         ignore_pypi: Option<bool>,
     },
     /// List all packages and their licenses in your conda or pixi environment
@@ -133,7 +132,7 @@ mod tests {
 
     #[test]
     fn test_cli_with_check_arguments() {
-        let cli = Cli::try_parse_from(vec!["conda-deny", "check", "--osi"]).unwrap();
+        let cli = Cli::try_parse_from(vec!["conda-deny", "check", "--osi", "true"]).unwrap();
         match cli.command {
             CondaDenyCliConfig::Check { osi, .. } => {
                 assert_eq!(osi, Some(true));
