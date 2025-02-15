@@ -7,6 +7,7 @@ use std::vec;
 use std::{fs::File, io::Read};
 
 use crate::license_whitelist::IgnorePackage;
+use crate::OutputFormat;
 
 #[derive(Debug, Deserialize)]
 pub struct CondaDenyTomlConfig {
@@ -48,12 +49,6 @@ pub enum LockfileSpec {
 }
 
 #[derive(Debug, Deserialize)]
-struct PixiEnvironmentEntry {
-    _file: String,
-    _environments: Vec<String>,
-}
-
-#[derive(Debug, Deserialize)]
 pub struct CondaDeny {
     #[serde(rename = "license-whitelist")]
     license_whitelist: Option<LicenseWhitelist>,
@@ -71,6 +66,8 @@ pub struct CondaDeny {
     pub safe_licenses: Option<Vec<String>>,
     #[serde(rename = "ignore-packages")]
     pub ignore_packages: Option<Vec<IgnorePackage>>,
+    #[serde(rename = "output-format")]
+    pub output_format: Option<OutputFormat>,
 }
 
 impl CondaDenyTomlConfig {
@@ -132,6 +129,10 @@ impl CondaDenyTomlConfig {
         self.tool.conda_deny.ignore_pypi
     }
 
+    pub fn get_output_format(&self) -> Option<OutputFormat> {
+        self.tool.conda_deny.output_format
+    }
+
     pub fn empty() -> Self {
         CondaDenyTomlConfig {
             tool: Tool {
@@ -144,6 +145,7 @@ impl CondaDenyTomlConfig {
                     ignore_pypi: None,
                     safe_licenses: None,
                     ignore_packages: None,
+                    output_format: None,
                 },
             },
         }

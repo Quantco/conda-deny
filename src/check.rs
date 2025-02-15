@@ -1,7 +1,13 @@
-use crate::{fetch_license_infos, license_info::LicenseInfo, CheckOutput, CondaDenyCheckConfig};
+use crate::{
+    fetch_license_infos,
+    license_info::{LicenseInfo, LicenseState},
+    CheckOutput, CondaDenyCheckConfig, OutputFormat,
+};
 use anyhow::{Context, Result};
 use colored::Colorize;
 use log::debug;
+use serde::Serialize;
+use serde_json::json;
 use std::io::Write;
 
 fn check_license_infos(config: &CondaDenyCheckConfig) -> Result<CheckOutput> {
@@ -20,14 +26,58 @@ fn check_license_infos(config: &CondaDenyCheckConfig) -> Result<CheckOutput> {
 pub fn check<W: Write>(check_config: CondaDenyCheckConfig, mut out: W) -> Result<()> {
     let (safe_dependencies, unsafe_dependencies) = check_license_infos(&check_config)?;
 
-    writeln!(
-        out,
-        "{}",
-        format_check_output(
-            safe_dependencies,
-            unsafe_dependencies.clone(),
-        )
-    )?;
+    match check_config.output_format {
+        OutputFormat::Pretty => {
+            writeln!(
+                out,
+                "{}",
+                format_check_output(safe_dependencies, unsafe_dependencies.clone(),)
+            )?;
+        }
+        OutputFormat::Json => {
+            let json_output = json!({
+                "safe": safe_dependencies,
+                "unsafe": unsafe_dependencies,
+            });
+            writeln!(out, "{}", json_output)?;
+        }
+        OutputFormat::Csv => {
+            #[derive(Debug, Clone, Serialize)]
+            struct LicenseInfoWithSafety {
+                package_name: String,
+                version: String,
+                license: LicenseState,
+                platform: Option<String>,
+                build: String,
+                safe: bool,
+            }
+
+            let mut writer = csv::WriterBuilder::new().from_writer(vec![]);
+
+            for (license_info, is_safe) in unsafe_dependencies
+                .iter()
+                .map(|x: &LicenseInfo| (x, false))
+                .chain(safe_dependencies.iter().map(|x: &LicenseInfo| (x, true)))
+            {
+                let extended_info = LicenseInfoWithSafety {
+                    package_name: license_info.package_name.clone(),
+                    version: license_info.version.clone(),
+                    license: license_info.license.clone(),
+                    platform: license_info.platform.clone(),
+                    build: license_info.build.clone(),
+                    safe: is_safe,
+                };
+                writer.serialize(&extended_info).with_context(|| {
+                    format!(
+                        "Failed to serialize the following LicenseInfo to CSV: {:?}",
+                        extended_info
+                    )
+                })?;
+            }
+
+            out.write_all(&writer.into_inner()?)?;
+        }
+    }
 
     if !unsafe_dependencies.is_empty() {
         Err(anyhow::anyhow!("Unsafe licenses found"))

@@ -1,5 +1,6 @@
 use assert_cmd::prelude::*;
 use conda_deny::cli::CondaDenyCliConfig;
+use conda_deny::OutputFormat;
 use conda_deny::{
     check::check, get_config_options, list::list, CondaDenyCheckConfig, CondaDenyConfig,
     CondaDenyListConfig,
@@ -19,6 +20,7 @@ fn list_config(
     #[default(None)] platform: Option<Vec<Platform>>,
     #[default(None)] environment: Option<Vec<String>>,
     #[default(None)] ignore_pypi: Option<bool>,
+    #[default(Some(OutputFormat::Pretty))] output: Option<OutputFormat>,
 ) -> CondaDenyListConfig {
     let cli = CondaDenyCliConfig::List {
         lockfile,
@@ -26,6 +28,7 @@ fn list_config(
         platform,
         environment,
         ignore_pypi,
+        output,
     };
 
     let config = get_config_options(config, cli).unwrap();
@@ -45,6 +48,7 @@ fn check_config(
     #[default(None)] environment: Option<Vec<String>>,
     #[default(None)] osi: Option<bool>,
     #[default(None)] ignore_pypi: Option<bool>,
+    #[default(Some(OutputFormat::Pretty))] output: Option<OutputFormat>,
 ) -> CondaDenyCheckConfig {
     let cli = CondaDenyCliConfig::Check {
         lockfile,
@@ -53,6 +57,7 @@ fn check_config(
         environment,
         osi,
         ignore_pypi,
+        output,
     };
 
     let config = get_config_options(config, cli);
@@ -123,6 +128,7 @@ license-whitelist = "https://raw.githubusercontent.com/Quantco/conda-deny/refs/h
         None,
         None,
         None,
+        None,
     );
 
     let result = check(check_config, &mut out);
@@ -170,6 +176,7 @@ fn test_multiple_whitelists_check() {
         None,
         None,
         None,
+        None,
     );
 
     let result = check(check_config, &mut out);
@@ -206,6 +213,7 @@ environment = "lint""#;
         None,
         None,
         None,
+        None,
     );
 
     let result = check(check_config, &mut out);
@@ -236,6 +244,7 @@ safe-licenses = ["BSD-3-Clause"]"#;
     let check_config = check_config(
         temp_path,
         Some(vec!["tests/default_pixi.lock".into()]),
+        None,
         None,
         None,
         None,
@@ -300,8 +309,9 @@ fn test_prefix_list(
     // License information from pixi.lock should not be listed
     let result = list(list_config, &mut out);
     assert!(result.is_ok(), "{:?}", result.unwrap_err());
-    let line_count = String::from_utf8(out).unwrap().split("\n").count();
-    let expected_line_count = 50;
+    let output = String::from_utf8(out).unwrap();
+    let line_count = output.split("\n").count();
+    let expected_line_count = 51;
     assert_eq!(
         line_count, expected_line_count,
         "Unexpected number of output lines"

@@ -19,6 +19,7 @@ use license_whitelist::{get_license_information_from_toml_config, IgnorePackage}
 use anyhow::{Context, Result};
 use log::debug;
 use rattler_conda_types::Platform;
+use serde::Deserialize;
 use spdx::Expression;
 
 use crate::license_info::LicenseInfos;
@@ -29,6 +30,18 @@ pub enum CondaDenyConfig {
     List(CondaDenyListConfig),
 }
 
+#[derive(Debug, Clone, clap::ValueEnum, Default, Deserialize, Copy)]
+#[serde(rename_all = "kebab-case")]
+pub enum OutputFormat {
+    #[serde(rename = "pretty")]
+    #[default]
+    Pretty,
+    #[serde(rename = "json")]
+    Json,
+    #[serde(rename = "csv")]
+    Csv,
+}
+
 /// Configuration for the check command
 #[derive(Debug)]
 pub struct CondaDenyCheckConfig {
@@ -36,12 +49,14 @@ pub struct CondaDenyCheckConfig {
     pub osi: bool,
     pub safe_licenses: Vec<Expression>,
     pub ignore_packages: Vec<IgnorePackage>,
+    pub output_format: OutputFormat,
 }
 
 /// Shared configuration between check and list commands
 #[derive(Debug)]
 pub struct CondaDenyListConfig {
     pub lockfile_or_prefix: LockfileOrPrefix,
+    pub output_format: OutputFormat,
 }
 
 #[derive(Debug, Clone)]
@@ -94,6 +109,7 @@ fn get_lockfile_or_prefix(
             }))
         }
     } else if !lockfile.is_empty() && !prefix.is_empty() {
+        // TODO: Specified prefixes override lockfiles
         Err(anyhow::anyhow!(
             "Both lockfiles and conda prefixes provided. Please only provide either or."
         ))
@@ -113,7 +129,7 @@ fn get_lockfile_or_prefix(
             ))
         } else if environments.is_some() {
             Err(anyhow::anyhow!(
-                "Cannot specify environments and conda prefixes at the same time"
+                "Cannot specify pixi environments and conda prefixes at the same time"
             ))
         } else if ignore_pypi.is_some() {
             Err(anyhow::anyhow!(
@@ -202,13 +218,17 @@ pub fn get_config_options(
         toml_config.get_ignore_pypi()
     };
 
+    let output_format = if cli_config.output_format().is_some() {
+        cli_config.output_format()
+    } else {
+        toml_config.get_output_format()
+    };
+
     let lockfile_or_prefix =
         get_lockfile_or_prefix(lockfile, prefix, platforms, environments, ignore_pypi)?;
 
     let config = match cli_config {
-        CondaDenyCliConfig::Check {
-            osi, ..
-        } => {
+        CondaDenyCliConfig::Check { osi, .. } => {
             // defaults to false
             let osi = if osi.is_some() {
                 osi
@@ -234,11 +254,13 @@ pub fn get_config_options(
                 osi,
                 safe_licenses,
                 ignore_packages,
+                output_format: output_format.unwrap_or(OutputFormat::Pretty),
             })
         }
-        CondaDenyCliConfig::List { .. } => {
-            CondaDenyConfig::List(CondaDenyListConfig { lockfile_or_prefix })
-        }
+        CondaDenyCliConfig::List { .. } => CondaDenyConfig::List(CondaDenyListConfig {
+            lockfile_or_prefix,
+            output_format: output_format.unwrap_or(OutputFormat::Pretty),
+        }),
     };
 
     Ok(config)

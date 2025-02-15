@@ -3,9 +3,8 @@ use std::path::{Path, PathBuf};
 use anyhow::{Context, Result};
 use colored::Colorize;
 use rattler_conda_types::PackageRecord;
+use serde::Serialize;
 use spdx::Expression;
-
-
 
 use crate::{
     conda_meta_entry::{CondaMetaEntries, CondaMetaEntry},
@@ -15,7 +14,7 @@ use crate::{
     CheckOutput, CondaDenyCheckConfig, LockfileSpec,
 };
 
-#[derive(Debug, Clone)]
+#[derive(Debug, Clone, Serialize)]
 pub struct LicenseInfo {
     pub package_name: String,
     pub version: String,
@@ -107,6 +106,7 @@ impl Ord for LicenseInfo {
     }
 }
 
+#[derive(Debug, Clone, Serialize)]
 pub struct LicenseInfos {
     pub license_infos: Vec<LicenseInfo>,
 }
@@ -254,19 +254,28 @@ impl LicenseInfos {
     }
 }
 
-#[derive(Debug, Clone, PartialEq)]
+#[derive(Debug, Clone, PartialEq, Serialize)]
 #[allow(clippy::large_enum_variant)]
 pub enum LicenseState {
+    #[serde(serialize_with = "serialize_expression")]
     Valid(Expression),
     Invalid(String),
+}
+
+fn serialize_expression<S>(expr: &Expression, serializer: S) -> Result<S::Ok, S::Error>
+where
+    S: serde::Serializer,
+{
+    serializer.serialize_str(&format!("{:?}", expr))
 }
 
 #[cfg(test)]
 mod tests {
 
     use super::*;
-    use crate::{conda_meta_entry::CondaMetaEntry, LockfileOrPrefix};
+    use crate::{conda_meta_entry::CondaMetaEntry, LockfileOrPrefix, OutputFormat};
     use spdx::Expression;
+
     #[test]
     fn test_license_info_from_conda_meta_entry() {
         let entry = CondaMetaEntry {
@@ -330,6 +339,7 @@ mod tests {
             osi: false,
             safe_licenses,
             ignore_packages,
+            output_format: OutputFormat::Pretty,
         };
 
         let (_, unsafe_dependencies) = unsafe_license_infos.check(&config).unwrap();

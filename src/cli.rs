@@ -5,6 +5,8 @@ use clap_verbosity_flag::{ErrorLevel, Verbosity};
 use clap::Parser;
 use rattler_conda_types::Platform;
 
+use crate::OutputFormat;
+
 #[derive(Parser, Debug)]
 #[command(name = "conda-deny", about = "Check and list licenses of pixi and conda environments", version = env!("CARGO_PKG_VERSION"))]
 pub struct Cli {
@@ -40,12 +42,16 @@ pub enum CondaDenyCliConfig {
         environment: Option<Vec<String>>,
 
         /// Check against OSI licenses instead of custom license whitelists.
-        #[arg(short, long)]
+        #[arg(long)]
         osi: Option<bool>,
 
         /// Ignore when encountering pypi packages instead of failing.
         #[arg(long)]
         ignore_pypi: Option<bool>,
+
+        /// Output format
+        #[arg(short, long, global = true)]
+        output: Option<OutputFormat>,
     },
     /// List all packages and their licenses in your conda or pixi environment
     List {
@@ -68,6 +74,10 @@ pub enum CondaDenyCliConfig {
         /// Ignore when encountering pypi packages instead of failing.
         #[arg(long)]
         ignore_pypi: Option<bool>,
+
+        /// Output format
+        #[arg(short, long, global = true)]
+        output: Option<OutputFormat>,
     },
 }
 
@@ -104,6 +114,13 @@ impl CondaDenyCliConfig {
         match self {
             CondaDenyCliConfig::Check { ignore_pypi, .. } => *ignore_pypi,
             CondaDenyCliConfig::List { ignore_pypi, .. } => *ignore_pypi,
+        }
+    }
+
+    pub fn output_format(&self) -> Option<OutputFormat> {
+        match self {
+            CondaDenyCliConfig::Check { output, .. } => *output,
+            CondaDenyCliConfig::List { output, .. } => *output,
         }
     }
 }
