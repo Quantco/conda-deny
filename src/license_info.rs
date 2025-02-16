@@ -339,7 +339,7 @@ mod tests {
             osi: false,
             safe_licenses,
             ignore_packages,
-            output_format: OutputFormat::Pretty,
+            output_format: OutputFormat::Default,
         };
 
         let (_, unsafe_dependencies) = unsafe_license_infos.check(&config).unwrap();

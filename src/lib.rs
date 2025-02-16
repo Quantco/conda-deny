@@ -33,11 +33,13 @@ pub enum CondaDenyConfig {
 #[derive(Debug, Clone, clap::ValueEnum, Default, Deserialize, Copy)]
 #[serde(rename_all = "kebab-case")]
 pub enum OutputFormat {
-    #[serde(rename = "pretty")]
+    #[serde(rename = "default")]
     #[default]
-    Pretty,
+    Default,
     #[serde(rename = "json")]
     Json,
+    #[serde(rename = "json-pretty")]
+    JsonPretty,
     #[serde(rename = "csv")]
     Csv,
 }
@@ -218,11 +220,7 @@ pub fn get_config_options(
         toml_config.get_ignore_pypi()
     };
 
-    let output_format = if cli_config.output_format().is_some() {
-        cli_config.output_format()
-    } else {
-        toml_config.get_output_format()
-    };
+    let output_format = cli_config.output_format().unwrap_or(OutputFormat::Default);
 
     let lockfile_or_prefix =
         get_lockfile_or_prefix(lockfile, prefix, platforms, environments, ignore_pypi)?;
@@ -254,12 +252,12 @@ pub fn get_config_options(
                 osi,
                 safe_licenses,
                 ignore_packages,
-                output_format: output_format.unwrap_or(OutputFormat::Pretty),
+                output_format,
             })
         }
         CondaDenyCliConfig::List { .. } => CondaDenyConfig::List(CondaDenyListConfig {
             lockfile_or_prefix,
-            output_format: output_format.unwrap_or(OutputFormat::Pretty),
+            output_format,
         }),
     };
 

@@ -78,3 +78,15 @@ ignore-packages = [
 
 After installing `conda-deny`, you can run `conda-deny check` in your project.
 This then checks `pixi.lock` to determine the packages (and their versions) used in your project.
+
+### ✨ Output Formats
+
+`conda-deny` supports different output formats via the `--output` (or `-o`) flag.
+Output formatting works for both, the `list` and the `check` command.
+To get an overview of the different format options, try:
+
+```bash
+conda-deny check --help
+# Or:
+conda-deny list --help
+```

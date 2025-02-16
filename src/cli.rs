@@ -50,7 +50,7 @@ pub enum CondaDenyCliConfig {
         ignore_pypi: Option<bool>,
 
         /// Output format
-        #[arg(short, long, global = true)]
+        #[arg(short, long)]
         output: Option<OutputFormat>,
     },
     /// List all packages and their licenses in your conda or pixi environment
@@ -76,7 +76,7 @@ pub enum CondaDenyCliConfig {
         ignore_pypi: Option<bool>,
 
         /// Output format
-        #[arg(short, long, global = true)]
+        #[arg(short, long)]
         output: Option<OutputFormat>,
     },
 }

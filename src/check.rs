@@ -27,7 +27,7 @@ pub fn check<W: Write>(check_config: CondaDenyCheckConfig, mut out: W) -> Result
     let (safe_dependencies, unsafe_dependencies) = check_license_infos(&check_config)?;
 
     match check_config.output_format {
-        OutputFormat::Pretty => {
+        OutputFormat::Default => {
             writeln!(
                 out,
                 "{}",
@@ -40,6 +40,13 @@ pub fn check<W: Write>(check_config: CondaDenyCheckConfig, mut out: W) -> Result
                 "unsafe": unsafe_dependencies,
             });
             writeln!(out, "{}", json_output)?;
+        }
+        OutputFormat::JsonPretty => {
+            let json_output = json!({
+                "safe": safe_dependencies,
+                "unsafe": unsafe_dependencies,
+            });
+            writeln!(out, "{}", serde_json::to_string_pretty(&json_output)?)?;
         }
         OutputFormat::Csv => {
             #[derive(Debug, Clone, Serialize)]

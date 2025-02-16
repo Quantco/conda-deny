@@ -20,7 +20,7 @@ fn list_config(
     #[default(None)] platform: Option<Vec<Platform>>,
     #[default(None)] environment: Option<Vec<String>>,
     #[default(None)] ignore_pypi: Option<bool>,
-    #[default(Some(OutputFormat::Pretty))] output: Option<OutputFormat>,
+    #[default(Some(OutputFormat::Default))] output: Option<OutputFormat>,
 ) -> CondaDenyListConfig {
     let cli = CondaDenyCliConfig::List {
         lockfile,
@@ -48,7 +48,7 @@ fn check_config(
     #[default(None)] environment: Option<Vec<String>>,
     #[default(None)] osi: Option<bool>,
     #[default(None)] ignore_pypi: Option<bool>,
-    #[default(Some(OutputFormat::Pretty))] output: Option<OutputFormat>,
+    #[default(Some(OutputFormat::Default))] output: Option<OutputFormat>,
 ) -> CondaDenyCheckConfig {
     let cli = CondaDenyCliConfig::Check {
         lockfile,
