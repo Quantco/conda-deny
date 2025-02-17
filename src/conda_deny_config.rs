@@ -48,12 +48,6 @@ pub enum LockfileSpec {
 }
 
 #[derive(Debug, Deserialize)]
-struct PixiEnvironmentEntry {
-    _file: String,
-    _environments: Vec<String>,
-}
-
-#[derive(Debug, Deserialize)]
 pub struct CondaDeny {
     #[serde(rename = "license-whitelist")]
     license_whitelist: Option<LicenseWhitelist>,
