@@ -33,14 +33,10 @@ pub enum CondaDenyConfig {
 #[derive(Debug, Clone, clap::ValueEnum, Default, Deserialize, Copy)]
 #[serde(rename_all = "kebab-case")]
 pub enum OutputFormat {
-    #[serde(rename = "default")]
     #[default]
     Default,
-    #[serde(rename = "json")]
     Json,
-    #[serde(rename = "json-pretty")]
     JsonPretty,
-    #[serde(rename = "csv")]
     Csv,
 }
 
