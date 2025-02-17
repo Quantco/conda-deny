@@ -216,7 +216,7 @@ pub fn get_config_options(
         toml_config.get_ignore_pypi()
     };
 
-    let output_format = cli_config.output_format().unwrap_or(OutputFormat::Default);
+    let output_format = cli_config.output_format().unwrap_or_default();
 
     let lockfile_or_prefix =
         get_lockfile_or_prefix(lockfile, prefix, platforms, environments, ignore_pypi)?;

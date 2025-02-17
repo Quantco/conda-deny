@@ -86,7 +86,32 @@ Output formatting works for both, the `list` and the `check` command.
 To get an overview of the different format options, try:
 
 ```bash
-conda-deny check --help
-# Or:
-conda-deny list --help
+$ conda-deny list --output csv
+package_name,version,license,platform,build,safe
+_openmp_mutex,4.5,BSD-3-Clause,linux-aarch64,2_gnu,false
+_openmp_mutex,4.5,BSD-3-Clause,linux-64,2_gnu,false
+...
+
+$ conda-deny list --output json-pretty
+{
+  "unsafe": [
+    {
+      "build": "conda_forge",
+      "license": {
+        "Invalid": "None"
+      },
+      "package_name": "_libgcc_mutex",
+      "platform": "linux-64",
+      "version": "0.1"
+    },
+    {
+      "build": "h57d6b7b_14",
+      "license": {
+        "Invalid": "LGPL-2.0-or-later AND LGPL-2.0-or-later WITH exceptions AND GPL-2.0-or-later AND MPL-2.0"
+      },
+      "package_name": "_sysroot_linux-aarch64_curr_repodata_hack",
+      "platform": "noarch",
+      "version": "4"
+    },
+...
 ```
