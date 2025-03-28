@@ -10,6 +10,7 @@
 [![CI Status][ci-badge]][ci]
 [![Binary Build][binary-build-badge]][binary-build]
 [![Conda Platform][conda-badge]][conda-url]
+[![Conda Downloads][conda-downloads-badge]][conda-url]
 [![Codecov][codecov]][codecov-url]
 
 [license-badge]: https://img.shields.io/github/license/quantco/conda-deny?style=flat-square
@@ -21,6 +22,7 @@
 [binary-build]: https://github.com/quantco/conda-deny/actions/workflows/build.yml
 
 [conda-badge]: https://img.shields.io/conda/vn/conda-forge/conda-deny?style=flat-square
+[conda-downloads-badge]: https://img.shields.io/conda/dn/conda-forge/conda-deny?style=flat-square
 [conda-url]: https://prefix.dev/channels/conda-forge/packages/conda-deny
 
 [codecov]: https://img.shields.io/codecov/c/github/quantco/conda-deny/main?style=flat-square
