@@ -82,7 +82,7 @@ jobs:
           targets: ${{ matrix.target }}
 
       - name: Rust cache
-        uses: Swatinem/rust-cache@9d47c6ad4b02e050fd481d890b2ea34778fd09d6
+        uses: Swatinem/rust-cache@9d47c6ad4b02e050fd481d890b2ea34778fd09d6 # v2.7.8
         with:
           key: build-${{ matrix.target }}-${{ needs.metadata.outputs.optimize-build }}-${{ matrix.cross }}-${{ matrix.os }}
 
