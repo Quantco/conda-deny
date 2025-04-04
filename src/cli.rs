@@ -79,6 +79,36 @@ pub enum CondaDenyCliConfig {
         #[arg(short, long)]
         output: Option<OutputFormat>,
     },
+
+    /// Bundle all dependency licenses in a directory
+    Bundle {
+        /// Path to the output directory
+        #[arg[short, long]]
+        directory: PathBuf,
+        /// Path to the pixi lockfile(s)
+        #[arg(short, long)]
+        lockfile: Option<Vec<PathBuf>>,
+
+        /// Path to the conda prefix(es)
+        #[arg(long, global = true)]
+        prefix: Option<Vec<PathBuf>>,
+
+        /// Platform(s) to bundle
+        #[arg(short, long)]
+        platform: Option<Vec<Platform>>,
+
+        /// Pixi environment(s) to bundle
+        #[arg(short, long)]
+        environment: Option<Vec<String>>,
+
+        /// Ignore when encountering pypi packages instead of failing.
+        #[arg(long)]
+        ignore_pypi: Option<bool>,
+
+        /// Output format
+        #[arg(short, long)]
+        output_format: Option<OutputFormat>,
+    },
 }
 
 impl CondaDenyCliConfig {
@@ -86,6 +116,7 @@ impl CondaDenyCliConfig {
         match self {
             CondaDenyCliConfig::Check { lockfile, .. } => lockfile.clone(),
             CondaDenyCliConfig::List { lockfile, .. } => lockfile.clone(),
+            CondaDenyCliConfig::Bundle { lockfile, .. } => lockfile.clone(),
         }
     }
 
@@ -93,6 +124,7 @@ impl CondaDenyCliConfig {
         match self {
             CondaDenyCliConfig::Check { prefix, .. } => prefix.clone(),
             CondaDenyCliConfig::List { prefix, .. } => prefix.clone(),
+            CondaDenyCliConfig::Bundle { prefix, .. } => prefix.clone(),
         }
     }
 
@@ -100,6 +132,7 @@ impl CondaDenyCliConfig {
         match self {
             CondaDenyCliConfig::Check { platform, .. } => platform.clone(),
             CondaDenyCliConfig::List { platform, .. } => platform.clone(),
+            CondaDenyCliConfig::Bundle { platform, .. } => platform.clone(),
         }
     }
 
@@ -107,6 +140,7 @@ impl CondaDenyCliConfig {
         match self {
             CondaDenyCliConfig::Check { environment, .. } => environment.clone(),
             CondaDenyCliConfig::List { environment, .. } => environment.clone(),
+            CondaDenyCliConfig::Bundle { environment, .. } => environment.clone(),
         }
     }
 
@@ -114,6 +148,7 @@ impl CondaDenyCliConfig {
         match self {
             CondaDenyCliConfig::Check { ignore_pypi, .. } => *ignore_pypi,
             CondaDenyCliConfig::List { ignore_pypi, .. } => *ignore_pypi,
+            CondaDenyCliConfig::Bundle { ignore_pypi, .. } => *ignore_pypi,
         }
     }
 
@@ -121,6 +156,7 @@ impl CondaDenyCliConfig {
         match self {
             CondaDenyCliConfig::Check { output, .. } => *output,
             CondaDenyCliConfig::List { output, .. } => *output,
+            CondaDenyCliConfig::Bundle { output_format, .. } => *output_format,
         }
     }
 }

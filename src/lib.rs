@@ -1,3 +1,4 @@
+mod bundle;
 pub mod check;
 pub mod cli;
 pub mod conda_deny_config;
@@ -255,6 +256,9 @@ pub fn get_config_options(
             lockfile_or_prefix,
             output_format,
         }),
+        CondaDenyCliConfig::Bundle { .. } => {
+            return Err(anyhow::anyhow!("Bundle command is not implemented yet"))
+        }
     };
 
     Ok(config)
