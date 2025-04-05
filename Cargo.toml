@@ -23,7 +23,7 @@ serde = { version = "1.0.219", features = ["derive"] }
 serde_json = "1.0.140"
 toml = "0.8.20"
 tokio = { version = "1.44.1", features = ["full"] }
-reqwest = { version = "0.12.15", default-features = false, features = ["http2", "blocking"] }
+reqwest = { version = "0.12.15", default-features = false, features = ["http2", "blocking", "stream"] }
 serde_yaml = "0.9.34"
 regex = "1.11.1"
 spdx = "0.10.8"
@@ -41,6 +41,10 @@ rattler_package_streaming = "0.22.35"
 tar = "0.4.44"
 indicatif = "0.17.11"
 rayon = "1.10.0"
+rattler_networking = "0.22.11"
+reqwest-middleware = "0.4.1"
+tokio-util = "0.7.14"
+futures-util = "0.3.31"
 
 [dev-dependencies]
 assert_cmd = "2.0.14"

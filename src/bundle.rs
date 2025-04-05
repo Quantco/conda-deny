@@ -7,15 +7,24 @@ use rattler_package_streaming::{
 use rayon::iter::{IntoParallelRefIterator, ParallelIterator};
 use reqwest::Url;
 use serde::{Deserialize, Serialize};
-use std::io::{copy, Cursor, Read, Seek, SeekFrom, Write};
+use std::{
+    io::{self, copy, Cursor, Read, Seek, SeekFrom, Write},
+    sync::Arc,
+};
 use tempfile::NamedTempFile;
 
 use indicatif::{ProgressBar, ProgressStyle};
 
+use rattler_networking::AuthenticationMiddleware;
+
 use crate::{pixi_lock::get_conda_packages_for_pixi_lock, CondaDenyBundleConfig, LockfileOrPrefix};
+use futures_util::TryStreamExt;
+use tokio::fs::File as TokioFile;
+use tokio_util::io::StreamReader;
 
 #[derive(Debug, Clone, Serialize, Deserialize)]
 struct LicenseFile {
+    package_name: Option<String>,
     filename: String,
     license_text: String,
 }
@@ -49,12 +58,31 @@ pub fn bundle<W: Write>(config: CondaDenyBundleConfig, mut out: W) -> Result<()>
                         "📦 Bundling licenses for: {}",
                         conda_package.record().name.as_source()
                     ));
+                    // Set package name of all returned license files
+
                     process_conda_package(conda_package)
+                        .map(|mut files| {
+                            for file in &mut files {
+                                file.package_name =
+                                    Some(conda_package.record().name.as_source().to_string());
+                            }
+                            files
+                        })
+                        .with_context(|| {
+                            format!(
+                                "Failed to process conda package: {}",
+                                conda_package.record().name.as_source()
+                            )
+                        })
                 })
                 .collect::<Result<Vec<Vec<LicenseFile>>, _>>()?
                 .into_iter()
                 .flatten()
                 .collect();
+            // Print all filenames in license_files
+            for license_file in &license_files {
+                println!("Package Name: {:?}, Filename: {}", license_file.package_name, license_file.filename);
+            }
 
             bar.finish_with_message("✅ Bundling licenses complete!");
         }
@@ -63,6 +91,7 @@ pub fn bundle<W: Write>(config: CondaDenyBundleConfig, mut out: W) -> Result<()>
             // TODO: Implement logic for handling prefix paths
         }
     }
+
     Ok(())
 }
 
@@ -77,24 +106,53 @@ fn process_conda_package(conda_package: &CondaPackageData) -> Result<Vec<License
     temp_file.seek(SeekFrom::Start(0))?;
 
     if url.to_string().ends_with(".tar.bz2") {
-        license_files_from_tarbz2(temp_file)
+        license_files_from_tarbz2(temp_file).with_context(|| {
+            format!(
+                "Extracting license files from tar.bz2 package failed: {}",
+                url
+            )
+        })
     } else if url.to_string().ends_with(".conda") {
-        license_files_from_dot_conda(temp_file)
+        license_files_from_dot_conda(temp_file).with_context(|| {
+            format!(
+                "Extracting license files from .conda package failed: {}",
+                url
+            )
+        })
     } else {
         Err(anyhow!("Unsupported package format: {}", url))
     }
 }
 
-fn download_conda_package_as_tempfile(url: Url) -> Result<tempfile::NamedTempFile> {
-    let mut response = reqwest::blocking::get(url)?;
+#[tokio::main]
+async fn download_conda_package_as_tempfile(url: Url) -> Result<tempfile::NamedTempFile> {
+    let auth_middleware = AuthenticationMiddleware::from_env_and_defaults()
+        .with_context(|| "Failed to set up authentication middleware.")?;
+    let client = reqwest_middleware::ClientBuilder::new(reqwest::Client::default())
+        .with_arc(Arc::new(auth_middleware))
+        .build();
+
+    let response = client.get(url).send().await?;
     if !response.status().is_success() {
-        return Err(anyhow::anyhow!("Failed to download the conda package"));
+        return Err(anyhow::anyhow!(format!(
+            "Failed to download the conda package: {}",
+            response.status()
+        )));
     }
 
-    let mut temp_file =
+    let temp_file =
         NamedTempFile::new().with_context(|| "Creation of new NamedTempFile failed.")?;
-    copy(&mut response, &mut temp_file)
-        .with_context(|| "Copying downloaded .conda package to NamedTempFile failed.")?;
+    let std_file = temp_file.reopen()?;
+    let mut async_file = TokioFile::from_std(std_file);
+
+    let stream = response
+        .bytes_stream()
+        .map_err(|err| io::Error::new(io::ErrorKind::Other, err));
+    let mut stream_reader = StreamReader::new(stream);
+
+    tokio::io::copy(&mut stream_reader, &mut async_file)
+        .await
+        .with_context(|| "Copying downloaded conda package to NamedTempFile failed.")?;
     Ok(temp_file)
 }
 
@@ -117,6 +175,7 @@ fn extract_license_files<R: Read>(archive: &mut tar::Archive<R>) -> Result<Vec<L
                 .to_string();
 
             licenses.push(LicenseFile {
+                package_name: None,
                 filename,
                 license_text: content,
             });
