@@ -1,10 +1,12 @@
+use anyhow::Context;
 use assert_cmd::prelude::*;
+use conda_deny::bundle::bundle;
 use conda_deny::cli::CondaDenyCliConfig;
-use conda_deny::OutputFormat;
 use conda_deny::{
     check::check, get_config_options, list::list, CondaDenyCheckConfig, CondaDenyConfig,
     CondaDenyListConfig,
 };
+use conda_deny::{CondaDenyBundleConfig, OutputFormat};
 use rattler_conda_types::Platform;
 use rstest::{fixture, rstest};
 use std::io::Write;
@@ -35,6 +37,34 @@ fn list_config(
 
     match config {
         CondaDenyConfig::List(list_config) => list_config,
+        _ => panic!(),
+    }
+}
+
+#[fixture]
+fn bundle_config(
+    #[default(None)] config: Option<PathBuf>,
+    #[default(None)] lockfile: Option<Vec<PathBuf>>,
+    #[default(None)] prefix: Option<Vec<PathBuf>>,
+    #[default(None)] platform: Option<Vec<Platform>>,
+    #[default(None)] environment: Option<Vec<String>>,
+    #[default(None)] ignore_pypi: Option<bool>,
+    #[default(Some(OutputFormat::Default))] output: Option<OutputFormat>,
+) -> CondaDenyBundleConfig {
+    let cli = CondaDenyCliConfig::Bundle {
+        lockfile,
+        prefix,
+        platform,
+        environment,
+        ignore_pypi,
+        directory: PathBuf::from("tests/bundle"),
+        output_format: output,
+    };
+
+    let config = get_config_options(config, cli).unwrap();
+
+    match config {
+        CondaDenyConfig::Bundle(bundle_config) => bundle_config,
         _ => panic!(),
     }
 }
@@ -316,6 +346,20 @@ fn test_prefix_list(
         line_count, expected_line_count,
         "Unexpected number of output lines"
     );
+}
+
+#[rstest]
+fn test_bundle(
+    #[with(
+        // CONFIG PATH
+        None,
+        // LOCKFILE PATHS
+        Some(vec!["pixi.lock".into()]),
+)]
+    bundle_config: CondaDenyBundleConfig,
+    mut out: Vec<u8>,
+) {
+    bundle(bundle_config, &mut out).with_context(|| "Bundle failed.").unwrap();
 }
 
 #[rstest]
