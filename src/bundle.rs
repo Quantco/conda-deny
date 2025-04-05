@@ -1,104 +1,88 @@
 use anyhow::{anyhow, Context, Result};
-use rattler_lock::UrlOrPath;
+use rattler_lock::{CondaPackageData, UrlOrPath};
 use rattler_package_streaming::{
     read::stream_tar_bz2,
     seek::{stream_conda_content, stream_conda_info},
 };
+use rayon::iter::{IntoParallelRefIterator, ParallelIterator};
 use reqwest::Url;
 use serde::{Deserialize, Serialize};
 use std::io::{copy, Cursor, Read, Seek, SeekFrom, Write};
 use tempfile::NamedTempFile;
 
+use indicatif::{ProgressBar, ProgressStyle};
+
 use crate::{pixi_lock::get_conda_packages_for_pixi_lock, CondaDenyBundleConfig, LockfileOrPrefix};
+
+#[derive(Debug, Clone, Serialize, Deserialize)]
+struct LicenseFile {
+    filename: String,
+    license_text: String,
+}
 
 pub fn bundle<W: Write>(config: CondaDenyBundleConfig, mut out: W) -> Result<()> {
     let lockfile_or_prefix = config.lockfile_or_prefix.clone();
 
-    let mut license_files: Vec<LicenseFile> = Vec::new();
-
     match lockfile_or_prefix {
         LockfileOrPrefix::Lockfile(lockfile_spec) => {
             let lockfiles = lockfile_spec.lockfiles.clone();
-            for lockfile in lockfiles {
-                let conda_packages = get_conda_packages_for_pixi_lock(
-                    &lockfile,
-                    &lockfile_spec.environments,
-                    &lockfile_spec.platforms,
-                    lockfile_spec.ignore_pypi,
-                )?;
-
-                // println!("conda_packages: {:?}", conda_packages);
-
-                for conda_package in conda_packages {
-                    let package_path = conda_package.location();
-                    println!(
-                        "Package: {:?}",
-                        conda_package.location().as_url().unwrap().to_string()
-                    );
-                    match package_path {
-                        UrlOrPath::Url(url) => {
-                            let mut temp_file = download_conda_package_as_tempfile(url.clone())
-                                .with_context(|| {
-                                    format!(
-                                        "Downloading .conda package to tempfile failed: {}",
-                                        url
-                                    )
-                                })?;
-                            temp_file
-                                .seek(SeekFrom::Start(0))
-                                .with_context(|| "Resetting temp file cursor failed.")?;
-
-                            if url.to_string().ends_with(".tar.bz2") {
-                                let current_package_license_files =
-                                    license_files_from_tarbz2(temp_file).with_context(|| format!(
-                                        "Getting license files from the following tar.bz2 package failed: {}", conda_package.record().name.as_source())
-                                    )?;
-
-                                for license_file in current_package_license_files.clone() {
-                                    println!(
-                                        "Package: {:?} Filename: {}",
-                                        conda_package.record().name,
-                                        license_file.filename
-                                    );
-                                }
-                                license_files.extend(current_package_license_files);
-                            } else if url.to_string().ends_with(".conda") {
-                                let current_package_license_files =
-                                    license_files_from_conda_package(temp_file).with_context(|| format!(
-                                        "Getting license files from the following conda package failed: {}", conda_package.record().name.as_source())
-                                    )?;
-
-                                for license_file in current_package_license_files.clone() {
-                                    println!(
-                                        "Package: {:?} Filename: {}",
-                                        conda_package.record().name,
-                                        license_file.filename
-                                    );
-                                }
-                                license_files.extend(current_package_license_files);
-                            } else {
-                                return Err(anyhow!(
-                                    "Unsupported package type format (not .conda or .tar.bz2)"
-                                ));
-                            }
-                        }
-                        UrlOrPath::Path(path) => {
-                            todo!("Handle local path: {:?}", path);
-                            // TODO: Implement logic for handling local paths
-                        }
-                    }
-                }
+            let mut conda_packages = Vec::new();
+            for lockfile in lockfiles.clone() {
+                conda_packages.extend(
+                    get_conda_packages_for_pixi_lock(
+                        &lockfile,
+                        &lockfile_spec.environments,
+                        &lockfile_spec.platforms,
+                        lockfile_spec.ignore_pypi,
+                    )?
+                    .into_iter(),
+                );
             }
+
+            let bar = setup_bundle_bar(conda_packages.len() as u64);
+
+            let license_files: Vec<LicenseFile> = conda_packages
+                .par_iter()
+                .map(|conda_package| {
+                    bar.inc(1);
+                    bar.set_message(format!(
+                        "📦 Bundling licenses for: {}",
+                        conda_package.record().name.as_source()
+                    ));
+                    process_conda_package(conda_package)
+                })
+                .collect::<Result<Vec<Vec<LicenseFile>>, _>>()?
+                .into_iter()
+                .flatten()
+                .collect();
+
+            bar.finish_with_message("✅ Bundling licenses complete!");
         }
         LockfileOrPrefix::Prefix(prefix_path) => {
             println!("Prefix path: {:?}", prefix_path);
             // TODO: Implement logic for handling prefix paths
         }
     }
-    println!("Number of license files: {:?}", license_files.len());
-
-    println!("The end of this function is reached.");
     Ok(())
+}
+
+fn process_conda_package(conda_package: &CondaPackageData) -> Result<Vec<LicenseFile>> {
+    let url = match conda_package.location() {
+        UrlOrPath::Url(url) => url,
+        UrlOrPath::Path(_path) => return Err(anyhow!("Local paths not supported yet")),
+    };
+
+    let mut temp_file = download_conda_package_as_tempfile(url.clone())
+        .with_context(|| format!("Downloading failed: {}", url))?;
+    temp_file.seek(SeekFrom::Start(0))?;
+
+    if url.to_string().ends_with(".tar.bz2") {
+        license_files_from_tarbz2(temp_file)
+    } else if url.to_string().ends_with(".conda") {
+        license_files_from_dot_conda(temp_file)
+    } else {
+        Err(anyhow!("Unsupported package format: {}", url))
+    }
 }
 
 fn download_conda_package_as_tempfile(url: Url) -> Result<tempfile::NamedTempFile> {
@@ -152,7 +136,7 @@ fn license_files_from_tarbz2<R: Read + Seek>(mut reader: R) -> Result<Vec<Licens
     extract_license_files(&mut archive)
 }
 
-fn license_files_from_conda_package<R: Read + Seek>(mut reader: R) -> Result<Vec<LicenseFile>> {
+fn license_files_from_dot_conda<R: Read + Seek>(mut reader: R) -> Result<Vec<LicenseFile>> {
     let mut buffer = Vec::new();
     reader.read_to_end(&mut buffer)?;
     let reader = Cursor::new(buffer);
@@ -168,10 +152,18 @@ fn license_files_from_conda_package<R: Read + Seek>(mut reader: R) -> Result<Vec
     Ok(license_files)
 }
 
-#[derive(Debug, Clone, Serialize, Deserialize)]
-struct LicenseFile {
-    filename: String,
-    license_text: String,
+fn setup_bundle_bar(steps: u64) -> ProgressBar {
+    let bar = ProgressBar::new(steps);
+
+    bar.set_style(
+        ProgressStyle::with_template(
+            "{msg}\n{spinner:.green} [{elapsed_precise}] {bar:40.yellow} {pos:>7}/{len:7}",
+        )
+        .unwrap()
+        .progress_chars("##-"),
+    );
+
+    bar
 }
 
 #[cfg(test)]
@@ -196,7 +188,7 @@ mod tests {
 
         temp_file.seek(SeekFrom::Start(0)).unwrap();
 
-        license_files_from_conda_package(temp_file).unwrap();
+        license_files_from_dot_conda(temp_file).unwrap();
     }
 
     #[test]
