@@ -122,7 +122,7 @@ impl LicenseInfos {
 
     pub fn from_pixi_lockfiles(lockfile_spec: LockfileSpec) -> Result<LicenseInfos> {
         let mut license_infos = Vec::new();
-        let mut package_records = Vec::new();
+        let mut conda_packages = Vec::new();
 
         assert!(!lockfile_spec.lockfiles.is_empty());
         for lockfile in lockfile_spec.lockfiles {
@@ -139,11 +139,11 @@ impl LicenseInfos {
                     &lockfile.to_str()
                 )
             })?;
-            package_records.extend(package_records_for_lockfile);
+            conda_packages.extend(package_records_for_lockfile);
         }
 
-        for package_record in package_records {
-            let license_info = LicenseInfo::from_package_record(package_record);
+        for conda_package in conda_packages {
+            let license_info = LicenseInfo::from_package_record(conda_package.record().to_owned());
             license_infos.push(license_info);
         }
 
