@@ -3,7 +3,7 @@ use std::path::Path;
 use anyhow::{Context, Result};
 
 use log::warn;
-use rattler_conda_types::{PackageRecord, Platform};
+use rattler_conda_types::Platform;
 use rattler_lock::{CondaPackageData, LockFile, LockedPackageRef};
 
 fn _get_environment_names(lock_file: &LockFile) -> Vec<String> {

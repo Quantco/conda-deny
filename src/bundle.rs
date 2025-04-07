@@ -1,5 +1,5 @@
 use anyhow::{anyhow, Context, Result};
-use rattler_lock::{CondaPackageData, UrlOrPath};
+use rattler_conda_types::PrefixRecord;
 use rattler_package_streaming::{
     read::stream_tar_bz2,
     seek::{stream_conda_content, stream_conda_info},
@@ -8,19 +8,18 @@ use rayon::iter::{IntoParallelRefIterator, ParallelIterator};
 use reqwest::Url;
 use serde::{Deserialize, Serialize};
 use std::{
-    io::{self, copy, Cursor, Read, Seek, SeekFrom, Write},
+    io::{Cursor, Read, Seek, Write},
     sync::Arc,
 };
-use tempfile::NamedTempFile;
 
 use indicatif::{ProgressBar, ProgressStyle};
 
 use rattler_networking::AuthenticationMiddleware;
 
-use crate::{pixi_lock::get_conda_packages_for_pixi_lock, CondaDenyBundleConfig, LockfileOrPrefix};
-use futures_util::TryStreamExt;
-use tokio::fs::File as TokioFile;
-use tokio_util::io::StreamReader;
+use crate::{
+    pixi_lock::get_conda_packages_for_pixi_lock, CondaDenyBundleConfig, LockfileOrPrefix,
+    OutputFormat,
+};
 
 #[derive(Debug, Clone, Serialize, Deserialize)]
 struct LicenseFile {
@@ -31,6 +30,7 @@ struct LicenseFile {
 
 pub fn bundle<W: Write>(config: CondaDenyBundleConfig, mut out: W) -> Result<()> {
     let lockfile_or_prefix = config.lockfile_or_prefix.clone();
+    let license_files: Vec<LicenseFile>;
 
     match lockfile_or_prefix {
         LockfileOrPrefix::Lockfile(lockfile_spec) => {
@@ -50,9 +50,9 @@ pub fn bundle<W: Write>(config: CondaDenyBundleConfig, mut out: W) -> Result<()>
 
             let bar = setup_bundle_bar(conda_packages.len() as u64);
 
-            let license_files: Vec<LicenseFile> = conda_packages
+            license_files = conda_packages
                 .par_iter()
-                .map(|conda_package| {
+                .map(|conda_package| -> Result<Vec<LicenseFile>, anyhow::Error> {
                     bar.inc(1);
                     bar.set_message(format!(
                         "📦 Bundling licenses for: {}",
@@ -60,72 +60,101 @@ pub fn bundle<W: Write>(config: CondaDenyBundleConfig, mut out: W) -> Result<()>
                     ));
                     // Set package name of all returned license files
 
-                    process_conda_package(conda_package)
-                        .map(|mut files| {
-                            for file in &mut files {
-                                file.package_name =
-                                    Some(conda_package.record().name.as_source().to_string());
-                            }
-                            files
-                        })
+                    let rt = tokio::runtime::Runtime::new()?;
+
+                    let mut files = rt
+                        .block_on(get_license_files_from_url(
+                            conda_package.location().as_url().unwrap().to_owned(),
+                        ))
                         .with_context(|| {
                             format!(
                                 "Failed to process conda package: {}",
                                 conda_package.record().name.as_source()
                             )
-                        })
+                        })?;
+
+                    let package_name = format!("{}-{}-{}", conda_package.record().name.as_source(), conda_package.record().version, conda_package.record().build);
+                    for file in &mut files {
+                        file.package_name = Some(package_name.clone());
+                    }
+
+                    Ok(files)
                 })
                 .collect::<Result<Vec<Vec<LicenseFile>>, _>>()?
                 .into_iter()
                 .flatten()
                 .collect();
-            // Print all filenames in license_files
-            for license_file in &license_files {
-                println!("Package Name: {:?}, Filename: {}", license_file.package_name, license_file.filename);
-            }
 
             bar.finish_with_message("✅ Bundling licenses complete!");
         }
-        LockfileOrPrefix::Prefix(prefix_path) => {
-            println!("Prefix path: {:?}", prefix_path);
-            // TODO: Implement logic for handling prefix paths
+        LockfileOrPrefix::Prefix(prefix_paths) => {
+            let mut prefix_records: Vec<PrefixRecord> = Vec::new();
+            for prefix in prefix_paths {
+                let current_prefix_records =
+                    rattler_conda_types::PrefixRecord::collect_from_prefix(prefix.as_path())
+                        .with_context(|| {
+                            format!("Failed to collect prefix records from: {:?}", prefix)
+                        })?;
+                prefix_records.extend(current_prefix_records);
+            }
+
+            let bar = setup_bundle_bar(prefix_records.len() as u64);
+
+            license_files = prefix_records
+                .par_iter()
+                .map(|record| -> Result<Vec<LicenseFile>, anyhow::Error> {
+                    bar.inc(1);
+                    bar.set_message(format!("📦 Bundling licenses for: {}", record.file_name()));
+                    let rt = tokio::runtime::Runtime::new()?;
+                    let url = record.repodata_record.url.clone();
+                    let mut files = rt
+                        .block_on(get_license_files_from_url(url.clone()))
+                        .with_context(|| format!("Failed to process conda package: {}", url))?;
+
+                    let package_name = record.file_name().to_string();
+                    for file in &mut files {
+                        file.package_name = Some(package_name.clone());
+                    }
+                    Ok(files)
+                })
+                .collect::<Result<Vec<Vec<LicenseFile>>, _>>()?
+                .into_iter()
+                .flatten()
+                .collect();
+            bar.finish_with_message("✅ Bundling licenses complete!");
+        }
+    }
+
+    match config.output_format {
+        OutputFormat::Json => {
+            serde_json::to_writer_pretty(&mut out, &license_files)
+                .with_context(|| "Failed to write license files to JSON")?;
+        }
+        OutputFormat::JsonPretty => {
+            serde_json::to_writer(&mut out, &license_files)
+                .with_context(|| "Failed to write license files to pretty JSON")?;
+        }
+        OutputFormat::Csv => {
+            let mut wtr = csv::Writer::from_writer(out);
+            for license_file in &license_files {
+                wtr.serialize(license_file)
+                    .with_context(|| "Failed to serialize license file to CSV")?;
+            }
+            wtr.flush().with_context(|| "Failed to flush CSV writer")?;
+        }
+        OutputFormat::Default => {
+            for license_file in &license_files {
+                writeln!(out, "{:?}", license_files).with_context(|| {
+                    format!("Failed to write license file: {:?}", license_file.filename)
+                })?;
+            }
         }
     }
 
     Ok(())
 }
 
-fn process_conda_package(conda_package: &CondaPackageData) -> Result<Vec<LicenseFile>> {
-    let url = match conda_package.location() {
-        UrlOrPath::Url(url) => url,
-        UrlOrPath::Path(_path) => return Err(anyhow!("Local paths not supported yet")),
-    };
-
-    let mut temp_file = download_conda_package_as_tempfile(url.clone())
-        .with_context(|| format!("Downloading failed: {}", url))?;
-    temp_file.seek(SeekFrom::Start(0))?;
-
-    if url.to_string().ends_with(".tar.bz2") {
-        license_files_from_tarbz2(temp_file).with_context(|| {
-            format!(
-                "Extracting license files from tar.bz2 package failed: {}",
-                url
-            )
-        })
-    } else if url.to_string().ends_with(".conda") {
-        license_files_from_dot_conda(temp_file).with_context(|| {
-            format!(
-                "Extracting license files from .conda package failed: {}",
-                url
-            )
-        })
-    } else {
-        Err(anyhow!("Unsupported package format: {}", url))
-    }
-}
-
-#[tokio::main]
-async fn download_conda_package_as_tempfile(url: Url) -> Result<tempfile::NamedTempFile> {
+async fn download_conda_package_as_cursor(url: Url) -> Result<std::io::Cursor<Vec<u8>>> {
     let auth_middleware = AuthenticationMiddleware::from_env_and_defaults()
         .with_context(|| "Failed to set up authentication middleware.")?;
     let client = reqwest_middleware::ClientBuilder::new(reqwest::Client::default())
@@ -140,20 +169,17 @@ async fn download_conda_package_as_tempfile(url: Url) -> Result<tempfile::NamedT
         )));
     }
 
-    let temp_file =
-        NamedTempFile::new().with_context(|| "Creation of new NamedTempFile failed.")?;
-    let std_file = temp_file.reopen()?;
-    let mut async_file = TokioFile::from_std(std_file);
+    let bytes = response.bytes().await?;
+    Ok(std::io::Cursor::new(bytes.to_vec()))
+}
 
-    let stream = response
-        .bytes_stream()
-        .map_err(|err| io::Error::new(io::ErrorKind::Other, err));
-    let mut stream_reader = StreamReader::new(stream);
-
-    tokio::io::copy(&mut stream_reader, &mut async_file)
-        .await
-        .with_context(|| "Copying downloaded conda package to NamedTempFile failed.")?;
-    Ok(temp_file)
+async fn get_license_files_from_url(url: Url) -> Result<Vec<LicenseFile>> {
+    let cursor = download_conda_package_as_cursor(url.clone()).await?;
+    if url.path().ends_with(".conda") {
+        license_files_from_dot_conda(cursor)
+    } else {
+        license_files_from_tarbz2(cursor)
+    }
 }
 
 fn extract_license_files<R: Read>(archive: &mut tar::Archive<R>) -> Result<Vec<LicenseFile>> {
@@ -163,7 +189,11 @@ fn extract_license_files<R: Read>(archive: &mut tar::Archive<R>) -> Result<Vec<L
         let mut file = entry?;
         let path = file.path()?.to_path_buf();
         if file.header().entry_type().is_file()
-            && path.components().any(|c| c.as_os_str() == "licenses")
+            && path.components().any(|c| {
+                c.as_os_str() == "licenses"
+                    || c.as_os_str() == "LICENSE"
+                    || c.as_os_str() == "copying"
+            })
         {
             let mut content = String::new();
             file.read_to_string(&mut content)?;
@@ -227,39 +257,35 @@ fn setup_bundle_bar(steps: u64) -> ProgressBar {
 
 #[cfg(test)]
 mod tests {
-    use std::{fs::File, io::SeekFrom, path::Path};
+    use std::{fs::File, path::Path};
 
     use super::*;
 
-    #[test]
-    fn test_download_conda_package() {
+    #[tokio::test]
+    async fn test_in_memory_license_file_extraction() {
         let url = Url::parse(
-            "https://conda.anaconda.org/conda-forge/linux-64/conda-deny-0.4.1-h53e704d_0.conda",
+            "https://conda.anaconda.org/conda-forge/linux-64/pysocks-1.7.1-py39hf3d152e_5.tar.bz2",
         )
         .unwrap();
-        let mut temp_file = download_conda_package_as_tempfile(url).unwrap();
-        assert!(temp_file.path().exists());
+        let license_files = get_license_files_from_url(url).await.unwrap();
 
-        // Store permanently for testing
-        // let mut temp_file = temp_file.reopen().unwrap();
-        // let mut file = File::create("tests/ruamel.yaml-0.18.6-py312h98912ed_0.conda").unwrap();
-        // copy(&mut temp_file, &mut file).unwrap();
+        println!("This test is running");
 
-        temp_file.seek(SeekFrom::Start(0)).unwrap();
-
-        license_files_from_dot_conda(temp_file).unwrap();
+        for license_file in &license_files {
+            println!("Filename: {}", license_file.filename);
+            println!("License Text: {}", license_file.license_text);
+        }
+        assert!(!license_files.is_empty());
     }
 
     #[test]
-    fn test_streaming() {
-        let path = Path::new("tests/cached-property-1.5.2-hd8ed1ab_1.tar.bz2");
-        // license_files_from_conda_package(File::open(path).unwrap()).unwrap();
-        // let content = stream_conda_info(File::open(path).unwrap()).unwrap();
-        // println!("Content: {:?}", content.entries().unwrap().);
-        // let file = read_package_file::<LicenseFile>(path).unwrap();
-
-        let license_files = license_files_from_tarbz2(File::open(path).unwrap()).unwrap();
-        println!("License files: {:?}", license_files);
-        println!("This is the test");
+    fn test_bundle_conda_prefix() {
+        let path = Path::new("/Users/pkm/micromamba/envs/test-bundle");
+        let file = File::open(path).unwrap();
+        let license_files = license_files_from_dot_conda(file).unwrap();
+        for license_file in &license_files {
+            println!("Filename: {}", license_file.filename);
+            println!("License Text: {}", license_file.license_text);
+        }
     }
 }
