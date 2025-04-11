@@ -82,9 +82,6 @@ pub enum CondaDenyCliConfig {
 
     /// Bundle all dependency licenses in a directory
     Bundle {
-        /// Path to the output directory
-        #[arg[short, long]]
-        directory: PathBuf,
         /// Path to the pixi lockfile(s)
         #[arg(short, long)]
         lockfile: Option<Vec<PathBuf>>,
@@ -107,7 +104,11 @@ pub enum CondaDenyCliConfig {
 
         /// Output format
         #[arg(short, long)]
-        output_format: Option<OutputFormat>,
+        output: Option<OutputFormat>,
+
+        /// Directory to bundle licenses into
+        #[arg(short, long)]
+        directory: Option<PathBuf>,
     },
 }
 
@@ -152,11 +153,11 @@ impl CondaDenyCliConfig {
         }
     }
 
-    pub fn output_format(&self) -> Option<OutputFormat> {
+    pub fn output(&self) -> Option<OutputFormat> {
         match self {
             CondaDenyCliConfig::Check { output, .. } => *output,
             CondaDenyCliConfig::List { output, .. } => *output,
-            CondaDenyCliConfig::Bundle { output_format, .. } => *output_format,
+            CondaDenyCliConfig::Bundle { output, .. } => *output,
         }
     }
 }

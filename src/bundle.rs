@@ -9,6 +9,7 @@ use reqwest::Url;
 use serde::{Deserialize, Serialize};
 use std::{
     io::{Cursor, Read, Seek, Write},
+    path::{Path, PathBuf},
     sync::Arc,
 };
 
@@ -25,6 +26,7 @@ use crate::{
 struct LicenseFile {
     package_name: Option<String>,
     filename: String,
+    // TODO: Change to bytes
     license_text: String,
 }
 
@@ -58,7 +60,6 @@ pub fn bundle<W: Write>(config: CondaDenyBundleConfig, mut out: W) -> Result<()>
                         "📦 Bundling licenses for: {}",
                         conda_package.record().name.as_source()
                     ));
-                    // Set package name of all returned license files
 
                     let rt = tokio::runtime::Runtime::new()?;
 
@@ -73,7 +74,12 @@ pub fn bundle<W: Write>(config: CondaDenyBundleConfig, mut out: W) -> Result<()>
                             )
                         })?;
 
-                    let package_name = format!("{}-{}-{}", conda_package.record().name.as_source(), conda_package.record().version, conda_package.record().build);
+                    let package_name = format!(
+                        "{}-{}-{}",
+                        conda_package.record().name.as_source(),
+                        conda_package.record().version,
+                        conda_package.record().build
+                    );
                     for file in &mut files {
                         file.package_name = Some(package_name.clone());
                     }
@@ -127,30 +133,72 @@ pub fn bundle<W: Write>(config: CondaDenyBundleConfig, mut out: W) -> Result<()>
 
     match config.output_format {
         OutputFormat::Json => {
-            serde_json::to_writer_pretty(&mut out, &license_files)
+            if config.directory.is_some() {
+                return Err(anyhow::anyhow!(
+                    "Cannot use CSV output format with a directory specified"
+                ));
+            }
+            serde_json::to_writer(&mut out, &license_files)
                 .with_context(|| "Failed to write license files to JSON")?;
         }
         OutputFormat::JsonPretty => {
-            serde_json::to_writer(&mut out, &license_files)
+            if config.directory.is_some() {
+                return Err(anyhow::anyhow!(
+                    "Cannot use CSV output format with a directory specified"
+                ));
+            }
+            serde_json::to_writer_pretty(&mut out, &license_files)
                 .with_context(|| "Failed to write license files to pretty JSON")?;
         }
         OutputFormat::Csv => {
-            let mut wtr = csv::Writer::from_writer(out);
-            for license_file in &license_files {
-                wtr.serialize(license_file)
-                    .with_context(|| "Failed to serialize license file to CSV")?;
-            }
-            wtr.flush().with_context(|| "Failed to flush CSV writer")?;
+            // Throw error. CSV output is not supported.
+            return Err(anyhow::anyhow!("Bundling to CSV format is not supported."));
         }
         OutputFormat::Default => {
-            for license_file in &license_files {
-                writeln!(out, "{:?}", license_files).with_context(|| {
-                    format!("Failed to write license file: {:?}", license_file.filename)
-                })?;
-            }
+            let path = config.directory.unwrap_or(PathBuf::from(".conda-deny"));
+            let path = Path::new(&path);
+            create_license_file_directory(path, license_files)
+                .with_context(|| format!("Failed to create license file directory: {:?}", path))?;
+            writeln!(out, "License files written to: {:?}", path)
+                .with_context(|| format!("Failed to write license file: {:?}", path))?;
         }
     }
 
+    Ok(())
+}
+
+fn create_license_file_directory(path: &Path, license_files: Vec<LicenseFile>) -> Result<()> {
+    if path.exists() {
+        std::fs::remove_dir_all(path)
+            .with_context(|| format!("Failed to remove existing directory: {:?}", path))?;
+    }
+    std::fs::create_dir_all(path)
+        .with_context(|| format!("Failed to create output directory: {:?}", path))?;
+    for license_file in &license_files {
+        let package_name = license_file
+            .package_name
+            .as_ref()
+            .ok_or_else(|| anyhow!("Package name is not specified"))?;
+        let package_path = path.join(package_name);
+        std::fs::create_dir_all(&package_path)
+            .with_context(|| format!("Failed to create package directory: {:?}", package_path))?;
+
+        let relative_path = Path::new(&license_file.filename)
+            .strip_prefix("info/licenses")
+            .with_context(|| format!("Unexpected license path: {}", license_file.filename))?;
+
+        let file_path = package_path.join(relative_path);
+
+        if let Some(parent) = file_path.parent() {
+            std::fs::create_dir_all(parent)
+                .with_context(|| format!("Failed to create directory for: {:?}", file_path))?;
+        }
+
+        let mut file = std::fs::File::create(&file_path)
+            .with_context(|| format!("Failed to create license file: {:?}", file_path))?;
+        file.write_all(license_file.license_text.as_bytes())
+            .with_context(|| format!("Failed to write license text to file: {:?}", file_path))?;
+    }
     Ok(())
 }
 
@@ -188,21 +236,11 @@ fn extract_license_files<R: Read>(archive: &mut tar::Archive<R>) -> Result<Vec<L
     for entry in archive.entries()? {
         let mut file = entry?;
         let path = file.path()?.to_path_buf();
-        if file.header().entry_type().is_file()
-            && path.components().any(|c| {
-                c.as_os_str() == "licenses"
-                    || c.as_os_str() == "LICENSE"
-                    || c.as_os_str() == "copying"
-            })
-        {
+        if file.header().entry_type().is_file() && path.starts_with("info/licenses") {
             let mut content = String::new();
             file.read_to_string(&mut content)?;
 
-            let filename = path
-                .file_name()
-                .ok_or_else(|| anyhow!("Invalid license file path {:?}", path))?
-                .to_string_lossy()
-                .to_string();
+            let filename = path.to_string_lossy().to_string();
 
             licenses.push(LicenseFile {
                 package_name: None,

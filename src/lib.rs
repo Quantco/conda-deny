@@ -64,6 +64,7 @@ pub struct CondaDenyListConfig {
 pub struct CondaDenyBundleConfig {
     pub lockfile_or_prefix: LockfileOrPrefix,
     pub output_format: OutputFormat,
+    pub directory: Option<PathBuf>,
 }
 
 #[derive(Debug, Clone)]
@@ -225,7 +226,7 @@ pub fn get_config_options(
         toml_config.get_ignore_pypi()
     };
 
-    let output_format = cli_config.output_format().unwrap_or_default();
+    let output_format = cli_config.output().unwrap_or_default();
 
     let lockfile_or_prefix =
         get_lockfile_or_prefix(lockfile, prefix, platforms, environments, ignore_pypi)?;
@@ -264,9 +265,10 @@ pub fn get_config_options(
             lockfile_or_prefix,
             output_format,
         }),
-        CondaDenyCliConfig::Bundle { .. } => CondaDenyConfig::Bundle(CondaDenyBundleConfig {
+        CondaDenyCliConfig::Bundle { directory, .. } => CondaDenyConfig::Bundle(CondaDenyBundleConfig {
             lockfile_or_prefix,
             output_format,
+            directory,
         }),
     };
 

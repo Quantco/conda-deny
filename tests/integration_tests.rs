@@ -49,6 +49,7 @@ fn bundle_config(
     #[default(None)] platform: Option<Vec<Platform>>,
     #[default(None)] environment: Option<Vec<String>>,
     #[default(None)] ignore_pypi: Option<bool>,
+    #[default(None)] directory: Option<PathBuf>,
     #[default(Some(OutputFormat::Default))] output: Option<OutputFormat>,
 ) -> CondaDenyBundleConfig {
     let cli = CondaDenyCliConfig::Bundle {
@@ -57,8 +58,8 @@ fn bundle_config(
         platform,
         environment,
         ignore_pypi,
-        directory: PathBuf::from("tests/bundle"),
-        output_format: output,
+        directory,
+        output,
     };
 
     let config = get_config_options(config, cli).unwrap();
