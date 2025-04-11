@@ -11,3 +11,8 @@ compliance/
 
 output/
 tests_private/
+
+pixi.lock
+pixi.toml
+
+pyconde/

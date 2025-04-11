@@ -2,6 +2,7 @@ use std::io;
 
 use anyhow::Result;
 use clap::Parser;
+use conda_deny::bundle::bundle;
 use conda_deny::check::check;
 use conda_deny::cli::Cli;
 use conda_deny::get_config_options;
@@ -27,5 +28,6 @@ fn main() -> Result<()> {
     match config {
         CondaDenyConfig::Check(check_config) => check(check_config, stdout),
         CondaDenyConfig::List(list_config) => list(list_config, stdout),
+        CondaDenyConfig::Bundle(bundle_config) => bundle(bundle_config, stdout),
     }
 }

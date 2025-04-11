@@ -4,6 +4,6 @@
 
 # Make sure you are in an environment with vhs installed
 
-export PS1="> "
-vhs demo-light.tape
-vhs demo-dark.tape
+# export PS1="> "
+vhs .github/assets/demo/demo-light.tape
+vhs .github/assets/demo/demo-dark.tape
