@@ -4,7 +4,7 @@ use rattler_conda_types::PrefixRecord;
 use rattler_lock::CondaPackageData;
 use rattler_package_streaming::{
     read::stream_tar_bz2,
-    seek::stream_conda_info,
+    seek::stream_conda_content,
 };
 use rayon::iter::{IntoParallelRefIterator, ParallelIterator};
 use reqwest::Url;
@@ -128,7 +128,7 @@ where
                 .block_on(get_license_files_from_url(url))
                 .with_context(|| format!("Failed to process conda package: {}", get_name(item)))?;
 
-            warn!("Received {} license files for {}", files.len(), get_name(item));
+            debug!("Received {} license files for {}", files.len(), get_name(item));
             trace!("License files: {:?}", files);
 
             let package_name = get_filename(item);
@@ -253,11 +253,12 @@ fn license_files_from_dot_conda<R: Read + Seek>(mut reader: R) -> Result<Vec<Lic
     reader.read_to_end(&mut buffer)?;
     let reader = Cursor::new(buffer);
 
-    let mut info_archive = stream_conda_info(reader)
-        .with_context(|| "Streaming .conda package info from archive failed.")?;
+    let mut content_archive = stream_conda_content(reader.clone())
+        .with_context(|| "Streaming .conda package content from archive failed.")?;
 
-    extract_license_files(&mut info_archive)
+    extract_license_files(&mut content_archive)
 }
+
 
 fn setup_bundle_bar(steps: u64) -> ProgressBar {
     if std::env::var("NO_PROGRESS").is_ok() {
