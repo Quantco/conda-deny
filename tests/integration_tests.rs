@@ -223,6 +223,7 @@ fn test_platform_env_restrictions_check() {
     let mut temp_pixi_toml = NamedTempFile::new().unwrap();
     let file_content = r#"[tool.conda-deny]
 license-whitelist = "tests/default_license_whitelist.toml"
+lockfile = "tests/default_pixi.lock"
 platform = "linux-64"
 environment = "lint""#;
 
@@ -236,7 +237,7 @@ environment = "lint""#;
     let temp_path = Some(temp_pixi_toml.path().to_path_buf());
     let check_config = check_config(
         temp_path,
-        Some(vec!["tests/default_pixi.lock".into()]),
+        None,
         None,
         None,
         None,
@@ -250,7 +251,7 @@ environment = "lint""#;
 
     assert!(output.contains(
         "There were \u{1b}[32m27\u{1b}[0m safe licenses and \u{1b}[31m21\u{1b}[0m unsafe licenses."
-    ));
+    ), "{output:?}");
     assert!(result.is_err());
 }
 
