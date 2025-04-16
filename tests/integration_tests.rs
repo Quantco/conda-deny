@@ -8,7 +8,6 @@ use conda_deny::{
 use conda_deny::{CondaDenyBundleConfig, OutputFormat};
 use rattler_conda_types::Platform;
 use rstest::{fixture, rstest};
-use std::env::temp_dir;
 use std::io::Write;
 use std::path::{Path, PathBuf};
 use std::process::Command;
@@ -431,6 +430,7 @@ fn test_pypi_ignore_error(
 #[rstest]
 fn test_bundle_prefix() {
     let mut out = out();
+    let temp_dir = tempfile::tempdir().unwrap();
     let bundle_config = bundle_config(
         // CONFIG PATH
         None,
@@ -445,7 +445,7 @@ fn test_bundle_prefix() {
         // IGNORE PYPI
         None,
         // DIRECTORY
-        Some(temp_dir().join(Path::new("test_bundle"))),
+        Some(temp_dir.path().join(Path::new("test_bundle"))),
     );
 
     // Suppress progress bar
@@ -478,6 +478,7 @@ fn test_bundle_prefix() {
 #[rstest]
 fn test_bundle_lockfile() {
     let mut out = out();
+    let temp_dir = tempfile::tempdir().unwrap();
     let bundle_config = bundle_config(
         // CONFIG PATH
         None,
@@ -492,7 +493,7 @@ fn test_bundle_lockfile() {
         // IGNORE PYPI
         None,
         // DIRECTORY
-        Some(temp_dir().join(Path::new("test_bundle"))),
+        Some(temp_dir.path().join(Path::new("test_bundle"))),
     );
 
     // Suppress progress bar
@@ -512,12 +513,12 @@ fn test_bundle_lockfile() {
             dirs.push(e.path().to_path_buf());
         }
     }
-    assert_eq!(files.len(), 5949);
-    assert_eq!(dirs.len(), 3895);
+    assert_eq!(files.len(), 6649);
+    assert_eq!(dirs.len(), 4724);
 
     let top_level_entries = std::fs::read_dir(bundle_dir).unwrap();
     let top_level_entry_count = top_level_entries.count();
-    assert_eq!(top_level_entry_count, 43);
+    assert_eq!(top_level_entry_count, 356);
     let output = String::from_utf8(out).unwrap();
     assert!(output.contains("License files written to:"));
 }
