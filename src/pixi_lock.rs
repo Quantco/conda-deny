@@ -3,8 +3,8 @@ use std::path::Path;
 use anyhow::{Context, Result};
 
 use log::warn;
-use rattler_conda_types::{PackageRecord, Platform};
-use rattler_lock::{LockFile, LockedPackageRef};
+use rattler_conda_types::Platform;
+use rattler_lock::{CondaPackageData, LockFile, LockedPackageRef};
 
 fn _get_environment_names(lock_file: &LockFile) -> Vec<String> {
     lock_file
@@ -18,7 +18,7 @@ pub fn get_conda_packages_for_pixi_lock(
     environment_spec: &Option<Vec<String>>,
     platform_spec: &Option<Vec<Platform>>,
     ignore_pypi: bool,
-) -> Result<Vec<PackageRecord>> {
+) -> Result<Vec<CondaPackageData>> {
     let lock_file = LockFile::from_path(pixi_lock_path)
         .with_context(|| format!("Failed to read pixi.lock file: {:?}", pixi_lock_path))?;
     let environment_spec = environment_spec
@@ -42,8 +42,7 @@ pub fn get_conda_packages_for_pixi_lock(
                         for package in packages {
                             match package {
                                 LockedPackageRef::Conda(conda_package) => {
-                                    let package_record = conda_package.record();
-                                    package_records.push(package_record.to_owned());
+                                    package_records.push(conda_package.to_owned());
                                 }
                                 LockedPackageRef::Pypi(package_data, _) => {
                                     if !ignore_pypi {

@@ -9,6 +9,8 @@ Set Height 750
 
 Hide
 Type "cd tests/test_default_use_case" Enter
+Type "alias conda-deny='$HOME/Projects/conda-deny/target/debug/conda-deny'" Enter
+Type "export PS1='$ '" Enter
 Type "clear" Enter
 
 Show
@@ -21,8 +23,14 @@ Sleep 5s
 Type "clear" Sleep 1s Enter
 Sleep 3s
 
-Type "cat license_whitelist.toml" Sleep 1s Enter
+Type "bat license_whitelist.toml" Sleep 1s Enter
 Sleep 3s
 
 Type@150ms "conda-deny check" Sleep 1s Enter
-Sleep 6s
+Sleep 5s
+
+Type@150ms "conda-deny bundle --prefix ../test_conda_prefixes/test-env" Sleep 1s Enter
+Sleep 7s
+
+Type@150ms "tree .conda-deny" Sleep 1s Enter
+Sleep 5s

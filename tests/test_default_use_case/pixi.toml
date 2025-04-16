@@ -8,9 +8,10 @@ build = "cargo build --release"
 test = "cargo test"
 
 [dependencies]
-rust = "1.77.2"
+rust = "==1.77.2"
 openssl = "3.*"
 pkg-config = "*"
+k9s = "*"
 
 [target.linux.dependencies]
 compilers = ">=1.7.0"
