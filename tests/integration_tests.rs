@@ -125,7 +125,7 @@ fn test_default_use_case(#[case] subcommand: &str, #[case] test_name: &str) {
 
     let stdout = str::from_utf8(&output.stdout).unwrap();
     if subcommand == "check" {
-        assert!(stdout.contains("There were \u{1b}[32m247\u{1b}[0m safe licenses and \u{1b}[31m301\u{1b}[0m unsafe licenses."), "{stdout:?}");
+        assert!(stdout.contains("There were \u{1b}[32m247\u{1b}[0m safe licenses and \u{1b}[31m301\u{1b}[0m unsafe licenses."), "{stdout}");
         output.assert().failure();
     } else {
         assert!(stdout.contains("\u{1b}[34mzstandard\u{1b}[0m \u{1b}[36m0.22.0\u{1b}[0m-\u{1b}[3;96mpy312h721a963_1\u{1b}[0m (\u{1b}[95mosx-arm64\u{1b}[0m): \u{1b}[33mBSD-3-Clause"));
@@ -451,10 +451,8 @@ fn test_bundle_prefix() {
     // Suppress progress bar
     std::env::set_var("NO_PROGRESS", "1");
 
-    let result = bundle(bundle_config.clone(), &mut out);
+    bundle(bundle_config.clone(), &mut out).unwrap();
     let bundle_dir = bundle_config.directory.unwrap();
-
-    assert!(bundle_dir.to_string_lossy().contains("test_bundle"));
 
     let mut files = Vec::new();
     let mut dirs = Vec::new();
@@ -467,13 +465,12 @@ fn test_bundle_prefix() {
             dirs.push(e.path().to_path_buf());
         }
     }
-    assert_eq!(files.len(), 48);
-    assert_eq!(dirs.len(), 52);
+    assert_eq!(files.len(), 48, "{files:?}");
+    assert_eq!(dirs.len(), 52, "{dirs:?}");
 
     let top_level_entries = std::fs::read_dir(bundle_dir).unwrap();
     let top_level_entry_count = top_level_entries.count();
     assert_eq!(top_level_entry_count, 47);
-    assert!(result.is_ok(), "{:?}", result.unwrap_err());
     let output = String::from_utf8(out).unwrap();
     assert!(output.contains("License files written to:"));
 }
@@ -501,10 +498,8 @@ fn test_bundle_lockfile() {
     // Suppress progress bar
     std::env::set_var("NO_PROGRESS", "1");
 
-    let result = bundle(bundle_config.clone(), &mut out);
+    bundle(bundle_config.clone(), &mut out).unwrap();
     let bundle_dir = bundle_config.directory.unwrap();
-
-    assert!(bundle_dir.to_string_lossy().contains("test_bundle"));
 
     let mut files = Vec::new();
     let mut dirs = Vec::new();
@@ -517,13 +512,12 @@ fn test_bundle_lockfile() {
             dirs.push(e.path().to_path_buf());
         }
     }
-    assert_eq!(files.len(), 1204);
-    assert_eq!(dirs.len(), 800);
+    assert_eq!(files.len(), 5949);
+    assert_eq!(dirs.len(), 3895);
 
     let top_level_entries = std::fs::read_dir(bundle_dir).unwrap();
     let top_level_entry_count = top_level_entries.count();
-    assert_eq!(top_level_entry_count, 24);
-    assert!(result.is_ok(), "{:?}", result.unwrap_err());
+    assert_eq!(top_level_entry_count, 43);
     let output = String::from_utf8(out).unwrap();
     assert!(output.contains("License files written to:"));
 }

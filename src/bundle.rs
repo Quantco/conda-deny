@@ -1,5 +1,5 @@
 use anyhow::{anyhow, Context, Result};
-use log::warn;
+use log::{debug, trace, warn};
 use rattler_conda_types::PrefixRecord;
 use rattler_lock::CondaPackageData;
 use rattler_package_streaming::{
@@ -127,6 +127,9 @@ where
             let files = rt
                 .block_on(get_license_files_from_url(url))
                 .with_context(|| format!("Failed to process conda package: {}", get_name(item)))?;
+
+            warn!("Received {} license files for {}", files.len(), get_name(item));
+            trace!("License files: {:?}", files);
 
             let package_name = get_filename(item);
             Ok(files
