@@ -30,7 +30,7 @@ pub enum CondaDenyCliConfig {
         lockfile: Option<Vec<PathBuf>>,
 
         /// Path to the conda prefix(es)
-        #[arg(long, global = true)]
+        #[arg(long, global = true, conflicts_with_all = ["platform", "environment", "lockfile"])]
         prefix: Option<Vec<PathBuf>>,
 
         /// Platform(s) to check
