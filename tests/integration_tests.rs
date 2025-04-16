@@ -1,16 +1,18 @@
 use assert_cmd::prelude::*;
+use conda_deny::bundle::bundle;
 use conda_deny::cli::CondaDenyCliConfig;
-use conda_deny::OutputFormat;
 use conda_deny::{
     check::check, get_config_options, list::list, CondaDenyCheckConfig, CondaDenyConfig,
     CondaDenyListConfig,
 };
+use conda_deny::{CondaDenyBundleConfig, OutputFormat};
 use rattler_conda_types::Platform;
 use rstest::{fixture, rstest};
 use std::io::Write;
 use std::path::{Path, PathBuf};
 use std::process::Command;
 use tempfile::NamedTempFile;
+use walkdir::WalkDir;
 
 #[fixture]
 fn list_config(
@@ -35,6 +37,33 @@ fn list_config(
 
     match config {
         CondaDenyConfig::List(list_config) => list_config,
+        _ => panic!(),
+    }
+}
+
+#[fixture]
+fn bundle_config(
+    #[default(None)] config: Option<PathBuf>,
+    #[default(None)] lockfile: Option<Vec<PathBuf>>,
+    #[default(None)] prefix: Option<Vec<PathBuf>>,
+    #[default(None)] platform: Option<Vec<Platform>>,
+    #[default(None)] environment: Option<Vec<String>>,
+    #[default(None)] ignore_pypi: Option<bool>,
+    #[default(None)] directory: Option<PathBuf>,
+) -> CondaDenyBundleConfig {
+    let cli = CondaDenyCliConfig::Bundle {
+        lockfile,
+        prefix,
+        platform,
+        environment,
+        ignore_pypi,
+        directory,
+    };
+
+    let config = get_config_options(config, cli).unwrap();
+
+    match config {
+        CondaDenyConfig::Bundle(bundle_config) => bundle_config,
         _ => panic!(),
     }
 }
@@ -95,7 +124,7 @@ fn test_default_use_case(#[case] subcommand: &str, #[case] test_name: &str) {
 
     let stdout = str::from_utf8(&output.stdout).unwrap();
     if subcommand == "check" {
-        assert!(stdout.contains("There were \u{1b}[32m242\u{1b}[0m safe licenses and \u{1b}[31m300\u{1b}[0m unsafe licenses."));
+        assert!(stdout.contains("There were \u{1b}[32m247\u{1b}[0m safe licenses and \u{1b}[31m301\u{1b}[0m unsafe licenses."), "{stdout}");
         output.assert().failure();
     } else {
         assert!(stdout.contains("\u{1b}[34mzstandard\u{1b}[0m \u{1b}[36m0.22.0\u{1b}[0m-\u{1b}[3;96mpy312h721a963_1\u{1b}[0m (\u{1b}[95mosx-arm64\u{1b}[0m): \u{1b}[33mBSD-3-Clause"));
@@ -135,7 +164,7 @@ license-whitelist = "https://raw.githubusercontent.com/Quantco/conda-deny/refs/h
     let output = String::from_utf8(out).unwrap();
 
     assert!(output.contains(
-        "There were \u{1b}[32m242\u{1b}[0m safe licenses and \u{1b}[31m300\u{1b}[0m unsafe licenses."
+        "There were \u{1b}[32m242\u{1b}[0m safe licenses and \u{1b}[31m299\u{1b}[0m unsafe licenses."
     ));
     assert!(result.is_err());
 }
@@ -183,7 +212,7 @@ fn test_multiple_whitelists_check() {
     let output = String::from_utf8(out).unwrap();
 
     assert!(output.contains(
-        "There were \u{1b}[32m344\u{1b}[0m safe licenses and \u{1b}[31m198\u{1b}[0m unsafe licenses."
+        "There were \u{1b}[32m343\u{1b}[0m safe licenses and \u{1b}[31m198\u{1b}[0m unsafe licenses."
     ));
     assert!(result.is_err());
 }
@@ -255,10 +284,8 @@ safe-licenses = ["BSD-3-Clause"]"#;
     let result = check(check_config, &mut out);
     let output = String::from_utf8(out).unwrap();
 
-    println!("{}", output);
-
     assert!(output.contains(
-        "There were \u{1b}[32m344\u{1b}[0m safe licenses and \u{1b}[31m198\u{1b}[0m unsafe licenses."
+        "There were \u{1b}[32m343\u{1b}[0m safe licenses and \u{1b}[31m198\u{1b}[0m unsafe licenses."
     ));
     assert!(result.is_err());
 }
@@ -287,7 +314,7 @@ fn test_osi_check(
     let output = String::from_utf8(out).unwrap();
 
     assert!(output.contains(
-        "There were \u{1b}[32m458\u{1b}[0m safe licenses and \u{1b}[31m84\u{1b}[0m unsafe licenses."
+        "There were \u{1b}[32m457\u{1b}[0m safe licenses and \u{1b}[31m84\u{1b}[0m unsafe licenses."
     ));
     assert!(result.is_err());
 }
@@ -334,8 +361,8 @@ fn test_exception_check(
     let output = String::from_utf8(out).unwrap();
 
     assert!(output.contains(
-        "There were \u{1b}[32m528\u{1b}[0m safe licenses and \u{1b}[31m14\u{1b}[0m unsafe licenses."
-    ));
+        "There were \u{1b}[32m527\u{1b}[0m safe licenses and \u{1b}[31m14\u{1b}[0m unsafe licenses."
+    ), "{output:?}");
     assert!(result.is_err());
 }
 
@@ -398,4 +425,100 @@ fn test_pypi_ignore_error(
     assert!(result.is_err());
     assert!(format!("{:?}", result).contains("Pypi packages are not supported: beautifulsoup4"));
     assert_eq!(out, b"");
+}
+
+#[rstest]
+fn test_bundle_prefix() {
+    let mut out = out();
+    let temp_dir = tempfile::tempdir().unwrap();
+    let bundle_config = bundle_config(
+        // CONFIG PATH
+        None,
+        // LOCKFILE PATHS
+        None,
+        // PREFIXES
+        Some(vec!["tests/test_conda_prefixes/test-env".into()]),
+        // PLATFORM
+        None,
+        // ENVIRONMENT
+        None,
+        // IGNORE PYPI
+        None,
+        // DIRECTORY
+        Some(temp_dir.path().join(Path::new("test_bundle"))),
+    );
+
+    // Suppress progress bar
+    std::env::set_var("NO_PROGRESS", "1");
+
+    bundle(bundle_config.clone(), &mut out).unwrap();
+    let bundle_dir = bundle_config.directory.unwrap();
+
+    let mut files = Vec::new();
+    let mut dirs = Vec::new();
+
+    for e in WalkDir::new(&bundle_dir).into_iter().filter_map(|e| e.ok()) {
+        if e.metadata().unwrap().is_file() {
+            files.push(e.path().to_path_buf());
+        }
+        if e.metadata().unwrap().is_dir() {
+            dirs.push(e.path().to_path_buf());
+        }
+    }
+    assert_eq!(files.len(), 48, "{files:?}");
+    assert_eq!(dirs.len(), 52, "{dirs:?}");
+
+    let top_level_entries = std::fs::read_dir(bundle_dir).unwrap();
+    let top_level_entry_count = top_level_entries.count();
+    assert_eq!(top_level_entry_count, 47);
+    let output = String::from_utf8(out).unwrap();
+    assert!(output.contains("License files written to:"));
+}
+
+#[rstest]
+fn test_bundle_lockfile() {
+    let mut out = out();
+    let temp_dir = tempfile::tempdir().unwrap();
+    let bundle_config = bundle_config(
+        // CONFIG PATH
+        None,
+        // LOCKFILE PATHS
+        Some(vec!["tests/test_default_use_case/pixi.lock".into()]),
+        // PREFIXES
+        None,
+        // PLATFORM
+        None,
+        // ENVIRONMENT
+        None,
+        // IGNORE PYPI
+        None,
+        // DIRECTORY
+        Some(temp_dir.path().join(Path::new("test_bundle"))),
+    );
+
+    // Suppress progress bar
+    std::env::set_var("NO_PROGRESS", "1");
+
+    bundle(bundle_config.clone(), &mut out).unwrap();
+    let bundle_dir = bundle_config.directory.unwrap();
+
+    let mut files = Vec::new();
+    let mut dirs = Vec::new();
+
+    for e in WalkDir::new(&bundle_dir).into_iter().filter_map(|e| e.ok()) {
+        if e.metadata().unwrap().is_file() {
+            files.push(e.path().to_path_buf());
+        }
+        if e.metadata().unwrap().is_dir() {
+            dirs.push(e.path().to_path_buf());
+        }
+    }
+    assert_eq!(files.len(), 6649);
+    assert_eq!(dirs.len(), 4724);
+
+    let top_level_entries = std::fs::read_dir(bundle_dir).unwrap();
+    let top_level_entry_count = top_level_entries.count();
+    assert_eq!(top_level_entry_count, 356);
+    let output = String::from_utf8(out).unwrap();
+    assert!(output.contains("License files written to:"));
 }

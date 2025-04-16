@@ -11,3 +11,6 @@ compliance/
 
 output/
 tests_private/
+
+# conda-deny bundle default output directory
+bundle/

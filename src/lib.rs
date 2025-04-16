@@ -1,3 +1,4 @@
+pub mod bundle;
 pub mod check;
 pub mod cli;
 pub mod conda_deny_config;
@@ -28,6 +29,7 @@ use crate::license_info::LicenseInfos;
 pub enum CondaDenyConfig {
     Check(CondaDenyCheckConfig),
     List(CondaDenyListConfig),
+    Bundle(CondaDenyBundleConfig),
 }
 
 #[derive(Debug, Clone, clap::ValueEnum, Default, Deserialize, Copy)]
@@ -50,11 +52,18 @@ pub struct CondaDenyCheckConfig {
     pub output_format: OutputFormat,
 }
 
-/// Shared configuration between check and list commands
+/// Shared configuration between check, list, and bundle commands
 #[derive(Debug)]
 pub struct CondaDenyListConfig {
     pub lockfile_or_prefix: LockfileOrPrefix,
     pub output_format: OutputFormat,
+}
+
+/// Shared configuration between check, list, and bundle commands
+#[derive(Debug, Clone)]
+pub struct CondaDenyBundleConfig {
+    pub lockfile_or_prefix: LockfileOrPrefix,
+    pub directory: Option<PathBuf>,
 }
 
 #[derive(Debug, Clone)]
@@ -216,7 +225,7 @@ pub fn get_config_options(
         toml_config.get_ignore_pypi()
     };
 
-    let output_format = cli_config.output_format().unwrap_or_default();
+    let output_format = cli_config.output().unwrap_or_default();
 
     let lockfile_or_prefix =
         get_lockfile_or_prefix(lockfile, prefix, platforms, environments, ignore_pypi)?;
@@ -254,6 +263,10 @@ pub fn get_config_options(
         CondaDenyCliConfig::List { .. } => CondaDenyConfig::List(CondaDenyListConfig {
             lockfile_or_prefix,
             output_format,
+        }),
+        CondaDenyCliConfig::Bundle { directory, .. } => CondaDenyConfig::Bundle(CondaDenyBundleConfig {
+            lockfile_or_prefix,
+            directory,
         }),
     };
 
