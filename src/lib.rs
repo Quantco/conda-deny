@@ -96,57 +96,41 @@ pub fn fetch_license_infos(lockfile_or_prefix: LockfileOrPrefix) -> Result<Licen
 const IGNORE_PYPI_DEFAULT: bool = false;
 
 fn get_lockfile_or_prefix(
-    lockfile: Vec<PathBuf>,
-    prefix: Vec<PathBuf>,
-    platforms: Option<Vec<Platform>>,
-    environments: Option<Vec<String>>,
-    ignore_pypi: Option<bool>,
+    cli_config: &CondaDenyCliConfig,
+    toml_config: &CondaDenyTomlConfig,
 ) -> Result<LockfileOrPrefix> {
-    if lockfile.is_empty() && prefix.is_empty() {
-        // test if pixi.lock exists next to config file, otherwise error
-        let default_lockfile_path = env::current_dir()?.join("pixi.lock");
-        if !default_lockfile_path.is_file() {
-            Err(anyhow::anyhow!("No lockfiles or conda prefixes provided"))
-        } else {
-            Ok(LockfileOrPrefix::Lockfile(LockfileSpec {
-                lockfiles: vec![default_lockfile_path],
-                platforms,
-                environments,
-                ignore_pypi: ignore_pypi.unwrap_or(IGNORE_PYPI_DEFAULT),
-            }))
-        }
-    } else if !lockfile.is_empty() && !prefix.is_empty() {
-        // TODO: Specified prefixes override lockfiles
-        Err(anyhow::anyhow!(
-            "Both lockfiles and conda prefixes provided. Please only provide either or."
-        ))
-    } else if !lockfile.is_empty() {
-        Ok(LockfileOrPrefix::Lockfile(LockfileSpec {
-            lockfiles: lockfile.iter().map(|s| s.into()).collect(),
-            platforms,
-            environments,
-            ignore_pypi: ignore_pypi.unwrap_or(IGNORE_PYPI_DEFAULT),
-        }))
-    } else {
+    // cli overrides toml config
+    if let Some(prefix) = cli_config.prefix() {
+        debug!("Ignoring toml config in favor of CLI config");
         assert!(!prefix.is_empty());
-
-        if platforms.is_some() {
-            Err(anyhow::anyhow!(
-                "Cannot specify platforms and conda prefixes at the same time"
-            ))
-        } else if environments.is_some() {
-            Err(anyhow::anyhow!(
-                "Cannot specify pixi environments and conda prefixes at the same time"
-            ))
-        } else if ignore_pypi.is_some() {
-            Err(anyhow::anyhow!(
-                "Cannot specify ignore-pypi and conda prefixes at the same time"
-            ))
-        } else {
-            Ok(LockfileOrPrefix::Prefix(
-                prefix.iter().map(|s| s.into()).collect(),
-            ))
+        Ok(LockfileOrPrefix::Prefix(prefix))
+    } else if let Some(lockfiles) = cli_config.lockfile() {
+        // ignore lockfile spec from toml config, only look at cli config
+        debug!("Ignoring toml config in favor of CLI config");
+        assert!(!lockfiles.is_empty());
+        let lockfile_spec = LockfileSpec {
+            environments: cli_config.environment(),
+            lockfiles,
+            platforms: cli_config.platform(),
+            ignore_pypi: cli_config.ignore_pypi().unwrap_or(IGNORE_PYPI_DEFAULT)
+        };
+        Ok(LockfileOrPrefix::Lockfile(lockfile_spec))
+    } else {
+        let mut lockfiles = toml_config.get_lockfile_spec();
+        if lockfiles.is_empty() {
+            let default_lockfile_path = env::current_dir()?.join("pixi.lock");
+            if !default_lockfile_path.is_file() {
+                return Err(anyhow::anyhow!("No lockfiles or conda prefixes provided"))
+            } else {
+                lockfiles = vec![default_lockfile_path];
+            }
         }
+        let platforms = cli_config.platform().or(toml_config.get_platform_spec());
+        let environments = cli_config.environment().or(toml_config.get_environment_spec());
+        let ignore_pypi = cli_config.ignore_pypi().or(toml_config.get_ignore_pypi()).unwrap_or(IGNORE_PYPI_DEFAULT);
+        Ok(LockfileOrPrefix::Lockfile(
+            LockfileSpec { lockfiles, platforms, environments, ignore_pypi }
+        ))
     }
 }
 
@@ -191,54 +175,12 @@ pub fn get_config_options(
 
     debug!("Parsed TOML config: {:?}", toml_config);
 
-    // cli overrides toml configuration
-    let lockfile = cli_config
-        .lockfile()
-        .unwrap_or(toml_config.get_lockfile_spec());
-    let prefix = cli_config.prefix().unwrap_or_default();
-
-    let platforms = if cli_config.platform().is_some() {
-        cli_config.platform()
-    } else {
-        toml_config.get_platform_spec()
-    };
-    if platforms.is_some() && !prefix.is_empty() {
-        return Err(anyhow::anyhow!(
-            "Cannot specify platforms and conda prefixes at the same time"
-        ));
-    }
-
-    let environments = if cli_config.environment().is_some() {
-        cli_config.environment()
-    } else {
-        toml_config.get_environment_spec()
-    };
-    if environments.is_some() && !prefix.is_empty() {
-        return Err(anyhow::anyhow!(
-            "Cannot specify environments and conda prefixes at the same time"
-        ));
-    }
-
-    let ignore_pypi = if cli_config.ignore_pypi().is_some() {
-        cli_config.ignore_pypi()
-    } else {
-        toml_config.get_ignore_pypi()
-    };
-
     let output_format = cli_config.output().unwrap_or_default();
-
-    let lockfile_or_prefix =
-        get_lockfile_or_prefix(lockfile, prefix, platforms, environments, ignore_pypi)?;
+    let lockfile_or_prefix = get_lockfile_or_prefix(&cli_config, &toml_config)?;
 
     let config = match cli_config {
         CondaDenyCliConfig::Check { osi, .. } => {
-            // defaults to false
-            let osi = if osi.is_some() {
-                osi
-            } else {
-                toml_config.get_osi()
-            }
-            .unwrap_or(false);
+            let osi = osi.or(toml_config.get_osi()).unwrap_or(false);
 
             let (safe_licenses, ignore_packages) =
                 get_license_information_from_toml_config(&toml_config)?;
