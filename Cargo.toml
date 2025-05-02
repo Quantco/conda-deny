@@ -20,6 +20,13 @@ rustls-tls = [
     "rattler_package_streaming/rustls-tls",
 ]
 
+# See https://doc.rust-lang.org/cargo/reference/profiles.html
+[profile.release]
+codegen-units = 1
+lto = true
+strip = true
+opt-level = "s"
+
 # See more keys and their definitions at https://doc.rust-lang.org/cargo/reference/manifest.html
 
 [dependencies]
