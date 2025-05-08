@@ -7,10 +7,8 @@ use conda_deny::{
     CondaDenyListConfig,
 };
 use conda_deny::{CondaDenyBundleConfig, OutputFormat};
-use fs_extra::dir;
 use rattler_conda_types::Platform;
 use rstest::{fixture, rstest};
-use std::env::set_current_dir;
 use std::io::Write;
 use std::path::{Path, PathBuf};
 use std::process::Command;
@@ -144,16 +142,11 @@ fn test_default_use_case(#[case] subcommand: &str, #[case] test_name: &str) {
 #[case("check")]
 #[case("list")]
 fn test_lockfile_pattern(#[case] subcommand: &str) {
-    let test_assets_dir = Path::new("tests/test_lockfile_pattern");
-    let temp_dir = tempfile::tempdir().unwrap();
+    let test_dir = Path::new("tests/test_lockfile_pattern");
+    let config = PathBuf::from(test_dir).join("pixi.toml");
 
-    fs_extra::copy_items(&[test_assets_dir], &temp_dir, &dir::CopyOptions::new()).unwrap();
-    let test_dir = temp_dir.path().join("test_lockfile_pattern");
-
-    let config = PathBuf::from(test_dir.as_path()).join("pixi.toml");
     let mut out = out();
 
-    set_current_dir(test_dir).unwrap();
     let check_config = check_config(
         Some(config.clone()),
         None,
