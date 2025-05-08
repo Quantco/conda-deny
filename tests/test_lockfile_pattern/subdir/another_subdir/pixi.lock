@@ -3,21 +3,9 @@ environments:
   default:
     channels:
     - url: https://conda.anaconda.org/conda-forge/
-    packages: {}
-  demo:
-    channels:
-    - url: https://conda.anaconda.org/conda-forge/
     packages:
       linux-64:
       - conda: https://conda.anaconda.org/conda-forge/linux-64/vhs-0.7.2-ha770c72_0.conda
-      linux-aarch64:
-      - conda: https://conda.anaconda.org/conda-forge/linux-aarch64/vhs-0.7.2-h8af1aa0_0.conda
-      osx-64:
-      - conda: https://conda.anaconda.org/conda-forge/osx-64/vhs-0.7.2-h694c41f_0.conda
-      osx-arm64:
-      - conda: https://conda.anaconda.org/conda-forge/osx-arm64/vhs-0.7.2-hce30654_0.conda
-      win-64:
-      - conda: https://conda.anaconda.org/conda-forge/win-64/vhs-0.7.2-h57928b3_0.conda
 packages:
 - conda: https://conda.anaconda.org/conda-forge/linux-64/vhs-0.7.2-ha770c72_0.conda
   sha256: 1e24c28aa0c73b4133bc55f5cbcc6cf35730361beb48ae3b19e086cf381e3fee
@@ -26,33 +14,3 @@ packages:
   license_family: MIT
   size: 13680299
   timestamp: 1718057875259
-- conda: https://conda.anaconda.org/conda-forge/linux-aarch64/vhs-0.7.2-h8af1aa0_0.conda
-  sha256: b3586e5d33c582c69ae0cae1b13bcbbb9ddf04ec38e9b9e78e0aa221746d0765
-  md5: 8f04d45f540516eabbf02c7903b4176a
-  license: MIT
-  license_family: MIT
-  size: 12831807
-  timestamp: 1718089666549
-- conda: https://conda.anaconda.org/conda-forge/osx-64/vhs-0.7.2-h694c41f_0.conda
-  sha256: fa298ca45861f98b06c0096dd9cf0aba88c183542f4205c755418917193a846d
-  md5: f9c8abf97e5ffb91de6df05e6f7e8035
-  constrains:
-  - __osx>=10.12
-  license: MIT
-  license_family: MIT
-  size: 13967983
-  timestamp: 1718058031870
-- conda: https://conda.anaconda.org/conda-forge/osx-arm64/vhs-0.7.2-hce30654_0.conda
-  sha256: 309981f7b9b66e4308e64ae698b65302e26b28a1e7d912e6db6fc400b400a140
-  md5: bd079d19fb232578ed65369f42d6175d
-  license: MIT
-  license_family: MIT
-  size: 13402928
-  timestamp: 1718057909213
-- conda: https://conda.anaconda.org/conda-forge/win-64/vhs-0.7.2-h57928b3_0.conda
-  sha256: 03253eaae3dc31c6b51880bd2b2a82d1a385a8bdf98902435f0057d0c5405bee
-  md5: 93835a8e015c3d4bd750ed6924adca75
-  license: MIT
-  license_family: MIT
-  size: 12993453
-  timestamp: 1718058512684

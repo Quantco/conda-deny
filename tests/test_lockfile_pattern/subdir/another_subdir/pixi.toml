@@ -1,16 +1,7 @@
 [project]
-name = "pixi-pack"
+name = "another-subdir"
 channels = ["conda-forge"]
-platforms = ["osx-arm64", "osx-64", "linux-64", "linux-aarch64", "win-64"]
+platforms = ["linux-64"]
 
-[tasks]
-build = "cargo build --release"
-test = "cargo test"
-
-[feature.demo.dependencies]
+[dependencies]
 vhs = "*"
-[feature.demo.tasks]
-demo = "vhs .github/assets/demo/demo-light.tape && vhs .github/assets/demo/demo-dark.tape"
-
-[environments]
-demo = { features = ["demo"], no-default-feature = true }

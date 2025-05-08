@@ -1,6 +1,5 @@
 [tool.conda-deny]
 safe-licenses = [
-    "Apache-2.0",
     "Unlicense",
     "WTFPL",
 ]

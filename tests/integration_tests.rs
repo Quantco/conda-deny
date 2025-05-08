@@ -140,7 +140,7 @@ fn test_default_use_case(#[case] subcommand: &str, #[case] test_name: &str) {
 
 #[rstest]
 #[case("check")]
-// #[case("list")]
+#[case("list")]
 fn test_lockfile_pattern(#[case] subcommand: &str) {
     use core::str;
 
@@ -160,17 +160,15 @@ fn test_lockfile_pattern(#[case] subcommand: &str) {
     debug!("Output: {}", stdout);
     if subcommand == "check" {
         assert!(
-            stdout.contains("There were 37 safe licenses and 515 unsafe licenses."),
+            stdout.contains("There were 1 safe licenses and 21 unsafe licenses."),
             "{stdout}"
         );
         output.assert().failure();
     } else {
         // only in subdir lockfile
-        assert!(stdout.contains("zstandard 0.23.0-py313h31d5739_2 (linux-aarch64): BSD-3-Clause"));
+        assert!(stdout.contains("k9s 0.50.4-h643be8f_0 (linux-64): Apache-2.0"));
         // only in subdir/another_subdir lockfile
-        assert!(stdout.contains("vhs 0.7.2-h57928b3_0 (win-64): MIT"));
-        // this is in the lint environment
-        assert!(!stdout.contains("prettier"));
+        assert!(stdout.contains("vhs 0.7.2-ha770c72_0 (linux-64): MIT"));
         output.assert().success();
     }
 }
