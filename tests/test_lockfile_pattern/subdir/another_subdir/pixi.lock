@@ -1,0 +1,16 @@
+version: 6
+environments:
+  default:
+    channels:
+    - url: https://conda.anaconda.org/conda-forge/
+    packages:
+      linux-64:
+      - conda: https://conda.anaconda.org/conda-forge/linux-64/vhs-0.7.2-ha770c72_0.conda
+packages:
+- conda: https://conda.anaconda.org/conda-forge/linux-64/vhs-0.7.2-ha770c72_0.conda
+  sha256: 1e24c28aa0c73b4133bc55f5cbcc6cf35730361beb48ae3b19e086cf381e3fee
+  md5: c5a1882b6bd21bc00efedd9aa7dd56a7
+  license: MIT
+  license_family: MIT
+  size: 13680299
+  timestamp: 1718057875259

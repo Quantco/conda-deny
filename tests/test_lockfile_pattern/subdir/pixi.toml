@@ -1,0 +1,10 @@
+[project]
+name = "subdir"
+channels = ["conda-forge"]
+platforms = ["linux-64"]
+
+[dependencies]
+rust = "==1.77.2"
+openssl = "3.*"
+pkg-config = "*"
+k9s = "*"
