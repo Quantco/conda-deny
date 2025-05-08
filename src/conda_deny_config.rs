@@ -43,8 +43,8 @@ pub enum EnviromentSpec {
 #[derive(Debug, Deserialize, Clone)]
 #[serde(untagged)]
 pub enum LockfileSpec {
-    Single(PathBuf),
-    Multiple(Vec<PathBuf>),
+    Single(String),
+    Multiple(Vec<String>),
 }
 
 #[derive(Debug, Deserialize)]
@@ -110,7 +110,7 @@ impl CondaDenyTomlConfig {
         }
     }
 
-    pub fn get_lockfile_spec(&self) -> Vec<PathBuf> {
+    pub fn get_lockfile_spec(&self) -> Vec<String> {
         match &self.tool.conda_deny.lockfile_spec {
             Some(LockfileSpec::Single(name)) => vec![name.clone()],
             Some(LockfileSpec::Multiple(names)) => names.clone(),

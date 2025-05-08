@@ -1,3 +1,4 @@
+#![allow(clippy::too_many_arguments)]
 use assert_cmd::prelude::*;
 use conda_deny::bundle::bundle;
 use conda_deny::cli::CondaDenyCliConfig;
@@ -17,7 +18,7 @@ use walkdir::WalkDir;
 #[fixture]
 fn list_config(
     #[default(None)] config: Option<PathBuf>,
-    #[default(None)] lockfile: Option<Vec<PathBuf>>,
+    #[default(None)] lockfile: Option<Vec<String>>,
     #[default(None)] prefix: Option<Vec<PathBuf>>,
     #[default(None)] platform: Option<Vec<Platform>>,
     #[default(None)] environment: Option<Vec<String>>,
@@ -44,7 +45,7 @@ fn list_config(
 #[fixture]
 fn bundle_config(
     #[default(None)] config: Option<PathBuf>,
-    #[default(None)] lockfile: Option<Vec<PathBuf>>,
+    #[default(None)] lockfile: Option<Vec<String>>,
     #[default(None)] prefix: Option<Vec<PathBuf>>,
     #[default(None)] platform: Option<Vec<Platform>>,
     #[default(None)] environment: Option<Vec<String>>,
@@ -71,7 +72,7 @@ fn bundle_config(
 #[fixture]
 fn check_config(
     #[default(None)] config: Option<PathBuf>,
-    #[default(None)] lockfile: Option<Vec<PathBuf>>,
+    #[default(None)] lockfile: Option<Vec<String>>,
     #[default(None)] prefix: Option<Vec<PathBuf>>,
     #[default(None)] platform: Option<Vec<Platform>>,
     #[default(None)] environment: Option<Vec<String>>,
@@ -111,6 +112,8 @@ fn out() -> Vec<u8> {
 fn test_default_use_case(#[case] subcommand: &str, #[case] test_name: &str) {
     use core::str;
 
+    use log::debug;
+
     let path_string = format!("tests/{}", test_name);
     let test_dir = Path::new(path_string.as_str());
 
@@ -123,6 +126,7 @@ fn test_default_use_case(#[case] subcommand: &str, #[case] test_name: &str) {
         .expect("Failed to execute command");
 
     let stdout = str::from_utf8(&output.stdout).unwrap();
+    debug!("Output: {}", stdout);
     if subcommand == "check" {
         assert!(stdout.contains("There were \u{1b}[32m247\u{1b}[0m safe licenses and \u{1b}[31m301\u{1b}[0m unsafe licenses."), "{stdout}");
         output.assert().failure();
@@ -130,6 +134,43 @@ fn test_default_use_case(#[case] subcommand: &str, #[case] test_name: &str) {
         assert!(stdout.contains("\u{1b}[34mzstandard\u{1b}[0m \u{1b}[36m0.22.0\u{1b}[0m-\u{1b}[3;96mpy312h721a963_1\u{1b}[0m (\u{1b}[95mosx-arm64\u{1b}[0m): \u{1b}[33mBSD-3-Clause"));
         assert!(stdout.contains("\u{1b}[34mzlib\u{1b}[0m \u{1b}[36m1.3.1\u{1b}[0m-\u{1b}[3;96mh4ab18f5_1\u{1b}[0m (\u{1b}[95mlinux-64\u{1b}[0m): \u{1b}[33mZlib"));
         assert!(stdout.contains("\u{1b}[34mxz\u{1b}[0m \u{1b}[36m5.2.6\u{1b}[0m-\u{1b}[3;96mh166bdaf_0\u{1b}[0m (\u{1b}[95mlinux-64\u{1b}[0m): \u{1b}[33mLGPL-2.1 and GPL-2.0"));
+        output.assert().success();
+    }
+}
+
+#[rstest]
+#[case("check")]
+// #[case("list")]
+fn test_lockfile_pattern(#[case] subcommand: &str) {
+    use core::str;
+
+    use log::debug;
+
+    let test_dir = Path::new("tests/test_lockfile_pattern");
+
+    let output = Command::cargo_bin("conda-deny")
+        .unwrap()
+        .arg(subcommand)
+        .current_dir(test_dir)
+        .env("CLICOLOR_FORCE", "0")
+        .output()
+        .expect("Failed to execute command");
+
+    let stdout = str::from_utf8(&output.stdout).unwrap();
+    debug!("Output: {}", stdout);
+    if subcommand == "check" {
+        assert!(
+            stdout.contains("There were 37 safe licenses and 515 unsafe licenses."),
+            "{stdout}"
+        );
+        output.assert().failure();
+    } else {
+        // only in subdir lockfile
+        assert!(stdout.contains("zstandard 0.23.0-py313h31d5739_2 (linux-aarch64): BSD-3-Clause"));
+        // only in subdir/another_subdir lockfile
+        assert!(stdout.contains("vhs 0.7.2-h57928b3_0 (win-64): MIT"));
+        // this is in the lint environment
+        assert!(!stdout.contains("prettier"));
         output.assert().success();
     }
 }
@@ -235,16 +276,7 @@ environment = "lint""#;
     let mut out = out();
     // Inject the temporary file's path into check_config
     let temp_path = Some(temp_pixi_toml.path().to_path_buf());
-    let check_config = check_config(
-        temp_path,
-        None,
-        None,
-        None,
-        None,
-        None,
-        None,
-        None,
-    );
+    let check_config = check_config(temp_path, None, None, None, None, None, None, None);
 
     let result = check(check_config, &mut out);
     let output = String::from_utf8(out).unwrap();

@@ -25,9 +25,9 @@ pub struct Cli {
 pub enum CondaDenyCliConfig {
     /// Check licenses of pixi or conda environment against a whitelist
     Check {
-        /// Path to the pixi lockfile(s)
+        /// Path to the pixi lockfile(s), can be glob patterns
         #[arg(short, long)]
-        lockfile: Option<Vec<PathBuf>>,
+        lockfile: Option<Vec<String>>,
 
         /// Path to the conda prefix(es)
         #[arg(long, global = true, conflicts_with_all = ["platform", "environment", "lockfile"])]
@@ -57,7 +57,7 @@ pub enum CondaDenyCliConfig {
     List {
         /// Path to the pixi lockfile(s)
         #[arg(short, long)]
-        lockfile: Option<Vec<PathBuf>>,
+        lockfile: Option<Vec<String>>,
 
         /// Path to the conda prefix(es)
         #[arg(long, global = true)]
@@ -84,7 +84,7 @@ pub enum CondaDenyCliConfig {
     Bundle {
         /// Path to the pixi lockfile(s)
         #[arg(short, long)]
-        lockfile: Option<Vec<PathBuf>>,
+        lockfile: Option<Vec<String>>,
 
         /// Path to the conda prefix(es)
         #[arg(long, global = true)]
@@ -109,7 +109,7 @@ pub enum CondaDenyCliConfig {
 }
 
 impl CondaDenyCliConfig {
-    pub fn lockfile(&self) -> Option<Vec<PathBuf>> {
+    pub fn lockfile(&self) -> Option<Vec<String>> {
         match self {
             CondaDenyCliConfig::Check { lockfile, .. } => lockfile.clone(),
             CondaDenyCliConfig::List { lockfile, .. } => lockfile.clone(),

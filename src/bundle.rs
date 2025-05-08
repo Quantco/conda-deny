@@ -128,7 +128,11 @@ where
                 .block_on(get_license_files_from_url(url))
                 .with_context(|| format!("Failed to process conda package: {}", get_name(item)))?;
 
-            debug!("Received {} license files for {}", files.len(), get_name(item));
+            debug!(
+                "Received {} license files for {}",
+                files.len(),
+                get_name(item)
+            );
             trace!("License files: {:?}", files);
 
             let package_name = get_filename(item);
@@ -175,7 +179,7 @@ fn create_license_file_directory(path: &Path, license_files: Vec<LicenseFile>) -
 
         let parent = file_path.parent().expect("Parent dir always exists");
         std::fs::create_dir_all(parent)
-                .with_context(|| format!("Failed to create directory for: {:?}", file_path))?;
+            .with_context(|| format!("Failed to create directory for: {:?}", file_path))?;
 
         let mut file = std::fs::File::create(&file_path)
             .with_context(|| format!("Failed to create license file: {:?}", file_path))?;
