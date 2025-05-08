@@ -7,8 +7,10 @@ use conda_deny::{
     CondaDenyListConfig,
 };
 use conda_deny::{CondaDenyBundleConfig, OutputFormat};
+use fs_extra::dir;
 use rattler_conda_types::Platform;
 use rstest::{fixture, rstest};
+use std::env::set_current_dir;
 use std::io::Write;
 use std::path::{Path, PathBuf};
 use std::process::Command;
@@ -142,34 +144,46 @@ fn test_default_use_case(#[case] subcommand: &str, #[case] test_name: &str) {
 #[case("check")]
 #[case("list")]
 fn test_lockfile_pattern(#[case] subcommand: &str) {
-    use core::str;
+    let test_assets_dir = Path::new("tests/test_lockfile_pattern");
+    let temp_dir = tempfile::tempdir().unwrap();
 
-    use log::debug;
+    fs_extra::copy_items(&[test_assets_dir], &temp_dir, &dir::CopyOptions::new()).unwrap();
+    let test_dir = temp_dir.path().join("test_lockfile_pattern");
 
-    let test_dir = Path::new("tests/test_lockfile_pattern");
+    let config = PathBuf::from(test_dir.as_path()).join("pixi.toml");
+    let mut out = out();
 
-    let output = Command::cargo_bin("conda-deny")
-        .unwrap()
-        .arg(subcommand)
-        .current_dir(test_dir)
-        .env("CLICOLOR_FORCE", "0")
-        .output()
-        .expect("Failed to execute command");
+    set_current_dir(test_dir).unwrap();
+    let check_config = check_config(
+        Some(config.clone()),
+        None,
+        None,
+        None,
+        None,
+        None,
+        None,
+        None,
+    );
 
-    let stdout = str::from_utf8(&output.stdout).unwrap();
-    debug!("Output: {}", stdout);
+    let list_config = list_config(Some(config), None, None, None, None, None, None);
+
     if subcommand == "check" {
-        assert!(
-            stdout.contains("There were 1 safe licenses and 21 unsafe licenses."),
-            "{stdout}"
-        );
-        output.assert().failure();
-    } else {
+        let result = check(check_config, &mut out);
+        let output = String::from_utf8(strip_ansi_escapes::strip(out)).unwrap();
+
+        assert!(output.contains("There were 1 safe licenses and 21 unsafe licenses."));
+        assert!(result.is_err());
+    } else if subcommand == "list" {
+        let result = list(list_config, &mut out);
+        let output = String::from_utf8(strip_ansi_escapes::strip(out)).unwrap();
+
         // only in subdir lockfile
-        assert!(stdout.contains("k9s 0.50.4-h643be8f_0 (linux-64): Apache-2.0"));
+        assert!(output.contains("k9s 0.50.4-h643be8f_0 (linux-64): Apache-2.0"));
         // only in subdir/another_subdir lockfile
-        assert!(stdout.contains("vhs 0.7.2-ha770c72_0 (linux-64): MIT"));
-        output.assert().success();
+        assert!(output.contains("vhs 0.7.2-ha770c72_0 (linux-64): MIT"));
+        assert!(result.is_ok())
+    } else {
+        panic!("Invalid subcommand");
     }
 }
 
