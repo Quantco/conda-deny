@@ -16,14 +16,14 @@ jobs:
       options: --security-opt seccomp=unconfined
     steps:
       - name: Checkout repository
-        uses: actions/checkout@v4
+        uses: actions/checkout@11bd71901bbe5b1630ceea73d27597364c9af683 # v4.2.2
 
       - name: Generate code coverage
         run: |
           cargo +nightly tarpaulin --verbose --all-features --workspace --timeout 120 --out xml
 
       - name: Upload to codecov.io
-        uses: codecov/codecov-action@v5
+        uses: codecov/codecov-action@ad3126e916f78f00edff4ed0317cf185271ccc2d # v5.4.2
         with:
           token: ${{ secrets.CODECOV_TOKEN }}
           fail_ci_if_error: true
