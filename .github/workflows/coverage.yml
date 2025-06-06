@@ -1,4 +1,5 @@
 name: coverage
+permissions: read-all
 
 on: 
   push:
