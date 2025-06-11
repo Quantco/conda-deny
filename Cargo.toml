@@ -1,23 +1,23 @@
 [package]
 name = "conda-deny"
 description = "A CLI tool to check your project's dependencies for license compliance."
-version = "0.5.1"
+version = "0.5.2"
 edition = "2021"
 
 [features]
 default = ["native-tls"]
 native-tls = [
-    "reqwest/native-tls",
-    "reqwest/native-tls-alpn",
-    "rattler_networking/native-tls",
-    "rattler_package_streaming/native-tls",
+  "reqwest/native-tls",
+  "reqwest/native-tls-alpn",
+  "rattler_networking/native-tls",
+  "rattler_package_streaming/native-tls",
 ]
 rustls-tls = [
-    "reqwest/rustls-tls",
-    "reqwest/rustls-tls-native-roots",
-    "rattler_networking/rustls-tls",
-    "reqwest-middleware/rustls-tls",
-    "rattler_package_streaming/rustls-tls",
+  "reqwest/rustls-tls",
+  "reqwest/rustls-tls-native-roots",
+  "rattler_networking/rustls-tls",
+  "reqwest-middleware/rustls-tls",
+  "rattler_package_streaming/rustls-tls",
 ]
 
 # See https://doc.rust-lang.org/cargo/reference/profiles.html
@@ -36,9 +36,9 @@ serde_json = "1.0.140"
 toml = "0.8.22"
 tokio = { version = "1.45.1", features = ["full"] }
 reqwest = { version = "0.12.18", default-features = false, features = [
-    "http2",
-    "blocking",
-    "stream",
+  "http2",
+  "blocking",
+  "stream",
 ] }
 serde_yaml = "0.9.34"
 regex = "1.11.1"

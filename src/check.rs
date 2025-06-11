@@ -18,7 +18,7 @@ fn check_license_infos(config: &CondaDenyCheckConfig) -> Result<CheckOutput> {
         debug!("Checking licenses for OSI compliance");
         Ok(license_infos.osi_check())
     } else {
-        debug!("Checking licenses against specified whitelist");
+        debug!("Checking licenses against specified allowlist");
         license_infos.check(config)
     }
 }

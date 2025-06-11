@@ -9,7 +9,7 @@ use spdx::Expression;
 use crate::{
     conda_meta_entry::{CondaMetaEntries, CondaMetaEntry},
     expression_utils::{check_expression_safety, extract_license_texts, parse_expression},
-    license_whitelist::is_package_ignored,
+    license_allowlist::is_package_ignored,
     pixi_lock::get_conda_packages_for_pixi_lock,
     CheckOutput, CondaDenyCheckConfig, LockfileSpec,
 };

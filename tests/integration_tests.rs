@@ -181,11 +181,11 @@ fn test_lockfile_pattern(#[case] subcommand: &str) {
 }
 
 #[test]
-fn test_remote_whitelist_check() {
-    // Create a temporary file for the license_whitelist.toml
+fn test_remote_allowlist_check() {
+    // Create a temporary file for the license_allowlist.toml
     let mut temp_config_file = NamedTempFile::new().unwrap();
     let file_content = r#"[tool.conda-deny]
-license-whitelist = "https://raw.githubusercontent.com/Quantco/conda-deny/refs/heads/main/tests/default_license_whitelist.toml""#;
+license-allowlist = "https://raw.githubusercontent.com/Quantco/conda-deny/refs/heads/main/tests/default_license_allowlist.toml""#;
 
     temp_config_file
         .as_file_mut()
@@ -216,24 +216,24 @@ license-whitelist = "https://raw.githubusercontent.com/Quantco/conda-deny/refs/h
 }
 
 #[test]
-fn test_multiple_whitelists_check() {
-    // Create a temporary file for the license_whitelist.toml
-    let mut temp_license_whitelist = NamedTempFile::new().unwrap();
+fn test_multiple_allowlists_check() {
+    // Create a temporary file for the license_allowlist.toml
+    let mut temp_license_allowlist = NamedTempFile::new().unwrap();
     let file_content = r#"[tool.conda-deny]
                                 safe-licenses = ["BSD-3-Clause"]"#;
-    temp_license_whitelist
+    temp_license_allowlist
         .as_file_mut()
         .write_all(file_content.as_bytes())
         .unwrap();
 
-    let temp_whitelist_path = temp_license_whitelist.path().to_path_buf();
+    let temp_allowlist_path = temp_license_allowlist.path().to_path_buf();
 
     // Create a temporary file for pixi.toml
     let mut temp_pixi_toml = NamedTempFile::new().unwrap();
     let file_content = "[tool.conda-deny]
-        license-whitelist = [
-        \"https://raw.githubusercontent.com/Quantco/conda-deny/refs/heads/main/tests/default_license_whitelist.toml\",
-        \"".to_string() + temp_whitelist_path.to_str().unwrap() + "\"]";
+        license-allowlist = [
+        \"https://raw.githubusercontent.com/Quantco/conda-deny/refs/heads/main/tests/default_license_allowlist.toml\",
+        \"".to_string() + temp_allowlist_path.to_str().unwrap() + "\"]";
 
     temp_pixi_toml
         .as_file_mut()
@@ -268,7 +268,7 @@ fn test_platform_env_restrictions_check() {
     // Create a temporary file for pixi.toml
     let mut temp_pixi_toml = NamedTempFile::new().unwrap();
     let file_content = r#"[tool.conda-deny]
-license-whitelist = "tests/default_license_whitelist.toml"
+license-allowlist = "tests/default_license_allowlist.toml"
 lockfile = "tests/default_pixi.lock"
 platform = "linux-64"
 environment = "lint""#;
@@ -297,7 +297,7 @@ fn test_safe_licenses_in_config_check() {
     // Create a temporary file for pixi.toml
     let mut temp_pixi_toml = NamedTempFile::new().unwrap();
     let file_content = r#"[tool.conda-deny]
-license-whitelist = "tests/default_license_whitelist.toml"
+license-allowlist = "tests/default_license_allowlist.toml"
 safe-licenses = ["BSD-3-Clause"]"#;
 
     temp_pixi_toml

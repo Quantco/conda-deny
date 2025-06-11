@@ -23,7 +23,7 @@ Sleep 5s
 Type "clear" Sleep 1s Enter
 Sleep 3s
 
-Type "bat license_whitelist.toml" Sleep 1s Enter
+Type "bat license_allowlist.toml" Sleep 1s Enter
 Sleep 3s
 
 Type@150ms "conda-deny check" Sleep 1s Enter
