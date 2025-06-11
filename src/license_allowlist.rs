@@ -11,14 +11,14 @@ use spdx::Expression;
 use crate::{conda_deny_config::CondaDenyTomlConfig, expression_utils::parse_expression};
 
 #[derive(Debug, Deserialize)]
-pub struct LicenseWhitelistConfig {
-    tool: RemoteWhitelistTool,
+pub struct LicenseAllowlistConfig {
+    tool: RemoteAllowlistTool,
 }
 
 #[derive(Debug, Deserialize)]
-struct RemoteWhitelistTool {
+struct RemoteAllowlistTool {
     #[serde(rename = "conda-deny")]
-    conda_deny: LicenseWhitelist,
+    conda_deny: LicenseAllowlist,
 }
 
 #[derive(Debug, Deserialize, Clone)]
@@ -28,7 +28,7 @@ pub struct IgnorePackage {
 }
 
 #[derive(Debug, Deserialize)]
-struct LicenseWhitelist {
+struct LicenseAllowlist {
     #[serde(rename = "safe-licenses")]
     safe_licenses: Option<Vec<String>>,
     #[serde(rename = "ignore-packages")]
@@ -81,7 +81,7 @@ pub fn license_config_from_toml_str(
     let config_content = fs::read_to_string(toml_file)
         .with_context(|| format!("Failed to read TOML file: {}", toml_file))?;
 
-    let config: LicenseWhitelistConfig = toml::from_str(&config_content)
+    let config: LicenseAllowlistConfig = toml::from_str(&config_content)
         .with_context(|| format!("Failed to parse TOML content from file: {}", toml_file))?;
 
     let mut expressions = Vec::new();
@@ -148,14 +148,14 @@ pub fn fetch_safe_licenses(
     let read_config_task = reader.read(url);
     let config_str = runtime.block_on(read_config_task).map_err(|e| {
         anyhow::anyhow!(
-            "Failed to read remote license whitelist.\nPlease check the URL. If you need a GITHUB_TOKEN, please set it in your environment.\nError: {}",
+            "Failed to read remote license allowlist.\nPlease check the URL. If you need a GITHUB_TOKEN, please set it in your environment.\nError: {}",
             e
         )
     })?;
 
-    let config: LicenseWhitelistConfig = toml::from_str(&config_str).with_context(|| {
+    let config: LicenseAllowlistConfig = toml::from_str(&config_str).with_context(|| {
         format!(
-            "Failed to parse license whitelist to TOML for whitelist URL: {}",
+            "Failed to parse license allowlist to TOML for allowlist URL: {}",
             url
         )
     })?;
@@ -169,18 +169,18 @@ pub fn fetch_safe_licenses(
     Ok((expressions, ignore_packages))
 }
 
-pub fn build_license_whitelist(
-    license_whitelist: &[String],
+pub fn build_license_allowlist(
+    license_allowlist: &[String],
 ) -> Result<(Vec<Expression>, Vec<IgnorePackage>)> {
     let mut all_safe_licenses = Vec::new();
     let mut all_ignore_packages = Vec::new();
 
-    for license_whitelist_path in license_whitelist.iter() {
+    for license_allowlist_path in license_allowlist.iter() {
         // todo: use Url (or Path)
-        if license_whitelist_path.starts_with("http") {
+        if license_allowlist_path.starts_with("http") {
             let reader = RealRemoteConfigReader;
 
-            match fetch_safe_licenses(license_whitelist_path, &reader) {
+            match fetch_safe_licenses(license_allowlist_path, &reader) {
                 Ok((safe_licenses, ignore_packages)) => {
                     all_safe_licenses.extend(safe_licenses);
                     all_ignore_packages.extend(ignore_packages);
@@ -189,13 +189,13 @@ pub fn build_license_whitelist(
                     return Err(e).with_context(|| {
                         format!(
                             "Failed to fetch safe licenses from URL: {}",
-                            license_whitelist_path
+                            license_allowlist_path
                         )
                     });
                 }
             }
         } else {
-            match license_config_from_toml_str(license_whitelist_path) {
+            match license_config_from_toml_str(license_allowlist_path) {
                 Ok((safe_licenses, ignore_packages)) => {
                     all_safe_licenses.extend(safe_licenses);
                     all_ignore_packages.extend(ignore_packages);
@@ -204,7 +204,7 @@ pub fn build_license_whitelist(
                     return Err(e).with_context(|| {
                         format!(
                             "Failed to parse TOML file at path: {}",
-                            license_whitelist_path
+                            license_allowlist_path
                         )
                     });
                 }
@@ -212,7 +212,7 @@ pub fn build_license_whitelist(
         }
     }
 
-    debug!("License whitelist built successfully.");
+    debug!("License allowlist built successfully.");
     Ok((all_safe_licenses, all_ignore_packages))
 }
 
@@ -232,8 +232,8 @@ pub fn get_license_information_from_toml_config(
         .clone()
         .unwrap_or_default();
 
-    let license_whitelist_urls = toml_config.get_license_whitelists().clone();
-    let (safe_licenses, ignore_packages) = build_license_whitelist(&license_whitelist_urls)?;
+    let license_allowlist_urls = toml_config.get_license_allowlists().clone();
+    let (safe_licenses, ignore_packages) = build_license_allowlist(&license_allowlist_urls)?;
 
     // TODO: Remove duplicates
     let safe_licenses = safe_licenses_from_toml
@@ -265,7 +265,7 @@ mod tests {
     #[test]
     fn test_fetch_safe_licenses_success() {
         let reader = RealRemoteConfigReader;
-        let (safe_licenses, ignore_packages) = fetch_safe_licenses("https://raw.githubusercontent.com/quantco/conda-deny/main/tests/default_license_whitelist.toml", &reader)
+        let (safe_licenses, ignore_packages) = fetch_safe_licenses("https://raw.githubusercontent.com/quantco/conda-deny/main/tests/default_license_allowlist.toml", &reader)
             .unwrap();
 
         // Assert the result
@@ -280,7 +280,7 @@ mod tests {
         // Create a temporary file for the pixi.toml
         let mut temp_config_file = NamedTempFile::new().unwrap();
         let file_content = r#"[tool.conda-deny]
-license-whitelist = "tests/default_license_whitelist.toml"
+license-allowlist = "tests/default_license_allowlist.toml"
 safe-licenses = [
     # Licenses by their SPDX identifier, see https://spdx.org/licenses/
     "MIT",
@@ -326,10 +326,10 @@ ignore-packages = [
     // Mock the read_remote_config function
     async fn _mock_read_remote_config(
         _url: &str,
-    ) -> Result<LicenseWhitelistConfig, Box<dyn Error>> {
-        Ok(LicenseWhitelistConfig {
-            tool: RemoteWhitelistTool {
-                conda_deny: LicenseWhitelist {
+    ) -> Result<LicenseAllowlistConfig, Box<dyn Error>> {
+        Ok(LicenseAllowlistConfig {
+            tool: RemoteAllowlistTool {
+                conda_deny: LicenseAllowlist {
                     safe_licenses: Some(vec!["MIT".to_string(), "Apache-2.0".to_string()]),
                     ignore_packages: Some(vec![]),
                 },
@@ -342,7 +342,7 @@ ignore-packages = [
         // Create a temporary file for the pixi.toml
         let mut temp_config_file = NamedTempFile::new().unwrap();
         let file_content = r#"[tool.conda-deny]
-        license-whitelist = "tests/default_license_whitelist.toml"
+        license-allowlist = "tests/default_license_allowlist.toml"
         safe-licenses = [
             # Licenses by their SPDX identifier, see https://spdx.org/licenses/
             "MIT",

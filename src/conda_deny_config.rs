@@ -6,7 +6,7 @@ use std::path::PathBuf;
 use std::vec;
 use std::{fs::File, io::Read};
 
-use crate::license_whitelist::IgnorePackage;
+use crate::license_allowlist::IgnorePackage;
 
 #[derive(Debug, Deserialize)]
 pub struct CondaDenyTomlConfig {
@@ -21,7 +21,7 @@ pub struct Tool {
 
 #[derive(Debug, Deserialize, Clone)]
 #[serde(untagged)]
-pub enum LicenseWhitelist {
+pub enum LicenseAllowlist {
     Single(String),
     Multiple(Vec<String>),
 }
@@ -48,22 +48,19 @@ pub enum LockfileSpec {
 }
 
 #[derive(Debug, Deserialize)]
+#[serde(rename_all = "kebab-case")]
 pub struct CondaDeny {
-    #[serde(rename = "license-whitelist")]
-    license_whitelist: Option<LicenseWhitelist>,
+    #[serde(alias = "license-whitelist")]
+    license_allowlist: Option<LicenseAllowlist>,
     #[serde(rename = "platform")]
     platform_spec: Option<PlatformSpec>,
     #[serde(rename = "environment")]
     environment_spec: Option<EnviromentSpec>,
     #[serde(rename = "lockfile")]
     lockfile_spec: Option<LockfileSpec>,
-    #[serde(rename = "osi")]
     osi: Option<bool>,
-    #[serde(rename = "ignore-pypi")]
     ignore_pypi: Option<bool>,
-    #[serde(rename = "safe-licenses")]
     pub safe_licenses: Option<Vec<String>>,
-    #[serde(rename = "ignore-packages")]
     pub ignore_packages: Option<Vec<IgnorePackage>>,
 }
 
@@ -82,14 +79,14 @@ impl CondaDenyTomlConfig {
         Ok(config)
     }
 
-    pub fn get_license_whitelists(&self) -> Vec<String> {
-        if self.tool.conda_deny.license_whitelist.is_none() {
+    pub fn get_license_allowlists(&self) -> Vec<String> {
+        if self.tool.conda_deny.license_allowlist.is_none() {
             Vec::<String>::new()
         } else {
-            match &self.tool.conda_deny.license_whitelist {
+            match &self.tool.conda_deny.license_allowlist {
                 None => vec![],
-                Some(LicenseWhitelist::Single(path)) => vec![path.clone()],
-                Some(LicenseWhitelist::Multiple(path)) => path.clone(),
+                Some(LicenseAllowlist::Single(path)) => vec![path.clone()],
+                Some(LicenseAllowlist::Multiple(path)) => path.clone(),
             }
         }
     }
@@ -130,7 +127,7 @@ impl CondaDenyTomlConfig {
         CondaDenyTomlConfig {
             tool: Tool {
                 conda_deny: CondaDeny {
-                    license_whitelist: None,
+                    license_allowlist: None,
                     platform_spec: None,
                     environment_spec: None,
                     lockfile_spec: None,

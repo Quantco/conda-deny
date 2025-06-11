@@ -39,7 +39,7 @@
 ## 📖 Introduction
 
 conda-deny is a CLI tool for checking software environment dependencies for license compliance.
-Compliance is checked with regard to a whitelist of licenses provided by the user.
+Compliance is checked with regard to an allowlist of licenses provided by the user.
 
 ## 💿 Installation
 
@@ -64,7 +64,7 @@ The tool expects a configuration in the following format:
 #--------------------------------------------------------
 # General setup options:
 #--------------------------------------------------------
-license-whitelist = "https://raw.githubusercontent.com/QuantCo/conda-deny/main/tests/test_remote_base_configs/conda-deny-license_whitelist.toml" # or ["license_whitelist.toml", "other_license_whitelist.toml"]
+license-allowlist = "https://raw.githubusercontent.com/quantco/conda-deny/main/tests/test_remote_base_configs/conda-deny-license_allowlist.toml" # or ["license_allowlist.toml", "other_license_allowlist.toml"]
 platform = "linux-64" # or ["linux-64", "osx-arm64"]
 environment = "default" # or ["default", "py39", "py310", "prod"]
 lockfile = "environment/pixi.lock" # or ["environment1/pixi.lock", "environment2/pixi.lock"]
@@ -72,7 +72,7 @@ lockfile = "environment/pixi.lock" # or ["environment1/pixi.lock", "environment2
 # lockfile = "environments/**/*.lock"
 
 #--------------------------------------------------------
-# License whitelist directly in configuration file:
+# License allowlist directly in configuration file:
 #--------------------------------------------------------
 safe-licenses = ["MIT", "BSD-3-Clause"]
 ignore-packages = [

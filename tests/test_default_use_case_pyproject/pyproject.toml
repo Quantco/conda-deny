@@ -19,7 +19,8 @@ select = [
   # pyflakes
   "F",
   # pycodestyle
-  "E", "W",
+  "E",
+  "W",
   # isort
   "I",
   # pep8-naming
@@ -33,19 +34,16 @@ known-first-party = ["glum", "glum_benchmarks"]
 
 [tool.mypy]
 python_version = '3.9'
-exclude = [
-  "tests/",
-  "src/glum_benchmarks/orig_sklearn_fork/",
-]
+exclude = ["tests/", "src/glum_benchmarks/orig_sklearn_fork/"]
 no_implicit_optional = false
 check_untyped_defs = true
 namespace_packages = true
 ignore_missing_imports = true
 
-[[tool.mypy.overrides]]  
-# https://github.com/scikit-learn/scikit-learn/issues/16705  
-module = ["sklearn.*"]  
-ignore_missing_imports = true  
+[[tool.mypy.overrides]]
+# https://github.com/scikit-learn/scikit-learn/issues/16705
+module = ["sklearn.*"]
+ignore_missing_imports = true
 
 [tool.cibuildwheel]
 skip = [
@@ -61,27 +59,25 @@ skip = [
 test-requires = ["pytest", "pytest-xdist"]
 
 [tool.cibuildwheel.macos]
-before-build = [
-  "bash build_tools/prepare_macos_wheel.sh",
-]
+before-build = ["bash build_tools/prepare_macos_wheel.sh"]
 
 [tool.cibuildwheel.macos.environment]
-LDFLAGS="-Wl,-rpath,$CONDA/envs/build/lib -L$CONDA/envs/build/lib"
-CFLAGS="-I$CONDA/envs/build/include"
-CXXFLAGS="-I$CONDA/envs/build/include"
-CXX="/usr/bin/clang++"
-CC="/usr/bin/clang"
-MACOSX_DEPLOYMENT_TARGET="10.13"
+LDFLAGS = "-Wl,-rpath,$CONDA/envs/build/lib -L$CONDA/envs/build/lib"
+CFLAGS = "-I$CONDA/envs/build/include"
+CXXFLAGS = "-I$CONDA/envs/build/include"
+CXX = "/usr/bin/clang++"
+CC = "/usr/bin/clang"
+MACOSX_DEPLOYMENT_TARGET = "10.13"
 
 
 [tool.pytest.ini_options]
 # Filters are standard python warning filters as described here:
 # https://docs.python.org/3/library/warnings.html#the-warnings-filter
 filterwarnings = [
-    "ignore:.*distutils.*:DeprecationWarning:.*",
-    "ignore:.*distutils.*:UserWarning:.*",
-    "ignore:.*The 'u' format is deprecated.*:DeprecationWarning:pywintypes",
+  "ignore:.*distutils.*:DeprecationWarning:.*",
+  "ignore:.*distutils.*:UserWarning:.*",
+  "ignore:.*The 'u' format is deprecated.*:DeprecationWarning:pywintypes",
 ]
 
 [tool.conda-deny]
-license-whitelist = "license_whitelist.toml"
+license-allowlist = "license_allowlist.toml"

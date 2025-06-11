@@ -5,8 +5,8 @@ pub mod conda_deny_config;
 mod conda_meta_entry;
 mod conda_meta_package;
 pub mod expression_utils;
+pub mod license_allowlist;
 mod license_info;
-pub mod license_whitelist;
 pub mod list;
 mod pixi_lock;
 
@@ -14,8 +14,8 @@ use std::{collections::HashSet, env, path::PathBuf};
 
 use cli::CondaDenyCliConfig;
 use conda_deny_config::CondaDenyTomlConfig;
+use license_allowlist::{get_license_information_from_toml_config, IgnorePackage};
 use license_info::LicenseInfo;
-use license_whitelist::{get_license_information_from_toml_config, IgnorePackage};
 
 use anyhow::{anyhow, Context, Result};
 use glob::glob_with;
@@ -243,7 +243,7 @@ pub fn get_config_options(
             }
 
             if !osi && safe_licenses.is_empty() {
-                return Err(anyhow::anyhow!("No license whitelist provided"));
+                return Err(anyhow::anyhow!("No license allowlist provided"));
             }
 
             CondaDenyConfig::Check(CondaDenyCheckConfig {

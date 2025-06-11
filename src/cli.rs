@@ -23,7 +23,7 @@ pub struct Cli {
 
 #[derive(clap::Subcommand, Debug)]
 pub enum CondaDenyCliConfig {
-    /// Check licenses of pixi or conda environment against a whitelist
+    /// Check licenses of pixi or conda environment against a allowlist
     Check {
         /// Path to the pixi lockfile(s), can be glob patterns
         #[arg(short, long)]
@@ -41,7 +41,7 @@ pub enum CondaDenyCliConfig {
         #[arg(short, long)]
         environment: Option<Vec<String>>,
 
-        /// Check against OSI licenses instead of custom license whitelists.
+        /// Check against OSI licenses instead of custom license allowlists.
         #[arg(long)]
         osi: Option<bool>,
 

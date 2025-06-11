@@ -41,4 +41,4 @@ demo = { features = ["demo"], no-default-feature = true }
 lint = { features = ["lint"], no-default-feature = true }
 
 [tool.conda-deny]
-license-whitelist = "license_whitelist.toml"
+license-allowlist = "license_allowlist.toml"
