@@ -134,6 +134,8 @@ jobs:
     name: Create Release
     needs: [metadata, build, provenance]
     if: ${{ needs.metadata.outputs.release == 'true' && github.ref == 'refs/heads/main' }}
+    permissions:
+      contents: write
     runs-on: ubuntu-latest
     steps:
       - name: Checkout source code
