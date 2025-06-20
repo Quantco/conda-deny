@@ -160,7 +160,7 @@ pub fn fetch_safe_licenses(
     let read_config_task = reader.read(url);
     let config_str = runtime.block_on(read_config_task).map_err(|e| {
         anyhow::anyhow!(
-            "Failed to read remote license allowlist.\nPlease check the URL.\nIf you need a bearer token you can set it via CONDA_DENY_BEARER_TOKEN in your environment.\nError: {}",
+            "Failed to read remote license allowlist.\nPlease check the URL.\nIf you need a bearer token, you can set it via CONDA_DENY_BEARER_TOKEN in your environment.\nError: {}",
             e
         )
     })?;
