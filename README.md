@@ -83,6 +83,11 @@ ignore-packages = [
 After installing `conda-deny`, you can run `conda-deny check` in your project.
 This then checks `pixi.lock` to determine the packages (and their versions) used in your project.
 
+### 🔒 Authorized access to allowlist
+
+If a Bearer Token is needed to access your allowlist, you can provide it using `CONDA_DENY_BEARER_TOKEN`.
+An example use case would be a private repository containing your allowlist.
+
 ### ✨ Output Formats
 
 `conda-deny` supports different output formats via the `--output` (or `-o`) flag.

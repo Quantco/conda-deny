@@ -2,9 +2,9 @@ use std::{env, fs, str::FromStr};
 
 use anyhow::{Context, Result};
 use async_trait::async_trait;
-use log::debug;
+use log::{debug, info};
 use rattler_conda_types::{ParseStrictness, Version, VersionSpec};
-use reqwest::header::{HeaderMap, HeaderValue, ACCEPT, AUTHORIZATION};
+use reqwest::header::{HeaderMap, HeaderValue, AUTHORIZATION};
 use serde::Deserialize;
 use spdx::Expression;
 
@@ -113,11 +113,7 @@ impl ReadRemoteConfig for RealRemoteConfigReader {
 
         // Add GitHub specific headers if GITHUB_TOKEN exists
         let mut headers = HeaderMap::new();
-        if let Ok(token) = env::var("GITHUB_TOKEN") {
-            headers.insert(
-                ACCEPT,
-                HeaderValue::from_static("application/vnd.github.v3.raw"),
-            );
+        if let Some(token) = get_bearer_token() {
             headers.insert(
                 AUTHORIZATION,
                 HeaderValue::from_str(&format!("Bearer {}", token))
@@ -137,6 +133,22 @@ impl ReadRemoteConfig for RealRemoteConfigReader {
     }
 }
 
+fn get_bearer_token() -> Option<String> {
+    if let Ok(token) = env::var("CONDA_DENY_BEARER_TOKEN") {
+        return Some(token);
+    }
+
+    info!("CONDA_DENY_BEARER_TOKEN is not set. Falling back to GITHUB_TOKEN.");
+
+    if let Ok(token) = env::var("GITHUB_TOKEN") {
+        return Some(token);
+    }
+
+    info!("GITHUB_TOKEN is not set.");
+
+    None
+}
+
 pub fn fetch_safe_licenses(
     remote_config: &str,
     reader: &dyn ReadRemoteConfig,
@@ -148,7 +160,7 @@ pub fn fetch_safe_licenses(
     let read_config_task = reader.read(url);
     let config_str = runtime.block_on(read_config_task).map_err(|e| {
         anyhow::anyhow!(
-            "Failed to read remote license allowlist.\nPlease check the URL. If you need a GITHUB_TOKEN, please set it in your environment.\nError: {}",
+            "Failed to read remote license allowlist.\nPlease check the URL.\nIf you need a bearer token, you can set it via CONDA_DENY_BEARER_TOKEN in your environment.\nError: {}",
             e
         )
     })?;
