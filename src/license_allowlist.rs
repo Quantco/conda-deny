@@ -113,7 +113,7 @@ impl ReadRemoteConfig for RealRemoteConfigReader {
 
         // Add GitHub specific headers if GITHUB_TOKEN exists
         let mut headers = HeaderMap::new();
-        if let Some(token) = get_bearer_token()? {
+        if let Some(token) = get_bearer_token() {
             headers.insert(
                 AUTHORIZATION,
                 HeaderValue::from_str(&format!("Bearer {}", token))
@@ -133,20 +133,20 @@ impl ReadRemoteConfig for RealRemoteConfigReader {
     }
 }
 
-fn get_bearer_token() -> Result<Option<String>> {
+fn get_bearer_token() -> Option<String> {
     if let Ok(token) = env::var("CONDA_DENY_BEARER_TOKEN") {
-        return Ok(Some(token));
+        return Some(token);
     }
 
     info!("CONDA_DENY_BEARER_TOKEN is not set. Falling back to GITHUB_TOKEN.");
 
     if let Ok(token) = env::var("GITHUB_TOKEN") {
-        return Ok(Some(token));
+        return Some(token);
     }
 
     info!("GITHUB_TOKEN is not set.");
 
-    Ok(None)
+    None
 }
 
 pub fn fetch_safe_licenses(
