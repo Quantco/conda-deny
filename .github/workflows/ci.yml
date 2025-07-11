@@ -7,12 +7,14 @@ on:
   workflow_dispatch:
   pull_request:
 
-env: 
+env:
   CARGO_TERM_COLOR: always
   # Colored output by the CLI should be colored in Github Actions
   CLICOLOR_FORCE: 1
   # Make sure CI fails on all warnings, including Clippy lints
   RUSTFLAGS: "-Dwarnings"
+  # insta snapshot tests behave differently in CI and expect this environment variable to be set
+  CI: true
 
 jobs:
   build_and_test:

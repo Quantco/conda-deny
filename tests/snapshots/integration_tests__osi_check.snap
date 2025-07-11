@@ -1,0 +1,93 @@
+---
+source: tests/integration_tests.rs
+expression: output
+---
+❌ The following dependencies are unsafe:
+
+_libgcc_mutex 0.1-conda_forge (linux-64): None (Non-SPDX)
+_sysroot_linux-aarch64_curr_repodata_hack 4-h57d6b7b_14 (noarch): LGPL-2.0-or-later AND LGPL-2.0-or-later WITH exceptions AND GPL-2.0-or-later AND MPL-2.0 (Non-SPDX)
+bzip2 1.0.8-hcfcfb64_5 (win-64): bzip2-1.0.6 
+bzip2 1.0.8-h10d778d_5 (osx-64): bzip2-1.0.6 
+bzip2 1.0.8-h31becfc_5 (linux-aarch64): bzip2-1.0.6 
+bzip2 1.0.8-h93a5062_5 (osx-arm64): bzip2-1.0.6 
+bzip2 1.0.8-hd590300_5 (linux-64): bzip2-1.0.6 
+bzip2 1.0.8-hcfcfb64_5 (win-64): bzip2-1.0.6 
+bzip2 1.0.8-h10d778d_5 (osx-64): bzip2-1.0.6 
+bzip2 1.0.8-h31becfc_5 (linux-aarch64): bzip2-1.0.6 
+bzip2 1.0.8-h93a5062_5 (osx-arm64): bzip2-1.0.6 
+bzip2 1.0.8-hd590300_5 (linux-64): bzip2-1.0.6 
+gcc_impl_linux-64 12.3.0-h58ffeeb_13 (linux-64): GPL-3.0-only WITH GCC-exception-3.1 
+gcc_impl_linux-aarch64 12.3.0-h3d98823_13 (linux-aarch64): GPL-3.0-only WITH GCC-exception-3.1 
+gfortran_impl_linux-64 12.3.0-h8f2110c_13 (linux-64): GPL-3.0-only WITH GCC-exception-3.1 
+gfortran_impl_linux-aarch64 12.3.0-h97ebfd2_13 (linux-aarch64): GPL-3.0-only WITH GCC-exception-3.1 
+gxx_impl_linux-64 12.3.0-h2a574ab_13 (linux-64): GPL-3.0-only WITH GCC-exception-3.1 
+gxx_impl_linux-aarch64 12.3.0-hba91e99_13 (linux-aarch64): GPL-3.0-only WITH GCC-exception-3.1 
+kernel-headers_linux-64 2.6.32-he073ed8_17 (noarch): LGPL-2.0-or-later AND LGPL-2.0-or-later WITH exceptions AND GPL-2.0-or-later AND MPL-2.0 (Non-SPDX)
+kernel-headers_linux-aarch64 4.18.0-h5b4a56d_14 (noarch): LGPL-2.0-or-later AND LGPL-2.0-or-later WITH exceptions AND GPL-2.0-or-later AND MPL-2.0 (Non-SPDX)
+libcurl 8.8.0-hd5e4a3a_1 (win-64): curl 
+libcurl 8.8.0-hf9fcc65_1 (osx-64): curl 
+libcurl 8.8.0-h4e8248e_1 (linux-aarch64): curl 
+libcurl 8.8.0-h7b6f9a7_1 (osx-arm64): curl 
+libcurl 8.8.0-hca28451_1 (linux-64): curl 
+libcxx 17.0.6-h88467a6_0 (osx-64): Apache-2.0 WITH LLVM-exception 
+libcxx 17.0.6-h5f092b4_0 (osx-arm64): Apache-2.0 WITH LLVM-exception 
+libcxx 17.0.6-h88467a6_0 (osx-64): Apache-2.0 WITH LLVM-exception 
+libcxx 17.0.6-h5f092b4_0 (osx-arm64): Apache-2.0 WITH LLVM-exception 
+libgcc-devel_linux-64 12.3.0-h6b66f73_113 (noarch): GPL-3.0-only WITH GCC-exception-3.1 
+libgcc-devel_linux-aarch64 12.3.0-h6144e03_113 (noarch): GPL-3.0-only WITH GCC-exception-3.1 
+libgcc-ng 14.1.0-he277a41_0 (linux-aarch64): GPL-3.0-only WITH GCC-exception-3.1 
+libgcc-ng 14.1.0-h77fa898_0 (linux-64): GPL-3.0-only WITH GCC-exception-3.1 
+libgcc-ng 14.1.0-he277a41_0 (linux-aarch64): GPL-3.0-only WITH GCC-exception-3.1 
+libgcc-ng 14.1.0-h77fa898_0 (linux-64): GPL-3.0-only WITH GCC-exception-3.1 
+libgfortran5 14.1.0-h9420597_0 (linux-aarch64): GPL-3.0-only WITH GCC-exception-3.1 
+libgfortran5 14.1.0-hc5f4f2c_0 (linux-64): GPL-3.0-only WITH GCC-exception-3.1 
+libgomp 14.1.0-he277a41_0 (linux-aarch64): GPL-3.0-only WITH GCC-exception-3.1 
+libgomp 14.1.0-h77fa898_0 (linux-64): GPL-3.0-only WITH GCC-exception-3.1 
+libgomp 14.1.0-he277a41_0 (linux-aarch64): GPL-3.0-only WITH GCC-exception-3.1 
+libgomp 14.1.0-h77fa898_0 (linux-64): GPL-3.0-only WITH GCC-exception-3.1 
+libsanitizer 12.3.0-h57e2e72_13 (linux-aarch64): GPL-3.0-only WITH GCC-exception-3.1 
+libsanitizer 12.3.0-hb8811af_13 (linux-64): GPL-3.0-only WITH GCC-exception-3.1 
+libstdcxx-devel_linux-64 12.3.0-h6b66f73_113 (noarch): GPL-3.0-only WITH GCC-exception-3.1 
+libstdcxx-devel_linux-aarch64 12.3.0-h6144e03_113 (noarch): GPL-3.0-only WITH GCC-exception-3.1 
+libstdcxx-ng 14.1.0-h3f4de04_0 (linux-aarch64): GPL-3.0-only WITH GCC-exception-3.1 
+libstdcxx-ng 14.1.0-hc0a3c3a_0 (linux-64): GPL-3.0-only WITH GCC-exception-3.1 
+libstdcxx-ng 14.1.0-h3f4de04_0 (linux-aarch64): GPL-3.0-only WITH GCC-exception-3.1 
+libstdcxx-ng 14.1.0-hc0a3c3a_0 (linux-64): GPL-3.0-only WITH GCC-exception-3.1 
+m2w64-gcc-libgfortran 5.3.0-6 (win-64): GPL, LGPL, FDL, custom (Non-SPDX)
+m2w64-gcc-libs 5.3.0-7 (win-64): GPL3+, partial:GCCRLE, partial:LGPL2+ (Non-SPDX)
+m2w64-gcc-libs-core 5.3.0-7 (win-64): GPL3+, partial:GCCRLE, partial:LGPL2+ (Non-SPDX)
+m2w64-gmp 6.1.0-2 (win-64): LGPL3 (Non-SPDX)
+m2w64-libwinpthread-git 5.0.0.4634.697f757-2 (win-64): MIT, BSD (Non-SPDX)
+micromamba 1.5.8-0 (win-64): BSD-3-Clause AND MIT AND OpenSSL 
+micromamba 1.5.8-0 (osx-64): BSD-3-Clause AND MIT AND OpenSSL 
+micromamba 1.5.8-0 (linux-aarch64): BSD-3-Clause AND MIT AND OpenSSL 
+micromamba 1.5.8-0 (osx-arm64): BSD-3-Clause AND MIT AND OpenSSL 
+micromamba 1.5.8-0 (linux-64): BSD-3-Clause AND MIT AND OpenSSL 
+msys2-conda-epoch 20160418-1 (win-64): None (Non-SPDX)
+ncurses 6.5-h5846eda_0 (osx-64): X11 AND BSD-3-Clause 
+ncurses 6.5-h0425590_0 (linux-aarch64): X11 AND BSD-3-Clause 
+ncurses 6.5-hb89a1cb_0 (osx-arm64): X11 AND BSD-3-Clause 
+ncurses 6.5-h59595ed_0 (linux-64): X11 AND BSD-3-Clause 
+ncurses 6.5-h5846eda_0 (osx-64): X11 AND BSD-3-Clause 
+ncurses 6.5-h0425590_0 (linux-aarch64): X11 AND BSD-3-Clause 
+ncurses 6.5-hb89a1cb_0 (osx-arm64): X11 AND BSD-3-Clause 
+ncurses 6.5-h59595ed_0 (linux-64): X11 AND BSD-3-Clause 
+sysroot_linux-64 2.12-he073ed8_17 (noarch): LGPL-2.0-or-later AND LGPL-2.0-or-later WITH exceptions AND GPL-2.0-or-later AND MPL-2.0 (Non-SPDX)
+sysroot_linux-aarch64 2.17-h5b4a56d_14 (noarch): LGPL-2.0-or-later AND LGPL-2.0-or-later WITH exceptions AND GPL-2.0-or-later AND MPL-2.0 (Non-SPDX)
+tk 8.6.13-h5226925_1 (win-64): TCL 
+tk 8.6.13-h1abcd95_1 (osx-64): TCL 
+tk 8.6.13-h194ca79_0 (linux-aarch64): TCL 
+tk 8.6.13-h5083fa2_1 (osx-arm64): TCL 
+tk 8.6.13-noxft_h4845f30_101 (linux-64): TCL 
+tk 8.6.13-h5226925_1 (win-64): TCL 
+tk 8.6.13-h1abcd95_1 (osx-64): TCL 
+tk 8.6.13-h194ca79_0 (linux-aarch64): TCL 
+tk 8.6.13-h5083fa2_1 (osx-arm64): TCL 
+tk 8.6.13-noxft_h4845f30_101 (linux-64): TCL 
+tzdata 2024a-h0c530f3_0 (noarch): LicenseRef-Public-Domain 
+ucrt 10.0.22621.0-h57928b3_0 (win-64): LicenseRef-Proprietary 
+vc14_runtime 14.40.33810-ha82c5b3_20 (win-64): LicenseRef-ProprietaryMicrosoft 
+win_inet_pton 1.1.0-pyhd8ed1ab_6 (noarch): PUBLIC-DOMAIN (Non-SPDX)
+
+❌ Unsafe licenses found! ❌
+There were 457 safe licenses and 84 unsafe licenses.
