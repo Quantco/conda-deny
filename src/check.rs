@@ -39,7 +39,7 @@ pub fn check<W: Write>(check_config: CondaDenyCheckConfig, mut out: W) -> Result
                 "safe": safe_dependencies,
                 "unsafe": unsafe_dependencies,
             });
-            writeln!(out, "{}", json_output)?;
+            writeln!(out, "{json_output}")?;
         }
         OutputFormat::JsonPretty => {
             let json_output = json!({

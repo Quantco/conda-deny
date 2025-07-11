@@ -23,10 +23,10 @@ pub struct CondaMetaEntry {
 impl CondaMetaEntry {
     pub fn from_filepath(filepath: &str) -> Result<Self> {
         let contents = Self::read_file(filepath)
-            .with_context(|| format!("Failed to read file: {}", filepath))?;
+            .with_context(|| format!("Failed to read file: {filepath}"))?;
 
         let v: Value = serde_json::from_str(&contents)
-            .with_context(|| format!("Failed to parse JSON from file: {}", filepath))?;
+            .with_context(|| format!("Failed to parse JSON from file: {filepath}"))?;
 
         let license_str = v["license"].as_str().unwrap_or_default();
         let license = match parse_expression(license_str) {
@@ -49,15 +49,15 @@ impl CondaMetaEntry {
         let path = Path::new(filepath);
 
         if !path.exists() {
-            anyhow::bail!("Error: The file {} does not exist.", filepath);
+            anyhow::bail!("Error: The file {filepath} does not exist.");
         }
 
-        let mut file = File::open(filepath)
-            .with_context(|| format!("Failed to open the file: {}", filepath))?;
+        let mut file =
+            File::open(filepath).with_context(|| format!("Failed to open the file: {filepath}"))?;
 
         let mut contents = String::new();
         file.read_to_string(&mut contents)
-            .with_context(|| format!("Failed to read the file: {}", filepath))?;
+            .with_context(|| format!("Failed to read the file: {filepath}"))?;
 
         Ok(contents)
     }

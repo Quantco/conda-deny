@@ -205,8 +205,7 @@ pub fn get_config_options(
             }
             Err(e) => {
                 debug!(
-                    "Error parsing config file: pixi.toml: {}. Attempting to use pyproject.toml instead...",
-                    e
+                    "Error parsing config file: pixi.toml: {e}. Attempting to use pyproject.toml instead..."
                 );
                 match CondaDenyTomlConfig::from_path("pyproject.toml".into())
                     .context(e)
@@ -215,8 +214,7 @@ pub fn get_config_options(
                     Ok(config) => config,
                     Err(e) => {
                         debug!(
-                            "Error parsing config file: pyproject.toml: {}. Using empty config instead...",
-                            e
+                            "Error parsing config file: pyproject.toml: {e}. Using empty config instead..."
                         );
                         CondaDenyTomlConfig::empty()
                     }

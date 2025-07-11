@@ -30,7 +30,7 @@ pub fn parse_expression(expression_str: &str) -> Result<Expression> {
     };
 
     Expression::parse_mode(expression_str, parse_mode)
-        .with_context(|| format!("Failed to parse expression: '{}'", expression_str))
+        .with_context(|| format!("Failed to parse expression: '{expression_str}'"))
 }
 
 #[cfg(test)]
