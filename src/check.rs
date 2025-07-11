@@ -76,8 +76,7 @@ pub fn check<W: Write>(check_config: CondaDenyCheckConfig, mut out: W) -> Result
                 };
                 writer.serialize(&extended_info).with_context(|| {
                     format!(
-                        "Failed to serialize the following LicenseInfo to CSV: {:?}",
-                        extended_info
+                        "Failed to serialize the following LicenseInfo to CSV: {extended_info:?}"
                     )
                 })?;
             }

@@ -20,7 +20,7 @@ pub fn get_conda_packages_for_pixi_lock(
     ignore_pypi: bool,
 ) -> Result<Vec<CondaPackageData>> {
     let lock_file = LockFile::from_path(pixi_lock_path)
-        .with_context(|| format!("Failed to read pixi.lock file: {:?}", pixi_lock_path))?;
+        .with_context(|| format!("Failed to read pixi.lock file: {pixi_lock_path:?}"))?;
     let environment_spec = environment_spec
         .clone()
         .unwrap_or_else(|| _get_environment_names(&lock_file));

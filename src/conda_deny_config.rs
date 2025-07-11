@@ -72,7 +72,7 @@ impl CondaDenyTomlConfig {
         file.read_to_string(&mut contents)?;
 
         let config: CondaDenyTomlConfig = toml::from_str(&contents)
-            .with_context(|| format!("Failed to parse TOML from the file: {:?}", filepath))?;
+            .with_context(|| format!("Failed to parse TOML from the file: {filepath:?}"))?;
 
         debug!("Loaded config from file: {:?}", filepath.clone());
 

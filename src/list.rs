@@ -27,8 +27,7 @@ pub fn list<W: Write>(config: CondaDenyListConfig, mut out: W) -> Result<()> {
             for license_info in &license_infos.license_infos {
                 writer.serialize(license_info).with_context(|| {
                     format!(
-                        "Failed to serialize the following license info: {:?}",
-                        license_info
+                        "Failed to serialize the following license info: {license_info:?}"
                     )
                 })?;
             }

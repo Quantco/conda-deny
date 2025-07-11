@@ -194,7 +194,7 @@ pub fn get_config_options(
     // else, try to load pixi.toml, then pyproject.toml and if nothing helps, use empty config
     let toml_config = if let Some(config_path) = config {
         CondaDenyTomlConfig::from_path(config_path.clone())
-            .with_context(|| format!("Failed to parse config file {:?}", config_path))?
+            .with_context(|| format!("Failed to parse config file {config_path:?}"))?
     } else {
         match CondaDenyTomlConfig::from_path("pixi.toml".into())
             .with_context(|| "Failed to parse config file pixi.toml")
@@ -225,7 +225,7 @@ pub fn get_config_options(
         }
     };
 
-    debug!("Parsed TOML config: {:?}", toml_config);
+    debug!("Parsed TOML config: {toml_config:?}");
 
     let output_format = cli_config.output().unwrap_or_default();
     let lockfile_or_prefix = get_lockfile_or_prefix(&cli_config, &toml_config)?;

@@ -461,7 +461,7 @@ fn test_pypi_ignore_error(
         println!("Actual error: {}", e);
     }
     assert!(result.is_err());
-    assert!(format!("{:?}", result).contains("Pypi packages are not supported: beautifulsoup4"));
+    assert!(format!("{result:?}").contains("Pypi packages are not supported: beautifulsoup4"));
     assert_eq!(out, b"");
 }
 
