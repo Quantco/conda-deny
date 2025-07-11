@@ -161,8 +161,7 @@ impl LicenseInfos {
             let conda_meta_entries =
                 CondaMetaEntries::from_dir(&conda_meta_path).with_context(|| {
                     format!(
-                        "Failed to parse conda meta entries from conda-meta: {:?}",
-                        conda_meta_path
+                        "Failed to parse conda meta entries from conda-meta: {conda_meta_path:?}"
                     )
                 })?;
 
@@ -266,7 +265,7 @@ fn serialize_expression<S>(expr: &Expression, serializer: S) -> Result<S::Ok, S:
 where
     S: serde::Serializer,
 {
-    serializer.serialize_str(&format!("{:?}", expr))
+    serializer.serialize_str(&format!("{expr:?}"))
 }
 
 #[cfg(test)]

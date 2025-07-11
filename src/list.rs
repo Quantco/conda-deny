@@ -13,7 +13,7 @@ pub fn list<W: Write>(config: CondaDenyListConfig, mut out: W) -> Result<()> {
             for license_info in &license_infos.license_infos {
                 output.push_str(&license_info.pretty_print());
             }
-            writeln!(out, "{}", output)?;
+            writeln!(out, "{output}")?;
         }
         OutputFormat::Json => {
             serde_json::to_writer(&mut out, &license_infos)?;
@@ -27,8 +27,7 @@ pub fn list<W: Write>(config: CondaDenyListConfig, mut out: W) -> Result<()> {
             for license_info in &license_infos.license_infos {
                 writer.serialize(license_info).with_context(|| {
                     format!(
-                        "Failed to serialize the following license info: {:?}",
-                        license_info
+                        "Failed to serialize the following license info: {license_info:?}"
                     )
                 })?;
             }

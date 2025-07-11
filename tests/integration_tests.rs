@@ -114,7 +114,7 @@ fn test_default_use_case(#[case] subcommand: &str, #[case] test_name: &str) {
 
     use log::debug;
 
-    let path_string = format!("tests/{}", test_name);
+    let path_string = format!("tests/{test_name}");
     let test_dir = Path::new(path_string.as_str());
 
     let output = Command::cargo_bin("conda-deny")
@@ -126,7 +126,7 @@ fn test_default_use_case(#[case] subcommand: &str, #[case] test_name: &str) {
         .expect("Failed to execute command");
 
     let stdout = str::from_utf8(&output.stdout).unwrap();
-    debug!("Output: {}", stdout);
+    debug!("Output: {stdout}");
     if subcommand == "check" {
         assert!(stdout.contains("There were \u{1b}[32m247\u{1b}[0m safe licenses and \u{1b}[31m301\u{1b}[0m unsafe licenses."), "{stdout}");
         output.assert().failure();
@@ -458,10 +458,10 @@ fn test_pypi_ignore_error(
 ) {
     let result = check(check_config, &mut out);
     if let Err(e) = &result {
-        println!("Actual error: {}", e);
+        println!("Actual error: {e}");
     }
     assert!(result.is_err());
-    assert!(format!("{:?}", result).contains("Pypi packages are not supported: beautifulsoup4"));
+    assert!(format!("{result:?}").contains("Pypi packages are not supported: beautifulsoup4"));
     assert_eq!(out, b"");
 }
 
