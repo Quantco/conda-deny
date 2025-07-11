@@ -22,7 +22,7 @@ fn list_config(
     #[default(None)] prefix: Option<Vec<PathBuf>>,
     #[default(None)] platform: Option<Vec<Platform>>,
     #[default(None)] environment: Option<Vec<String>>,
-    #[default(None)] ignore_pypi: Option<bool>,
+    #[default(false)] ignore_pypi: bool,
     #[default(Some(OutputFormat::Default))] output: Option<OutputFormat>,
 ) -> CondaDenyListConfig {
     let cli = CondaDenyCliConfig::List {
@@ -49,7 +49,7 @@ fn bundle_config(
     #[default(None)] prefix: Option<Vec<PathBuf>>,
     #[default(None)] platform: Option<Vec<Platform>>,
     #[default(None)] environment: Option<Vec<String>>,
-    #[default(None)] ignore_pypi: Option<bool>,
+    #[default(false)] ignore_pypi: bool,
     #[default(None)] directory: Option<PathBuf>,
 ) -> CondaDenyBundleConfig {
     let cli = CondaDenyCliConfig::Bundle {
@@ -76,8 +76,8 @@ fn check_config(
     #[default(None)] prefix: Option<Vec<PathBuf>>,
     #[default(None)] platform: Option<Vec<Platform>>,
     #[default(None)] environment: Option<Vec<String>>,
-    #[default(None)] osi: Option<bool>,
-    #[default(None)] ignore_pypi: Option<bool>,
+    #[default(false)] osi: bool,
+    #[default(false)] ignore_pypi: bool,
     #[default(Some(OutputFormat::Default))] output: Option<OutputFormat>,
 ) -> CondaDenyCheckConfig {
     let cli = CondaDenyCliConfig::Check {
@@ -153,12 +153,12 @@ fn test_lockfile_pattern(#[case] subcommand: &str) {
         None,
         None,
         None,
-        None,
-        None,
+        false,
+        false,
         None,
     );
 
-    let list_config = list_config(Some(config), None, None, None, None, None, None);
+    let list_config = list_config(Some(config), None, None, None, None, false, None);
 
     if subcommand == "check" {
         let result = check(check_config, &mut out);
@@ -201,8 +201,8 @@ license-allowlist = "https://raw.githubusercontent.com/Quantco/conda-deny/refs/h
         None,
         None,
         None,
-        None,
-        None,
+        false,
+        false,
         None,
     );
 
@@ -249,8 +249,8 @@ fn test_multiple_allowlists_check() {
         None,
         None,
         None,
-        None,
-        None,
+        false,
+        false,
         None,
     );
 
@@ -281,7 +281,7 @@ environment = "lint""#;
     let mut out = out();
     // Inject the temporary file's path into check_config
     let temp_path = Some(temp_pixi_toml.path().to_path_buf());
-    let check_config = check_config(temp_path, None, None, None, None, None, None, None);
+    let check_config = check_config(temp_path, None, None, None, None, false, false, None);
 
     let result = check(check_config, &mut out);
     let output = String::from_utf8(out).unwrap();
@@ -314,8 +314,8 @@ safe-licenses = ["BSD-3-Clause"]"#;
         None,
         None,
         None,
-        None,
-        None,
+        false,
+        false,
         None,
     );
 
@@ -342,7 +342,7 @@ fn test_osi_check(
         // ENVIRONMENT
         None,
         // OSI FLAG
-        Some(true)
+        true
     )]
     check_config: CondaDenyCheckConfig,
     mut out: Vec<u8>,
@@ -418,9 +418,9 @@ fn test_pypi_ignore_check(
         // ENVIRONMENT
         None,
         // OSI FLAG
-        None,
+        false,
         // IGNORE PYPI
-        Some(true)
+        true
     )]
     check_config: CondaDenyCheckConfig,
     mut out: Vec<u8>,
@@ -449,9 +449,9 @@ fn test_pypi_ignore_error(
         // ENVIRONMENT
         None,
         // OSI FLAG
-        None,
+        false,
         // IGNORE PYPI
-        Some(false)
+        false
     )]
     check_config: CondaDenyCheckConfig,
     mut out: Vec<u8>,
@@ -481,7 +481,7 @@ fn test_bundle_prefix() {
         // ENVIRONMENT
         None,
         // IGNORE PYPI
-        None,
+        false,
         // DIRECTORY
         Some(temp_dir.path().join(Path::new("test_bundle"))),
     );
@@ -529,7 +529,7 @@ fn test_bundle_lockfile() {
         // ENVIRONMENT
         None,
         // IGNORE PYPI
-        None,
+        false,
         // DIRECTORY
         Some(temp_dir.path().join(Path::new("test_bundle"))),
     );

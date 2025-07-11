@@ -43,11 +43,11 @@ pub enum CondaDenyCliConfig {
 
         /// Check against OSI licenses instead of custom license allowlists.
         #[arg(long)]
-        osi: Option<bool>,
+        osi: bool,
 
         /// Ignore when encountering pypi packages instead of failing.
         #[arg(long)]
-        ignore_pypi: Option<bool>,
+        ignore_pypi: bool,
 
         /// Output format
         #[arg(short, long)]
@@ -73,7 +73,7 @@ pub enum CondaDenyCliConfig {
 
         /// Ignore when encountering pypi packages instead of failing.
         #[arg(long)]
-        ignore_pypi: Option<bool>,
+        ignore_pypi: bool,
 
         /// Output format
         #[arg(short, long)]
@@ -100,7 +100,7 @@ pub enum CondaDenyCliConfig {
 
         /// Ignore when encountering pypi packages instead of failing.
         #[arg(long)]
-        ignore_pypi: Option<bool>,
+        ignore_pypi: bool,
 
         /// Directory to bundle licenses into
         #[arg(short, long)]
@@ -141,7 +141,7 @@ impl CondaDenyCliConfig {
         }
     }
 
-    pub fn ignore_pypi(&self) -> Option<bool> {
+    pub fn ignore_pypi(&self) -> bool {
         match self {
             CondaDenyCliConfig::Check { ignore_pypi, .. } => *ignore_pypi,
             CondaDenyCliConfig::List { ignore_pypi, .. } => *ignore_pypi,
@@ -182,10 +182,10 @@ mod tests {
 
     #[test]
     fn test_cli_with_check_arguments() {
-        let cli = Cli::try_parse_from(vec!["conda-deny", "check", "--osi", "true"]).unwrap();
+        let cli = Cli::try_parse_from(vec!["conda-deny", "check", "--osi"]).unwrap();
         match cli.command {
             CondaDenyCliConfig::Check { osi, .. } => {
-                assert_eq!(osi, Some(true));
+                assert!(osi);
             }
             _ => panic!("Expected check subcommand with --include-safe"),
         }

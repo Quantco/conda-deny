@@ -152,7 +152,7 @@ fn get_lockfile_or_prefix(
             environments: cli_config.environment(),
             lockfiles: resolve_glob_patterns(&lockfile_patterns)?,
             platforms: cli_config.platform(),
-            ignore_pypi: cli_config.ignore_pypi().unwrap_or(IGNORE_PYPI_DEFAULT),
+            ignore_pypi: cli_config.ignore_pypi() || IGNORE_PYPI_DEFAULT,
         };
         Ok(LockfileOrPrefix::Lockfile(lockfile_spec))
     } else {
@@ -173,10 +173,8 @@ fn get_lockfile_or_prefix(
         let environments = cli_config
             .environment()
             .or(toml_config.get_environment_spec());
-        let ignore_pypi = cli_config
-            .ignore_pypi()
-            .or(toml_config.get_ignore_pypi())
-            .unwrap_or(IGNORE_PYPI_DEFAULT);
+        let ignore_pypi = cli_config.ignore_pypi()
+            || toml_config.get_ignore_pypi().unwrap_or(IGNORE_PYPI_DEFAULT);
         Ok(LockfileOrPrefix::Lockfile(LockfileSpec {
             lockfiles,
             platforms,
@@ -232,7 +230,7 @@ pub fn get_config_options(
 
     let config = match cli_config {
         CondaDenyCliConfig::Check { osi, .. } => {
-            let osi = osi.or(toml_config.get_osi()).unwrap_or(false);
+            let osi = osi || toml_config.get_osi().unwrap_or(false);
 
             let (safe_licenses, ignore_packages) =
                 get_license_information_from_toml_config(&toml_config)?;
