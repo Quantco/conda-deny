@@ -54,7 +54,7 @@ pub fn bundle<W: Write>(config: CondaDenyBundleConfig, mut out: W) -> Result<()>
                     pkg.location()
                         .as_url()
                         .ok_or_else(|| {
-                            anyhow!(format!("URL for package could not be resolved: {:?}", pkg))
+                            anyhow!(format!("URL for package could not be resolved: {pkg:?}"))
                         })
                         .cloned()
                 },
@@ -73,7 +73,7 @@ pub fn bundle<W: Write>(config: CondaDenyBundleConfig, mut out: W) -> Result<()>
             let mut prefix_records = vec![];
             for prefix in prefix_paths {
                 let recs = PrefixRecord::collect_from_prefix(prefix.as_path())
-                    .with_context(|| format!("Failed to collect from: {:?}", prefix))?;
+                    .with_context(|| format!("Failed to collect from: {prefix:?}"))?;
                 prefix_records.extend(recs);
             }
 
@@ -95,9 +95,9 @@ pub fn bundle<W: Write>(config: CondaDenyBundleConfig, mut out: W) -> Result<()>
     let path = config.directory.unwrap_or(PathBuf::from("bundle"));
     let path = Path::new(&path);
     create_license_file_directory(path, license_files)
-        .with_context(|| format!("Failed to create license file directory: {:?}", path))?;
-    writeln!(out, "License files written to: {:?}", path)
-        .with_context(|| format!("Failed to write license file: {:?}", path))?;
+        .with_context(|| format!("Failed to create license file directory: {path:?}"))?;
+    writeln!(out, "License files written to: {path:?}")
+        .with_context(|| format!("Failed to write license file: {path:?}"))?;
 
     Ok(())
 }
@@ -133,7 +133,7 @@ where
                 files.len(),
                 get_name(item)
             );
-            trace!("License files: {:?}", files);
+            trace!("License files: {files:?}");
 
             let package_name = get_filename(item);
             Ok(files
@@ -157,19 +157,18 @@ where
 fn create_license_file_directory(path: &Path, license_files: Vec<LicenseFile>) -> Result<()> {
     if path.exists() {
         warn!(
-            "Output directory already exists. Removing and creating a new one: {:?}",
-            path
+            "Output directory already exists. Removing and creating a new one: {path:?}"
         );
         std::fs::remove_dir_all(path)
-            .with_context(|| format!("Failed to remove existing directory: {:?}", path))?;
+            .with_context(|| format!("Failed to remove existing directory: {path:?}"))?;
     }
     std::fs::create_dir_all(path)
-        .with_context(|| format!("Failed to create output directory: {:?}", path))?;
+        .with_context(|| format!("Failed to create output directory: {path:?}"))?;
     for license_file in &license_files {
         let package_name = license_file.package_name.to_string();
         let package_path = path.join(package_name);
         std::fs::create_dir_all(&package_path)
-            .with_context(|| format!("Failed to create package directory: {:?}", package_path))?;
+            .with_context(|| format!("Failed to create package directory: {package_path:?}"))?;
 
         let relative_path = Path::new(&license_file.filename)
             .strip_prefix("info/licenses")
@@ -179,10 +178,10 @@ fn create_license_file_directory(path: &Path, license_files: Vec<LicenseFile>) -
 
         let parent = file_path.parent().expect("Parent dir always exists");
         std::fs::create_dir_all(parent)
-            .with_context(|| format!("Failed to create directory for: {:?}", file_path))?;
+            .with_context(|| format!("Failed to create directory for: {file_path:?}"))?;
 
         let mut file = std::fs::File::create(&file_path)
-            .with_context(|| format!("Failed to create license file: {:?}", file_path))?;
+            .with_context(|| format!("Failed to create license file: {file_path:?}"))?;
         file.write_all(
             &license_file
                 .license_text
@@ -190,7 +189,7 @@ fn create_license_file_directory(path: &Path, license_files: Vec<LicenseFile>) -
                 .into_iter()
                 .collect::<Vec<u8>>(),
         )
-        .with_context(|| format!("Failed to write license text to file: {:?}", file_path))?;
+        .with_context(|| format!("Failed to write license text to file: {file_path:?}"))?;
     }
     Ok(())
 }

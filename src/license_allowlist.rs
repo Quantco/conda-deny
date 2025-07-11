@@ -41,10 +41,7 @@ pub fn is_package_ignored(
     package_version: &str,
 ) -> Result<bool> {
     let parsed_package_version = Version::from_str(package_version).with_context(|| {
-        format!(
-            "Error parsing package version: {} for package: {}",
-            package_version, package_name
-        )
+        format!("Error parsing package version: {package_version} for package: {package_name}")
     })?;
 
     for ignore_package in ignore_packages {
@@ -55,8 +52,7 @@ pub fn is_package_ignored(
                         VersionSpec::from_str(version_req_str, ParseStrictness::Strict)
                             .with_context(|| {
                                 format!(
-                                    "Error parsing version requirement: {} for package: {}",
-                                    version_req_str, package_name
+                                    "Error parsing version requirement: {version_req_str} for package: {package_name}"
                                 )
                             })?;
 
@@ -79,17 +75,17 @@ pub fn license_config_from_toml_str(
     toml_file: &str,
 ) -> Result<(Vec<Expression>, Vec<IgnorePackage>)> {
     let config_content = fs::read_to_string(toml_file)
-        .with_context(|| format!("Failed to read TOML file: {}", toml_file))?;
+        .with_context(|| format!("Failed to read TOML file: {toml_file}"))?;
 
     let config: LicenseAllowlistConfig = toml::from_str(&config_content)
-        .with_context(|| format!("Failed to parse TOML content from file: {}", toml_file))?;
+        .with_context(|| format!("Failed to parse TOML content from file: {toml_file}"))?;
 
     let mut expressions = Vec::new();
 
     if let Some(safe_licenses) = config.tool.conda_deny.safe_licenses {
         for license in safe_licenses {
             let expr = parse_expression(&license)
-                .with_context(|| format!("Failed to parse license expression: {}", license))?;
+                .with_context(|| format!("Failed to parse license expression: {license}"))?;
             expressions.push(expr);
         }
     }
@@ -116,7 +112,7 @@ impl ReadRemoteConfig for RealRemoteConfigReader {
         if let Some(token) = get_bearer_token() {
             headers.insert(
                 AUTHORIZATION,
-                HeaderValue::from_str(&format!("Bearer {}", token))
+                HeaderValue::from_str(&format!("Bearer {token}"))
                     .with_context(|| "Invalid Header value for AUTHORIZATION")?,
             );
         }
@@ -166,15 +162,12 @@ pub fn fetch_safe_licenses(
     })?;
 
     let config: LicenseAllowlistConfig = toml::from_str(&config_str).with_context(|| {
-        format!(
-            "Failed to parse license allowlist to TOML for allowlist URL: {}",
-            url
-        )
+        format!("Failed to parse license allowlist to TOML for allowlist URL: {url}")
     })?;
     let mut expressions = Vec::new();
     for license in config.tool.conda_deny.safe_licenses.unwrap_or_default() {
         let expr = parse_expression(&license)
-            .with_context(|| format!("Failed to parse license expression: {}", license))?;
+            .with_context(|| format!("Failed to parse license expression: {license}"))?;
         expressions.push(expr);
     }
     let ignore_packages = config.tool.conda_deny.ignore_packages.unwrap_or_default();
@@ -199,10 +192,7 @@ pub fn build_license_allowlist(
                 }
                 Err(e) => {
                     return Err(e).with_context(|| {
-                        format!(
-                            "Failed to fetch safe licenses from URL: {}",
-                            license_allowlist_path
-                        )
+                        format!("Failed to fetch safe licenses from URL: {license_allowlist_path}")
                     });
                 }
             }
@@ -214,10 +204,7 @@ pub fn build_license_allowlist(
                 }
                 Err(e) => {
                     return Err(e).with_context(|| {
-                        format!(
-                            "Failed to parse TOML file at path: {}",
-                            license_allowlist_path
-                        )
+                        format!("Failed to parse TOML file at path: {license_allowlist_path}")
                     });
                 }
             }

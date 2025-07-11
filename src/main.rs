@@ -17,11 +17,11 @@ fn main() -> Result<()> {
         .filter_level(cli.verbose.log_level_filter())
         .init();
 
-    debug!("Parsed CLI config: {:?}", cli);
+    debug!("Parsed CLI config: {cli:?}");
 
     let config = get_config_options(cli.config, cli.command)?;
 
-    info!("Parsed config: {:?}", config);
+    info!("Parsed config: {config:?}");
 
     let stdout = io::stdout();
 
