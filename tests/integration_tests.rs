@@ -112,8 +112,6 @@ fn out() -> Vec<u8> {
 fn test_default_use_case(#[case] subcommand: &str, #[case] test_name: &str) {
     use core::str;
 
-    use log::debug;
-
     let path_string = format!("tests/{test_name}");
     let test_dir = Path::new(path_string.as_str());
 
@@ -121,19 +119,16 @@ fn test_default_use_case(#[case] subcommand: &str, #[case] test_name: &str) {
         .unwrap()
         .arg(subcommand)
         .current_dir(test_dir)
-        .env("CLICOLOR_FORCE", "1")
+        // .env("CLICOLOR_FORCE", "1") <-- Uncomment to force colored output
         .output()
         .expect("Failed to execute command");
 
     let stdout = str::from_utf8(&output.stdout).unwrap();
-    debug!("Output: {stdout}");
     if subcommand == "check" {
-        assert!(stdout.contains("There were \u{1b}[32m247\u{1b}[0m safe licenses and \u{1b}[31m301\u{1b}[0m unsafe licenses."), "{stdout}");
+        insta::assert_snapshot!(format!("{subcommand}_{test_name}"), stdout);
         output.assert().failure();
     } else {
-        assert!(stdout.contains("\u{1b}[34mzstandard\u{1b}[0m \u{1b}[36m0.22.0\u{1b}[0m-\u{1b}[3;96mpy312h721a963_1\u{1b}[0m (\u{1b}[95mosx-arm64\u{1b}[0m): \u{1b}[33mBSD-3-Clause"));
-        assert!(stdout.contains("\u{1b}[34mzlib\u{1b}[0m \u{1b}[36m1.3.1\u{1b}[0m-\u{1b}[3;96mh4ab18f5_1\u{1b}[0m (\u{1b}[95mlinux-64\u{1b}[0m): \u{1b}[33mZlib"));
-        assert!(stdout.contains("\u{1b}[34mxz\u{1b}[0m \u{1b}[36m5.2.6\u{1b}[0m-\u{1b}[3;96mh166bdaf_0\u{1b}[0m (\u{1b}[95mlinux-64\u{1b}[0m): \u{1b}[33mLGPL-2.1 and GPL-2.0"));
+        insta::assert_snapshot!(format!("{subcommand}_{test_name}"), stdout);
         output.assert().success();
     }
 }
@@ -164,16 +159,13 @@ fn test_lockfile_pattern(#[case] subcommand: &str) {
         let result = check(check_config, &mut out);
         let output = String::from_utf8(strip_ansi_escapes::strip(out)).unwrap();
 
-        assert!(output.contains("There were 1 safe licenses and 21 unsafe licenses."));
+        insta::assert_snapshot!(format!("{subcommand}"), output);
         assert!(result.is_err());
     } else if subcommand == "list" {
         let result = list(list_config, &mut out);
         let output = String::from_utf8(strip_ansi_escapes::strip(out)).unwrap();
 
-        // only in subdir lockfile
-        assert!(output.contains("k9s 0.50.4-h643be8f_0 (linux-64): Apache-2.0"));
-        // only in subdir/another_subdir lockfile
-        assert!(output.contains("vhs 0.7.2-ha770c72_0 (linux-64): MIT"));
+        insta::assert_snapshot!(format!("{subcommand}"), output);
         assert!(result.is_ok())
     } else {
         panic!("Invalid subcommand");
@@ -183,7 +175,7 @@ fn test_lockfile_pattern(#[case] subcommand: &str) {
 #[test]
 fn test_remote_allowlist_check() {
     colored::control::set_override(false);
-    
+
     // Create a temporary file for the license_allowlist.toml
     let mut temp_config_file = NamedTempFile::new().unwrap();
     let file_content = r#"[tool.conda-deny]
