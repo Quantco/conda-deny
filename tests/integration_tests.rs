@@ -16,6 +16,13 @@ use tempfile::NamedTempFile;
 use walkdir::WalkDir;
 
 #[fixture]
+#[once]
+fn colored_control() {
+    // Disable colored output for tests
+    colored::control::set_override(false);
+}
+
+#[fixture]
 fn list_config(
     #[default(None)] config: Option<PathBuf>,
     #[default(None)] lockfile: Option<Vec<String>>,
@@ -174,8 +181,6 @@ fn test_lockfile_pattern(#[case] subcommand: &str) {
 
 #[test]
 fn test_remote_allowlist_check() {
-    colored::control::set_override(false);
-
     // Create a temporary file for the license_allowlist.toml
     let mut temp_config_file = NamedTempFile::new().unwrap();
     let file_content = r#"[tool.conda-deny]
@@ -209,7 +214,6 @@ license-allowlist = "https://raw.githubusercontent.com/Quantco/conda-deny/refs/h
 
 #[test]
 fn test_multiple_allowlists_check() {
-    colored::control::set_override(false);
     // Create a temporary file for the license_allowlist.toml
     let mut temp_license_allowlist = NamedTempFile::new().unwrap();
     let file_content = r#"[tool.conda-deny]
@@ -254,9 +258,8 @@ fn test_multiple_allowlists_check() {
     insta::assert_snapshot!(output);
 }
 
-#[test]
-fn test_platform_env_restrictions_check() {
-    colored::control::set_override(false);
+#[rstest]
+fn test_platform_env_restrictions_check(_colored_control: ()) {
 
     // Create a temporary file for pixi.toml
     let mut temp_pixi_toml = NamedTempFile::new().unwrap();
@@ -283,9 +286,8 @@ environment = "lint""#;
     insta::assert_snapshot!(output);
 }
 
-#[test]
-fn test_safe_licenses_in_config_check() {
-    colored::control::set_override(false);
+#[rstest]
+fn test_safe_licenses_in_config_check(_colored_control: ()) {
 
     // Create a temporary file for pixi.toml
     let mut temp_pixi_toml = NamedTempFile::new().unwrap();
@@ -337,8 +339,8 @@ fn test_osi_check(
     )]
     check_config: CondaDenyCheckConfig,
     mut out: Vec<u8>,
+    _colored_control: ()
 ) {
-    colored::control::set_override(false);
     let result = check(check_config, &mut out);
     let output = String::from_utf8(out).unwrap();
 
@@ -358,10 +360,10 @@ fn test_prefix_list(
 )]
     list_config: CondaDenyListConfig,
     mut out: Vec<u8>,
+    _colored_control: ()
 ) {
     // When --prefix is specified, only the license information for the conda-meta directory in the specified prefix should be listed
     // License information from pixi.lock should not be listed
-    colored::control::set_override(false);
     let result = list(list_config, &mut out);
     let output = String::from_utf8(out).unwrap();
 
@@ -379,8 +381,8 @@ fn test_exception_check(
     )]
     check_config: CondaDenyCheckConfig,
     mut out: Vec<u8>,
+    _colored_control: ()
 ) {
-    colored::control::set_override(false);
     let result = check(check_config, &mut out);
     let output = String::from_utf8(out).unwrap();
 
@@ -408,8 +410,8 @@ fn test_pypi_ignore_check(
     )]
     check_config: CondaDenyCheckConfig,
     mut out: Vec<u8>,
+    _colored_control: ()
 ) {
-    colored::control::set_override(false);
     let result = check(check_config, &mut out);
     let output = String::from_utf8(out).unwrap();
 
