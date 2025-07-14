@@ -159,13 +159,13 @@ fn test_lockfile_pattern(#[case] subcommand: &str) {
         let result = check(check_config, &mut out);
         let output = String::from_utf8(strip_ansi_escapes::strip(out)).unwrap();
 
-        insta::assert_snapshot!(format!("{subcommand}"), output);
+        insta::assert_snapshot!(subcommand, output);
         assert!(result.is_err());
     } else if subcommand == "list" {
         let result = list(list_config, &mut out);
         let output = String::from_utf8(strip_ansi_escapes::strip(out)).unwrap();
 
-        insta::assert_snapshot!(format!("{subcommand}"), output);
+        insta::assert_snapshot!(subcommand, output);
         assert!(result.is_ok())
     } else {
         panic!("Invalid subcommand");
