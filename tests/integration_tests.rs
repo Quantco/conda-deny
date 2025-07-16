@@ -16,6 +16,13 @@ use tempfile::NamedTempFile;
 use walkdir::WalkDir;
 
 #[fixture]
+#[once]
+fn colored_control() {
+    // Disable colored output for tests
+    colored::control::set_override(false);
+}
+
+#[fixture]
 fn list_config(
     #[default(None)] config: Option<PathBuf>,
     #[default(None)] lockfile: Option<Vec<String>>,
@@ -112,8 +119,6 @@ fn out() -> Vec<u8> {
 fn test_default_use_case(#[case] subcommand: &str, #[case] test_name: &str) {
     use core::str;
 
-    use log::debug;
-
     let path_string = format!("tests/{test_name}");
     let test_dir = Path::new(path_string.as_str());
 
@@ -121,19 +126,16 @@ fn test_default_use_case(#[case] subcommand: &str, #[case] test_name: &str) {
         .unwrap()
         .arg(subcommand)
         .current_dir(test_dir)
-        .env("CLICOLOR_FORCE", "1")
+        // .env("CLICOLOR_FORCE", "1") <-- Uncomment to force colored output
         .output()
         .expect("Failed to execute command");
 
     let stdout = str::from_utf8(&output.stdout).unwrap();
-    debug!("Output: {stdout}");
     if subcommand == "check" {
-        assert!(stdout.contains("There were \u{1b}[32m247\u{1b}[0m safe licenses and \u{1b}[31m301\u{1b}[0m unsafe licenses."), "{stdout}");
+        insta::assert_snapshot!(format!("{subcommand}_{test_name}"), stdout);
         output.assert().failure();
     } else {
-        assert!(stdout.contains("\u{1b}[34mzstandard\u{1b}[0m \u{1b}[36m0.22.0\u{1b}[0m-\u{1b}[3;96mpy312h721a963_1\u{1b}[0m (\u{1b}[95mosx-arm64\u{1b}[0m): \u{1b}[33mBSD-3-Clause"));
-        assert!(stdout.contains("\u{1b}[34mzlib\u{1b}[0m \u{1b}[36m1.3.1\u{1b}[0m-\u{1b}[3;96mh4ab18f5_1\u{1b}[0m (\u{1b}[95mlinux-64\u{1b}[0m): \u{1b}[33mZlib"));
-        assert!(stdout.contains("\u{1b}[34mxz\u{1b}[0m \u{1b}[36m5.2.6\u{1b}[0m-\u{1b}[3;96mh166bdaf_0\u{1b}[0m (\u{1b}[95mlinux-64\u{1b}[0m): \u{1b}[33mLGPL-2.1 and GPL-2.0"));
+        insta::assert_snapshot!(format!("{subcommand}_{test_name}"), stdout);
         output.assert().success();
     }
 }
@@ -164,16 +166,13 @@ fn test_lockfile_pattern(#[case] subcommand: &str) {
         let result = check(check_config, &mut out);
         let output = String::from_utf8(strip_ansi_escapes::strip(out)).unwrap();
 
-        assert!(output.contains("There were 1 safe licenses and 21 unsafe licenses."));
+        insta::assert_snapshot!(subcommand, output);
         assert!(result.is_err());
     } else if subcommand == "list" {
         let result = list(list_config, &mut out);
         let output = String::from_utf8(strip_ansi_escapes::strip(out)).unwrap();
 
-        // only in subdir lockfile
-        assert!(output.contains("k9s 0.50.4-h643be8f_0 (linux-64): Apache-2.0"));
-        // only in subdir/another_subdir lockfile
-        assert!(output.contains("vhs 0.7.2-ha770c72_0 (linux-64): MIT"));
+        insta::assert_snapshot!(subcommand, output);
         assert!(result.is_ok())
     } else {
         panic!("Invalid subcommand");
@@ -209,10 +208,8 @@ license-allowlist = "https://raw.githubusercontent.com/Quantco/conda-deny/refs/h
     let result = check(check_config, &mut out);
     let output = String::from_utf8(out).unwrap();
 
-    assert!(output.contains(
-        "There were \u{1b}[32m242\u{1b}[0m safe licenses and \u{1b}[31m299\u{1b}[0m unsafe licenses."
-    ));
     assert!(result.is_err());
+    insta::assert_snapshot!(output);
 }
 
 #[test]
@@ -257,14 +254,13 @@ fn test_multiple_allowlists_check() {
     let result = check(check_config, &mut out);
     let output = String::from_utf8(out).unwrap();
 
-    assert!(output.contains(
-        "There were \u{1b}[32m343\u{1b}[0m safe licenses and \u{1b}[31m198\u{1b}[0m unsafe licenses."
-    ));
     assert!(result.is_err());
+    insta::assert_snapshot!(output);
 }
 
-#[test]
-fn test_platform_env_restrictions_check() {
+#[rstest]
+fn test_platform_env_restrictions_check(_colored_control: ()) {
+
     // Create a temporary file for pixi.toml
     let mut temp_pixi_toml = NamedTempFile::new().unwrap();
     let file_content = r#"[tool.conda-deny]
@@ -286,14 +282,13 @@ environment = "lint""#;
     let result = check(check_config, &mut out);
     let output = String::from_utf8(out).unwrap();
 
-    assert!(output.contains(
-        "There were \u{1b}[32m27\u{1b}[0m safe licenses and \u{1b}[31m21\u{1b}[0m unsafe licenses."
-    ), "{output:?}");
     assert!(result.is_err());
+    insta::assert_snapshot!(output);
 }
 
-#[test]
-fn test_safe_licenses_in_config_check() {
+#[rstest]
+fn test_safe_licenses_in_config_check(_colored_control: ()) {
+
     // Create a temporary file for pixi.toml
     let mut temp_pixi_toml = NamedTempFile::new().unwrap();
     let file_content = r#"[tool.conda-deny]
@@ -322,10 +317,8 @@ safe-licenses = ["BSD-3-Clause"]"#;
     let result = check(check_config, &mut out);
     let output = String::from_utf8(out).unwrap();
 
-    assert!(output.contains(
-        "There were \u{1b}[32m343\u{1b}[0m safe licenses and \u{1b}[31m198\u{1b}[0m unsafe licenses."
-    ));
     assert!(result.is_err());
+    insta::assert_snapshot!(output);
 }
 
 #[rstest]
@@ -346,15 +339,13 @@ fn test_osi_check(
     )]
     check_config: CondaDenyCheckConfig,
     mut out: Vec<u8>,
+    _colored_control: ()
 ) {
     let result = check(check_config, &mut out);
-
     let output = String::from_utf8(out).unwrap();
 
-    assert!(output.contains(
-        "There were \u{1b}[32m457\u{1b}[0m safe licenses and \u{1b}[31m84\u{1b}[0m unsafe licenses."
-    ));
     assert!(result.is_err());
+    insta::assert_snapshot!(output);
 }
 
 #[rstest]
@@ -369,18 +360,15 @@ fn test_prefix_list(
 )]
     list_config: CondaDenyListConfig,
     mut out: Vec<u8>,
+    _colored_control: ()
 ) {
     // When --prefix is specified, only the license information for the conda-meta directory in the specified prefix should be listed
     // License information from pixi.lock should not be listed
     let result = list(list_config, &mut out);
-    assert!(result.is_ok(), "{:?}", result.unwrap_err());
     let output = String::from_utf8(out).unwrap();
-    let line_count = output.split("\n").count();
-    let expected_line_count = 51;
-    assert_eq!(
-        line_count, expected_line_count,
-        "Unexpected number of output lines"
-    );
+
+    assert!(result.is_ok(), "{:?}", result.unwrap_err());
+    insta::assert_snapshot!(output);
 }
 
 #[rstest]
@@ -393,15 +381,13 @@ fn test_exception_check(
     )]
     check_config: CondaDenyCheckConfig,
     mut out: Vec<u8>,
+    _colored_control: ()
 ) {
     let result = check(check_config, &mut out);
-
     let output = String::from_utf8(out).unwrap();
 
-    assert!(output.contains(
-        "There were \u{1b}[32m527\u{1b}[0m safe licenses and \u{1b}[31m14\u{1b}[0m unsafe licenses."
-    ), "{output:?}");
     assert!(result.is_err());
+    insta::assert_snapshot!(output);
 }
 
 #[rstest]
@@ -424,15 +410,13 @@ fn test_pypi_ignore_check(
     )]
     check_config: CondaDenyCheckConfig,
     mut out: Vec<u8>,
+    _colored_control: ()
 ) {
     let result = check(check_config, &mut out);
-
     let output = String::from_utf8(out).unwrap();
 
-    assert!(output.contains(
-        "There were \u{1b}[32m5\u{1b}[0m safe licenses and \u{1b}[31m17\u{1b}[0m unsafe licenses."
-    ));
     assert!(result.is_err());
+    insta::assert_snapshot!(output);
 }
 
 #[rstest]
@@ -492,23 +476,24 @@ fn test_bundle_prefix() {
     bundle(bundle_config.clone(), &mut out).unwrap();
     let bundle_dir = bundle_config.directory.unwrap();
 
-    let mut files = Vec::new();
-    let mut dirs = Vec::new();
+    let mut entries = Vec::new();
 
     for e in WalkDir::new(&bundle_dir).into_iter().filter_map(|e| e.ok()) {
-        if e.metadata().unwrap().is_file() {
-            files.push(e.path().to_path_buf());
-        }
-        if e.metadata().unwrap().is_dir() {
-            dirs.push(e.path().to_path_buf());
-        }
+        let full_path = e.path();
+        let rel_path = full_path.strip_prefix(&bundle_dir).unwrap().to_path_buf();
+        entries.push(rel_path);
     }
-    assert_eq!(files.len(), 48, "{files:?}");
-    assert_eq!(dirs.len(), 52, "{dirs:?}");
 
-    let top_level_entries = std::fs::read_dir(bundle_dir).unwrap();
-    let top_level_entry_count = top_level_entries.count();
-    assert_eq!(top_level_entry_count, 47);
+    let mut entry_output = entries
+        .iter()
+        .map(|p| p.display().to_string())
+        .collect::<Vec<_>>();
+
+    entry_output.sort();
+    let pretty_output = entry_output.join("\n");
+
+    insta::assert_snapshot!(pretty_output);
+
     let output = String::from_utf8(out).unwrap();
     assert!(output.contains("License files written to:"));
 }
@@ -540,23 +525,24 @@ fn test_bundle_lockfile() {
     bundle(bundle_config.clone(), &mut out).unwrap();
     let bundle_dir = bundle_config.directory.unwrap();
 
-    let mut files = Vec::new();
-    let mut dirs = Vec::new();
+    let mut entries = Vec::new();
 
     for e in WalkDir::new(&bundle_dir).into_iter().filter_map(|e| e.ok()) {
-        if e.metadata().unwrap().is_file() {
-            files.push(e.path().to_path_buf());
-        }
-        if e.metadata().unwrap().is_dir() {
-            dirs.push(e.path().to_path_buf());
-        }
+        let full_path = e.path();
+        let rel_path = full_path.strip_prefix(&bundle_dir).unwrap().to_path_buf();
+        entries.push(rel_path);
     }
-    assert_eq!(files.len(), 6649);
-    assert_eq!(dirs.len(), 4724);
 
-    let top_level_entries = std::fs::read_dir(bundle_dir).unwrap();
-    let top_level_entry_count = top_level_entries.count();
-    assert_eq!(top_level_entry_count, 356);
+    let mut entry_output = entries
+        .iter()
+        .map(|p| p.display().to_string())
+        .collect::<Vec<_>>();
+
+    entry_output.sort();
+    let pretty_output = entry_output.join("\n");
+
+    insta::assert_snapshot!(pretty_output);
+
     let output = String::from_utf8(out).unwrap();
     assert!(output.contains("License files written to:"));
 }

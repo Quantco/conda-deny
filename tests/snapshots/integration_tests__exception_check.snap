@@ -1,0 +1,23 @@
+---
+source: tests/integration_tests.rs
+expression: output
+---
+❌ The following dependencies are unsafe:
+
+distlib 0.3.8-pyhd8ed1ab_0 (noarch): Apache-2.0 
+distro 1.9.0-pyhd8ed1ab_0 (noarch): Apache-2.0 
+openssl 3.3.1-h2466b09_1 (win-64): Apache-2.0 
+openssl 3.3.1-h87427d6_1 (osx-64): Apache-2.0 
+openssl 3.3.1-h68df207_1 (linux-aarch64): Apache-2.0 
+openssl 3.3.1-hfb2fe0b_1 (osx-arm64): Apache-2.0 
+openssl 3.3.1-h4ab18f5_1 (linux-64): Apache-2.0 
+openssl 3.3.1-h2466b09_1 (win-64): Apache-2.0 
+openssl 3.3.1-h87427d6_1 (osx-64): Apache-2.0 
+openssl 3.3.1-h68df207_1 (linux-aarch64): Apache-2.0 
+openssl 3.3.1-hfb2fe0b_1 (osx-arm64): Apache-2.0 
+openssl 3.3.1-h4ab18f5_1 (linux-64): Apache-2.0 
+packaging 24.1-pyhd8ed1ab_0 (noarch): Apache-2.0 
+requests 2.32.3-pyhd8ed1ab_0 (noarch): Apache-2.0 
+
+❌ Unsafe licenses found! ❌
+There were 527 safe licenses and 14 unsafe licenses.
