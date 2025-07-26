@@ -2,12 +2,12 @@ use std::path::{Path, PathBuf};
 
 use anyhow::{Context, Result};
 use colored::Colorize;
+use rattler_conda_types::prefix_record::PrefixRecord;
 use rattler_conda_types::PackageRecord;
 use serde::Serialize;
 use spdx::Expression;
 
 use crate::{
-    conda_meta_entry::{CondaMetaEntries, CondaMetaEntry},
     expression_utils::{check_expression_safety, extract_license_texts, parse_expression},
     license_allowlist::is_package_ignored,
     pixi_lock::get_conda_packages_for_pixi_lock,
@@ -24,16 +24,6 @@ pub struct LicenseInfo {
 }
 
 impl LicenseInfo {
-    pub fn from_conda_meta_entry(entry: &CondaMetaEntry) -> Self {
-        LicenseInfo {
-            package_name: entry.name.clone(),
-            version: entry.version.clone(),
-            license: entry.license.clone(),
-            platform: Some(entry.platform.clone()),
-            build: entry.build.clone(),
-        }
-    }
-
     pub fn from_package_record(package_record: PackageRecord) -> Self {
         let license_str = match &package_record.license {
             Some(license) => license.clone(),
@@ -157,32 +147,31 @@ impl LicenseInfos {
         let mut license_infos = Vec::new();
         assert!(!prefixes.is_empty());
         for conda_prefix in prefixes {
-            let conda_meta_path = conda_prefix.join("conda-meta");
-            let conda_meta_entries =
-                CondaMetaEntries::from_dir(&conda_meta_path).with_context(|| {
-                    format!(
-                        "Failed to parse conda meta entries from conda-meta: {conda_meta_path:?}"
-                    )
+            // This is needed because collect_from_prefix silently ignores non-existing prefixes
+            if !conda_prefix.join("conda-meta").exists() {
+                anyhow::bail!("Error: The prefix path {:?} does not exist.", conda_prefix);
+            }
+
+            let prefix_records: Vec<PrefixRecord> = PrefixRecord::collect_from_prefix(conda_prefix)
+                .with_context(|| {
+                    format!("Failed to collect prefix records from: {:?}", conda_prefix)
                 })?;
 
-            let license_infos_for_meta = LicenseInfos::from_conda_meta_entries(conda_meta_entries);
+            let package_records: Vec<PackageRecord> = prefix_records
+                .iter()
+                .map(|record| record.repodata_record.package_record.clone())
+                .collect();
 
-            license_infos.extend(license_infos_for_meta.license_infos);
+            for package_record in package_records {
+                let license_info = LicenseInfo::from_package_record(package_record.to_owned());
+                license_infos.push(license_info);
+            }
         }
 
         license_infos.sort();
         license_infos.dedup();
 
         Ok(LicenseInfos { license_infos })
-    }
-
-    pub fn from_conda_meta_entries(conda_meta_entries: CondaMetaEntries) -> Self {
-        let license_infos = conda_meta_entries
-            .entries
-            .iter()
-            .map(LicenseInfo::from_conda_meta_entry)
-            .collect();
-        LicenseInfos { license_infos }
     }
 
     pub fn check(&self, config: &CondaDenyCheckConfig) -> Result<CheckOutput> {
@@ -272,32 +261,8 @@ where
 mod tests {
 
     use super::*;
-    use crate::{conda_meta_entry::CondaMetaEntry, LockfileOrPrefix, OutputFormat};
+    use crate::{LockfileOrPrefix, OutputFormat};
     use spdx::Expression;
-
-    #[test]
-    fn test_license_info_from_conda_meta_entry() {
-        let entry = CondaMetaEntry {
-            name: "test".to_string(),
-            version: "1.0".to_string(),
-            timestamp: 1234567890,
-            license: super::LicenseState::Invalid("Invalid-MIT".to_string()),
-            sha256: "123456".to_string(),
-            platform: "linux-64".to_string(),
-            build: "py_0".to_string(),
-        };
-
-        let license_info = LicenseInfo::from_conda_meta_entry(&entry);
-
-        assert_eq!(license_info.package_name, "test");
-        assert_eq!(license_info.version, "1.0");
-        assert_eq!(
-            license_info.license,
-            super::LicenseState::Invalid("Invalid-MIT".to_string())
-        );
-        assert_eq!(license_info.platform, Some("linux-64".to_string()));
-        assert_eq!(license_info.build, "py_0".to_string());
-    }
 
     #[test]
     fn test_exit_code_for_safe_and_unsafe_dependencies() {

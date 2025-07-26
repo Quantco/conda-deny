@@ -2,7 +2,6 @@ pub mod bundle;
 pub mod check;
 pub mod cli;
 pub mod conda_deny_config;
-mod conda_meta_entry;
 mod conda_meta_package;
 pub mod expression_utils;
 pub mod license_allowlist;
