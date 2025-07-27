@@ -1,9 +1,14 @@
-use std::path::{Path, PathBuf};
+use std::{
+    collections::BTreeSet,
+    path::{Path, PathBuf},
+};
 
 use anyhow::{Context, Result};
 use colored::Colorize;
 use rattler_conda_types::prefix_record::PrefixRecord;
 use rattler_conda_types::PackageRecord;
+use rattler_lock::CondaPackageData;
+use rayon::prelude::*;
 use serde::Serialize;
 use spdx::Expression;
 
@@ -111,67 +116,75 @@ impl LicenseInfos {
     }
 
     pub fn from_pixi_lockfiles(lockfile_spec: LockfileSpec) -> Result<LicenseInfos> {
-        let mut license_infos = Vec::new();
-        let mut conda_packages = Vec::new();
+        anyhow::ensure!(
+            !lockfile_spec.lockfiles.is_empty(),
+            "No lockfiles provided in LockfileSpec"
+        );
 
-        assert!(!lockfile_spec.lockfiles.is_empty());
-        for lockfile in lockfile_spec.lockfiles {
-            let path: &Path = Path::new(&lockfile);
-            let package_records_for_lockfile = get_conda_packages_for_pixi_lock(
-                path,
-                &lockfile_spec.environments,
-                &lockfile_spec.platforms,
-                lockfile_spec.ignore_pypi,
-            )
-            .with_context(|| {
-                format!(
-                    "Failed to get package records from lockfile: {:?}",
-                    &lockfile.to_str()
+        let conda_packages: Vec<CondaPackageData> = lockfile_spec
+            .lockfiles
+            .par_iter()
+            .map(|lockfile| {
+                let path = Path::new(lockfile);
+                get_conda_packages_for_pixi_lock(
+                    path,
+                    &lockfile_spec.environments,
+                    &lockfile_spec.platforms,
+                    lockfile_spec.ignore_pypi,
                 )
-            })?;
-            conda_packages.extend(package_records_for_lockfile);
-        }
+                .with_context(|| {
+                    format!(
+                        "Failed to get package records from lockfile: {}",
+                        lockfile.display()
+                    )
+                })
+            })
+            .collect::<Result<Vec<_>>>()?
+            .into_iter()
+            .flatten()
+            .collect();
 
-        for conda_package in conda_packages {
-            let license_info = LicenseInfo::from_package_record(conda_package.record().to_owned());
-            license_infos.push(license_info);
-        }
+        let license_infos: BTreeSet<_> = conda_packages
+            .into_iter()
+            .map(|pkg| LicenseInfo::from_package_record(pkg.record().to_owned()))
+            .collect();
 
-        license_infos.sort();
-        license_infos.dedup();
-
-        Ok(LicenseInfos { license_infos })
+        Ok(LicenseInfos {
+            license_infos: license_infos.into_iter().collect(),
+        })
     }
 
     pub fn from_conda_prefixes(prefixes: &[PathBuf]) -> Result<LicenseInfos> {
-        let mut license_infos = Vec::new();
-        assert!(!prefixes.is_empty());
+        let mut license_infos: BTreeSet<_> = BTreeSet::new();
+        anyhow::ensure!(!prefixes.is_empty(), "No conda prefixes provided");
+
         for conda_prefix in prefixes {
             // This is needed because collect_from_prefix silently ignores non-existing prefixes
-            if !conda_prefix.join("conda-meta").exists() {
-                anyhow::bail!("Error: The prefix path {:?} does not exist.", conda_prefix);
-            }
-
+            let meta_path = conda_prefix.join("conda-meta");
+            anyhow::ensure!(
+                meta_path.exists(),
+                "The conda prefix {:?} is invalid: {:?} directory is missing",
+                conda_prefix,
+                meta_path
+            );
             let prefix_records: Vec<PrefixRecord> = PrefixRecord::collect_from_prefix(conda_prefix)
                 .with_context(|| {
-                    format!("Failed to collect prefix records from: {conda_prefix:?}")
+                    format!(
+                        "Failed to collect prefix records from {}",
+                        conda_prefix.display()
+                    )
                 })?;
 
-            let package_records: Vec<PackageRecord> = prefix_records
-                .iter()
-                .map(|record| record.repodata_record.package_record.clone())
-                .collect();
-
-            for package_record in package_records {
-                let license_info = LicenseInfo::from_package_record(package_record.to_owned());
-                license_infos.push(license_info);
+            for record in prefix_records {
+                let license_info =
+                    LicenseInfo::from_package_record(record.repodata_record.package_record.clone());
+                license_infos.insert(license_info);
             }
         }
 
-        license_infos.sort();
-        license_infos.dedup();
-
-        Ok(LicenseInfos { license_infos })
+        Ok(LicenseInfos {
+            license_infos: license_infos.into_iter().collect(),
+        })
     }
 
     pub fn check(&self, config: &CondaDenyCheckConfig) -> Result<CheckOutput> {
