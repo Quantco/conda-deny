@@ -154,7 +154,7 @@ impl LicenseInfos {
 
             let prefix_records: Vec<PrefixRecord> = PrefixRecord::collect_from_prefix(conda_prefix)
                 .with_context(|| {
-                    format!("Failed to collect prefix records from: {:?}", conda_prefix)
+                    format!("Failed to collect prefix records from: {conda_prefix:?}")
                 })?;
 
             let package_records: Vec<PackageRecord> = prefix_records
