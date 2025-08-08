@@ -1,13 +1,18 @@
-use std::path::{Path, PathBuf};
+use std::{
+    collections::BTreeSet,
+    path::{Path, PathBuf},
+};
 
 use anyhow::{Context, Result};
 use colored::Colorize;
+use rattler_conda_types::prefix_record::PrefixRecord;
 use rattler_conda_types::PackageRecord;
+use rattler_lock::CondaPackageData;
+use rayon::prelude::*;
 use serde::Serialize;
 use spdx::Expression;
 
 use crate::{
-    conda_meta_entry::{CondaMetaEntries, CondaMetaEntry},
     expression_utils::{check_expression_safety, extract_license_texts, parse_expression},
     license_allowlist::is_package_ignored,
     pixi_lock::get_conda_packages_for_pixi_lock,
@@ -24,16 +29,6 @@ pub struct LicenseInfo {
 }
 
 impl LicenseInfo {
-    pub fn from_conda_meta_entry(entry: &CondaMetaEntry) -> Self {
-        LicenseInfo {
-            package_name: entry.name.clone(),
-            version: entry.version.clone(),
-            license: entry.license.clone(),
-            platform: Some(entry.platform.clone()),
-            build: entry.build.clone(),
-        }
-    }
-
     pub fn from_package_record(package_record: PackageRecord) -> Self {
         let license_str = match &package_record.license {
             Some(license) => license.clone(),
@@ -121,68 +116,75 @@ impl LicenseInfos {
     }
 
     pub fn from_pixi_lockfiles(lockfile_spec: LockfileSpec) -> Result<LicenseInfos> {
-        let mut license_infos = Vec::new();
-        let mut conda_packages = Vec::new();
+        anyhow::ensure!(
+            !lockfile_spec.lockfiles.is_empty(),
+            "No lockfiles provided in LockfileSpec"
+        );
 
-        assert!(!lockfile_spec.lockfiles.is_empty());
-        for lockfile in lockfile_spec.lockfiles {
-            let path: &Path = Path::new(&lockfile);
-            let package_records_for_lockfile = get_conda_packages_for_pixi_lock(
-                path,
-                &lockfile_spec.environments,
-                &lockfile_spec.platforms,
-                lockfile_spec.ignore_pypi,
-            )
-            .with_context(|| {
-                format!(
-                    "Failed to get package records from lockfile: {:?}",
-                    &lockfile.to_str()
+        let conda_packages: Vec<CondaPackageData> = lockfile_spec
+            .lockfiles
+            .par_iter()
+            .map(|lockfile| {
+                let path = Path::new(lockfile);
+                get_conda_packages_for_pixi_lock(
+                    path,
+                    &lockfile_spec.environments,
+                    &lockfile_spec.platforms,
+                    lockfile_spec.ignore_pypi,
                 )
-            })?;
-            conda_packages.extend(package_records_for_lockfile);
-        }
+                .with_context(|| {
+                    format!(
+                        "Failed to get package records from lockfile: {}",
+                        lockfile.display()
+                    )
+                })
+            })
+            .collect::<Result<Vec<_>>>()?
+            .into_iter()
+            .flatten()
+            .collect();
 
-        for conda_package in conda_packages {
-            let license_info = LicenseInfo::from_package_record(conda_package.record().to_owned());
-            license_infos.push(license_info);
-        }
+        let license_infos: BTreeSet<_> = conda_packages
+            .into_iter()
+            .map(|pkg| LicenseInfo::from_package_record(pkg.record().to_owned()))
+            .collect();
 
-        license_infos.sort();
-        license_infos.dedup();
-
-        Ok(LicenseInfos { license_infos })
+        Ok(LicenseInfos {
+            license_infos: license_infos.into_iter().collect(),
+        })
     }
 
     pub fn from_conda_prefixes(prefixes: &[PathBuf]) -> Result<LicenseInfos> {
-        let mut license_infos = Vec::new();
-        assert!(!prefixes.is_empty());
+        let mut license_infos: BTreeSet<_> = BTreeSet::new();
+        anyhow::ensure!(!prefixes.is_empty(), "No conda prefixes provided");
+
         for conda_prefix in prefixes {
-            let conda_meta_path = conda_prefix.join("conda-meta");
-            let conda_meta_entries =
-                CondaMetaEntries::from_dir(&conda_meta_path).with_context(|| {
+            // This is needed because collect_from_prefix silently ignores non-existing prefixes
+            let meta_path = conda_prefix.join("conda-meta");
+            anyhow::ensure!(
+                meta_path.exists(),
+                "The conda prefix {:?} is invalid: {:?} directory is missing",
+                conda_prefix,
+                meta_path
+            );
+            let prefix_records: Vec<PrefixRecord> = PrefixRecord::collect_from_prefix(conda_prefix)
+                .with_context(|| {
                     format!(
-                        "Failed to parse conda meta entries from conda-meta: {conda_meta_path:?}"
+                        "Failed to collect prefix records from {}",
+                        conda_prefix.display()
                     )
                 })?;
 
-            let license_infos_for_meta = LicenseInfos::from_conda_meta_entries(conda_meta_entries);
-
-            license_infos.extend(license_infos_for_meta.license_infos);
+            for record in prefix_records {
+                let license_info =
+                    LicenseInfo::from_package_record(record.repodata_record.package_record.clone());
+                license_infos.insert(license_info);
+            }
         }
 
-        license_infos.sort();
-        license_infos.dedup();
-
-        Ok(LicenseInfos { license_infos })
-    }
-
-    pub fn from_conda_meta_entries(conda_meta_entries: CondaMetaEntries) -> Self {
-        let license_infos = conda_meta_entries
-            .entries
-            .iter()
-            .map(LicenseInfo::from_conda_meta_entry)
-            .collect();
-        LicenseInfos { license_infos }
+        Ok(LicenseInfos {
+            license_infos: license_infos.into_iter().collect(),
+        })
     }
 
     pub fn check(&self, config: &CondaDenyCheckConfig) -> Result<CheckOutput> {
@@ -272,32 +274,8 @@ where
 mod tests {
 
     use super::*;
-    use crate::{conda_meta_entry::CondaMetaEntry, LockfileOrPrefix, OutputFormat};
+    use crate::{LockfileOrPrefix, OutputFormat};
     use spdx::Expression;
-
-    #[test]
-    fn test_license_info_from_conda_meta_entry() {
-        let entry = CondaMetaEntry {
-            name: "test".to_string(),
-            version: "1.0".to_string(),
-            timestamp: 1234567890,
-            license: super::LicenseState::Invalid("Invalid-MIT".to_string()),
-            sha256: "123456".to_string(),
-            platform: "linux-64".to_string(),
-            build: "py_0".to_string(),
-        };
-
-        let license_info = LicenseInfo::from_conda_meta_entry(&entry);
-
-        assert_eq!(license_info.package_name, "test");
-        assert_eq!(license_info.version, "1.0");
-        assert_eq!(
-            license_info.license,
-            super::LicenseState::Invalid("Invalid-MIT".to_string())
-        );
-        assert_eq!(license_info.platform, Some("linux-64".to_string()));
-        assert_eq!(license_info.build, "py_0".to_string());
-    }
 
     #[test]
     fn test_exit_code_for_safe_and_unsafe_dependencies() {
