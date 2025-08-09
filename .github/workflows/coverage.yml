@@ -1,13 +1,10 @@
 name: coverage
 permissions: read-all
 
-on: 
+on:
   push:
     branches: [main]
   pull_request:
-env:
-  # Colored output by the CLI should be colored in Github Actions
-  CLICOLOR_FORCE: 1
 jobs:
   test:
     name: coverage
