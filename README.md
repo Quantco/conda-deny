@@ -53,8 +53,13 @@ Or by downloading our pre-built binaries from the [releases page](https://github
 
 ## 🎯 Usage
 
+After installing `conda-deny`, you can run `conda-deny check` in your project.
+This then checks `pixi.lock` to determine the packages (and their versions) used in your project.
+
 ![conda-deny demo](.github/assets/demo/demo-light.gif#gh-light-mode-only)
 ![conda-deny demo](.github/assets/demo/demo-dark.gif#gh-dark-mode-only)
+
+### ⚙️ Configuration
 
 `conda-deny` can be configured in your `pixi.toml` or `pyproject.toml` (`pixi.toml` is preferred).
 The tool expects a configuration in the following format:
@@ -68,8 +73,6 @@ license-allowlist = "https://raw.githubusercontent.com/quantco/conda-deny/main/t
 platform = "linux-64" # or ["linux-64", "osx-arm64"]
 environment = "default" # or ["default", "py39", "py310", "prod"]
 lockfile = "environment/pixi.lock" # or ["environment1/pixi.lock", "environment2/pixi.lock"]
-# lockfile also supports glob patterns:
-# lockfile = "environments/**/*.lock"
 
 #--------------------------------------------------------
 # License allowlist directly in configuration file:
@@ -80,8 +83,19 @@ ignore-packages = [
 ]
 ```
 
-After installing `conda-deny`, you can run `conda-deny check` in your project.
-This then checks `pixi.lock` to determine the packages (and their versions) used in your project.
+> [!TIP]
+> The `lockfile` field supports strings that include environment variables and glob patterns.
+> The `license-allowlist` field supports strings containing environment variables and URLs.
+> In both cases, environment variables are denoted by a preceding `$`.
+>
+> Example:
+> ```toml
+> [tool.conda-deny]
+> # The following can be used for license-allowlists that are provided as packages
+> license-allowlist = "$CONDA_PREFIX/etc/conda-deny/license-allowlist.toml"
+> # Including an environment variable and a glob pattern:
+> lockfile = "$PIXI_LOCK_LOCATION/**/pixi.lock"
+> ```
 
 ### 🔒 Authorized access to allowlist
 

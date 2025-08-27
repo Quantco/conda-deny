@@ -1,7 +1,9 @@
 use anyhow::{Context, Result};
+use glob::glob_with;
 use log::debug;
 use rattler_conda_types::Platform;
 use serde::Deserialize;
+use std::collections::HashSet;
 use std::path::PathBuf;
 use std::vec;
 use std::{fs::File, io::Read};
@@ -79,16 +81,17 @@ impl CondaDenyTomlConfig {
         Ok(config)
     }
 
-    pub fn get_license_allowlists(&self) -> Vec<String> {
-        if self.tool.conda_deny.license_allowlist.is_none() {
-            Vec::<String>::new()
-        } else {
-            match &self.tool.conda_deny.license_allowlist {
-                None => vec![],
-                Some(LicenseAllowlist::Single(path)) => vec![path.clone()],
-                Some(LicenseAllowlist::Multiple(path)) => path.clone(),
-            }
-        }
+    pub fn get_license_allowlists(&self) -> Result<Vec<String>> {
+        let paths = match &self.tool.conda_deny.license_allowlist {
+            None => return Ok(vec![]),
+            Some(LicenseAllowlist::Single(p)) => vec![p.clone()],
+            Some(LicenseAllowlist::Multiple(ps)) => ps.clone(),
+        };
+
+        let resolved = expand_env_vars(&paths)
+            .with_context(|| format!("Failed to parse license allowlist: {:?}", paths))?;
+
+        Ok(resolved)
     }
 
     pub fn get_platform_spec(&self) -> Option<Vec<Platform>> {
@@ -139,4 +142,45 @@ impl CondaDenyTomlConfig {
             },
         }
     }
+}
+
+pub fn parse_paths_in_config(paths: &[String]) -> Result<Vec<PathBuf>> {
+    let resolved_paths_envs = expand_env_vars(paths)?;
+    let paths = resolve_glob_patterns(&resolved_paths_envs)?;
+    Ok(paths.into_iter().collect())
+}
+
+pub fn expand_env_vars(strings: &[String]) -> Result<Vec<String>> {
+    strings
+        .iter()
+        .map(|path| {
+            shellexpand::env(path)
+                .with_context(|| format!("Failed to expand path {path}"))
+                .map(|cow| cow.into_owned())
+        })
+        .collect()
+}
+
+fn resolve_glob_patterns(patterns: &[String]) -> Result<Vec<PathBuf>> {
+    let mut set = HashSet::new();
+
+    // otherwise, we recurse into .pixi directories
+    let glob_options = glob::MatchOptions {
+        case_sensitive: true,
+        require_literal_separator: true,
+        require_literal_leading_dot: true,
+    };
+
+    for pattern in patterns {
+        let paths = glob_with(pattern, glob_options)
+            .with_context(|| format!("Failed to parse glob pattern: {}", pattern))?;
+
+        for entry in paths {
+            let path =
+                entry.with_context(|| format!("Error while resolving glob pattern {pattern}"))?;
+            set.insert(path);
+        }
+    }
+
+    Ok(set.into_iter().collect())
 }

@@ -1,7 +1,7 @@
 [package]
 name = "conda-deny"
 description = "A CLI tool to check your project's dependencies for license compliance."
-version = "0.5.4"
+version = "0.5.5"
 edition = "2021"
 
 [features]
@@ -60,6 +60,7 @@ reqwest-middleware = { version = "0.4.1", default-features = false }
 tar = "0.4.44"
 futures = "0.3.31"
 glob = "0.3.2"
+shellexpand = "3.1.1"
 
 [dev-dependencies]
 assert_cmd = "2.0.17"

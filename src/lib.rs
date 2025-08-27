@@ -9,21 +9,23 @@ mod license_info;
 pub mod list;
 mod pixi_lock;
 
-use std::{collections::HashSet, env, path::PathBuf};
+use std::{env, path::PathBuf};
 
 use cli::CondaDenyCliConfig;
 use conda_deny_config::CondaDenyTomlConfig;
 use license_allowlist::{get_license_information_from_toml_config, IgnorePackage};
 use license_info::LicenseInfo;
 
-use anyhow::{anyhow, Context, Result};
-use glob::glob_with;
+use anyhow::{Context, Result};
 use log::{debug, warn};
 use rattler_conda_types::Platform;
 use serde::Deserialize;
 use spdx::Expression;
 
-use crate::license_info::LicenseInfos;
+use crate::{
+    conda_deny_config::parse_paths_in_config,
+    license_info::LicenseInfos,
+};
 
 #[derive(Debug)]
 pub enum CondaDenyConfig {
@@ -95,45 +97,6 @@ pub fn fetch_license_infos(lockfile_or_prefix: LockfileOrPrefix) -> Result<Licen
 
 const IGNORE_PYPI_DEFAULT: bool = false;
 
-fn resolve_glob_patterns(patterns: &[String]) -> Result<Vec<PathBuf>> {
-    let mut set = HashSet::new();
-
-    // otherwise, we recurse into .pixi directories
-    let glob_options = glob::MatchOptions {
-        case_sensitive: true,
-        require_literal_separator: true,
-        require_literal_leading_dot: true,
-    };
-
-    for pattern in patterns {
-        let paths = match glob_with(pattern, glob_options) {
-            Ok(paths) => paths,
-            Err(e) => {
-                return Err(anyhow::anyhow!(
-                    "Failed to resolve glob pattern {}: {}",
-                    pattern,
-                    e
-                ))
-            }
-        };
-
-        for entry in paths {
-            match entry {
-                Ok(path) => set.insert(path),
-                Err(e) => {
-                    return Err(anyhow!(
-                        "Error while resolving glob pattern {}: {}",
-                        pattern,
-                        e
-                    ))
-                }
-            };
-        }
-    }
-
-    Ok(set.into_iter().collect())
-}
-
 fn get_lockfile_or_prefix(
     cli_config: &CondaDenyCliConfig,
     toml_config: &CondaDenyTomlConfig,
@@ -142,47 +105,48 @@ fn get_lockfile_or_prefix(
     if let Some(prefix) = cli_config.prefix() {
         debug!("Ignoring toml config in favor of CLI config");
         assert!(!prefix.is_empty());
-        Ok(LockfileOrPrefix::Prefix(prefix))
+        return Ok(LockfileOrPrefix::Prefix(prefix))
     } else if let Some(lockfile_patterns) = cli_config.lockfile() {
         // ignore lockfile spec from toml config, only look at cli config
         debug!("Ignoring toml config in favor of CLI config");
         assert!(!lockfile_patterns.is_empty());
         let lockfile_spec = LockfileSpec {
             environments: cli_config.environment(),
-            lockfiles: resolve_glob_patterns(&lockfile_patterns)?,
+            lockfiles: parse_paths_in_config(&lockfile_patterns)?,
             platforms: cli_config.platform(),
             ignore_pypi: cli_config.ignore_pypi().unwrap_or(IGNORE_PYPI_DEFAULT),
         };
-        Ok(LockfileOrPrefix::Lockfile(lockfile_spec))
-    } else {
-        let lockfile_patterns = toml_config.get_lockfile_spec();
-        let lockfiles = if lockfile_patterns.is_empty() {
-            let default_lockfile_path = env::current_dir()?.join("pixi.lock");
-            if !default_lockfile_path.is_file() {
-                return Err(anyhow::anyhow!("No lockfiles or conda prefixes provided"));
-            }
-            vec![default_lockfile_path]
-        } else {
-            resolve_glob_patterns(&lockfile_patterns)?
-        };
-        if lockfiles.is_empty() {
-            warn!("Your lockfile glob patterns did not match any files. THis will do nothing.");
-        }
-        let platforms = cli_config.platform().or(toml_config.get_platform_spec());
-        let environments = cli_config
-            .environment()
-            .or(toml_config.get_environment_spec());
-        let ignore_pypi = cli_config
-            .ignore_pypi()
-            .or(toml_config.get_ignore_pypi())
-            .unwrap_or(IGNORE_PYPI_DEFAULT);
-        Ok(LockfileOrPrefix::Lockfile(LockfileSpec {
-            lockfiles,
-            platforms,
-            environments,
-            ignore_pypi,
-        }))
+        return Ok(LockfileOrPrefix::Lockfile(lockfile_spec))
     }
+
+    // fall back to toml config
+    let lockfile_patterns = parse_paths_in_config(&toml_config.get_lockfile_spec())?;
+    let lockfiles = if lockfile_patterns.is_empty() {
+        let default_lockfile_path = env::current_dir()?.join("pixi.lock");
+        if !default_lockfile_path.is_file() {
+            return Err(anyhow::anyhow!("No lockfiles or conda prefixes provided"));
+        }
+        vec![default_lockfile_path]
+    } else {
+        lockfile_patterns
+    };
+    if lockfiles.is_empty() {
+        warn!("Your lockfile glob patterns did not match any files. This will do nothing.");
+    }
+    let platforms = cli_config.platform().or(toml_config.get_platform_spec());
+    let environments = cli_config
+        .environment()
+        .or(toml_config.get_environment_spec());
+    let ignore_pypi = cli_config
+        .ignore_pypi()
+        .or(toml_config.get_ignore_pypi())
+        .unwrap_or(IGNORE_PYPI_DEFAULT);
+    Ok(LockfileOrPrefix::Lockfile(LockfileSpec {
+        lockfiles,
+        platforms,
+        environments,
+        ignore_pypi,
+    }))
 }
 
 pub fn get_config_options(

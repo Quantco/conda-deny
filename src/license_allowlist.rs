@@ -231,7 +231,7 @@ pub fn get_license_information_from_toml_config(
         .clone()
         .unwrap_or_default();
 
-    let license_allowlist_urls = toml_config.get_license_allowlists().clone();
+    let license_allowlist_urls = toml_config.get_license_allowlists()?;
     let (safe_licenses, ignore_packages) = build_license_allowlist(&license_allowlist_urls)?;
 
     // TODO: Remove duplicates
