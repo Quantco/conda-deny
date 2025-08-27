@@ -60,6 +60,7 @@ reqwest-middleware = { version = "0.4.1", default-features = false }
 tar = "0.4.44"
 futures = "0.3.31"
 glob = "0.3.2"
+shellexpand = "3.1.1"
 
 [dev-dependencies]
 assert_cmd = "2.0.17"

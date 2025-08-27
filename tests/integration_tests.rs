@@ -144,7 +144,9 @@ fn test_default_use_case(#[case] subcommand: &str, #[case] test_name: &str) {
 #[case("check")]
 #[case("list")]
 fn test_lockfile_pattern(#[case] subcommand: &str) {
-    let test_dir = Path::new("tests/test_lockfile_pattern");
+    let test_folder = String::from("tests/test_lockfile_pattern");
+    std::env::set_var("TEST_FOLDER", &test_folder);
+    let test_dir = Path::new(&test_folder);
     let config = PathBuf::from(test_dir).join("pixi.toml");
 
     let mut out = out();
@@ -506,7 +508,7 @@ fn test_bundle_lockfile() {
         // CONFIG PATH
         None,
         // LOCKFILE PATHS
-        Some(vec!["tests/test_default_use_case/pixi.lock".into()]),
+        Some(vec!["tests/bundle_pixi.lock".into()]),
         // PREFIXES
         None,
         // PLATFORM
