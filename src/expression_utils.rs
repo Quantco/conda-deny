@@ -22,12 +22,7 @@ pub fn check_expression_safety(expression: &Expression, safe_licenses: &[Express
 }
 
 pub fn parse_expression(expression_str: &str) -> Result<Expression> {
-    let parse_mode = ParseMode {
-        allow_imprecise_license_names: false,
-        allow_slash_as_or_operator: false,
-        allow_lower_case_operators: true,
-        allow_postfix_plus_on_gpl: false,
-    };
+    let parse_mode = ParseMode::STRICT;
 
     Expression::parse_mode(expression_str, parse_mode)
         .with_context(|| format!("Failed to parse expression: '{expression_str}'"))

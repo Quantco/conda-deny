@@ -88,6 +88,16 @@ tzdata 2024a-h0c530f3_0 (noarch): LicenseRef-Public-Domain
 ucrt 10.0.22621.0-h57928b3_0 (win-64): LicenseRef-Proprietary 
 vc14_runtime 14.40.33810-ha82c5b3_20 (win-64): LicenseRef-ProprietaryMicrosoft 
 win_inet_pton 1.1.0-pyhd8ed1ab_6 (noarch): PUBLIC-DOMAIN (Non-SPDX)
+xz 5.2.6-h8d14728_0 (win-64): LGPL-2.1 and GPL-2.0 (Non-SPDX)
+xz 5.2.6-h775f41a_0 (osx-64): LGPL-2.1 and GPL-2.0 (Non-SPDX)
+xz 5.2.6-h9cdd2b7_0 (linux-aarch64): LGPL-2.1 and GPL-2.0 (Non-SPDX)
+xz 5.2.6-h57fd34a_0 (osx-arm64): LGPL-2.1 and GPL-2.0 (Non-SPDX)
+xz 5.2.6-h166bdaf_0 (linux-64): LGPL-2.1 and GPL-2.0 (Non-SPDX)
+xz 5.2.6-h8d14728_0 (win-64): LGPL-2.1 and GPL-2.0 (Non-SPDX)
+xz 5.2.6-h775f41a_0 (osx-64): LGPL-2.1 and GPL-2.0 (Non-SPDX)
+xz 5.2.6-h9cdd2b7_0 (linux-aarch64): LGPL-2.1 and GPL-2.0 (Non-SPDX)
+xz 5.2.6-h57fd34a_0 (osx-arm64): LGPL-2.1 and GPL-2.0 (Non-SPDX)
+xz 5.2.6-h166bdaf_0 (linux-64): LGPL-2.1 and GPL-2.0 (Non-SPDX)
 
 ❌ Unsafe licenses found! ❌
-There were 457 safe licenses and 84 unsafe licenses.
+There were 447 safe licenses and 94 unsafe licenses.
