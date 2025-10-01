@@ -31,9 +31,9 @@ opt-level = "s"
 
 [dependencies]
 clap = { version = "4.5", features = ["derive"] }
-serde = { version = "1.0.219", features = ["derive"] }
-serde_json = "1.0.143"
-toml = "0.9.5"
+serde = { version = "1.0.228", features = ["derive"] }
+serde_json = "1.0.145"
+toml = "0.9.7"
 tokio = { version = "1.47.1", features = ["full"] }
 reqwest = { version = "0.12.23", default-features = false, features = [
   "http2",
@@ -41,16 +41,16 @@ reqwest = { version = "0.12.23", default-features = false, features = [
   "stream",
 ] }
 serde_yaml = "0.9.34"
-regex = "1.11.2"
+regex = "1.11.3"
 spdx = "0.12.0"
 colored = "3.0.0"
 async-trait = "0.1.89"
 rattler_conda_types = "0.33.0"
 rattler_lock = "0.23.3"
-anyhow = "1.0.99"
+anyhow = "1.0.100"
 clap-verbosity-flag = "3.0.4"
 env_logger = "0.11.6"
-log = "0.4.27"
+log = "0.4.28"
 csv = "1.3.1"
 rattler_package_streaming = { version = "0.22.37", default-features = false }
 indicatif = "0.18.0"
@@ -64,10 +64,10 @@ shellexpand = "3.1.1"
 
 [dev-dependencies]
 assert_cmd = "2.0.17"
-insta = { version = "1.43.1", features = ["yaml"] }
+insta = { version = "1.43.2", features = ["yaml"] }
 predicates = "3.1.3"
 serial_test = "3.2.0"
 rstest = "0.26.1"
-tempfile = "3.21.0"
+tempfile = "3.23.0"
 walkdir = "2.5.0"
 strip-ansi-escapes = "0.2.1"
