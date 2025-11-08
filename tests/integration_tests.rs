@@ -122,8 +122,7 @@ fn test_default_use_case(#[case] subcommand: &str, #[case] test_name: &str) {
     let path_string = format!("tests/{test_name}");
     let test_dir = Path::new(path_string.as_str());
 
-    let output = Command::cargo_bin("conda-deny")
-        .unwrap()
+    let output = Command::new(assert_cmd::cargo::cargo_bin!("conda-deny"))
         .arg(subcommand)
         .current_dir(test_dir)
         // .env("CLICOLOR_FORCE", "1") <-- Uncomment to force colored output
@@ -262,7 +261,6 @@ fn test_multiple_allowlists_check() {
 
 #[rstest]
 fn test_platform_env_restrictions_check(_colored_control: ()) {
-
     // Create a temporary file for pixi.toml
     let mut temp_pixi_toml = NamedTempFile::new().unwrap();
     let file_content = r#"[tool.conda-deny]
@@ -290,7 +288,6 @@ environment = "lint""#;
 
 #[rstest]
 fn test_safe_licenses_in_config_check(_colored_control: ()) {
-
     // Create a temporary file for pixi.toml
     let mut temp_pixi_toml = NamedTempFile::new().unwrap();
     let file_content = r#"[tool.conda-deny]
@@ -341,7 +338,7 @@ fn test_osi_check(
     )]
     check_config: CondaDenyCheckConfig,
     mut out: Vec<u8>,
-    _colored_control: ()
+    _colored_control: (),
 ) {
     let result = check(check_config, &mut out);
     let output = String::from_utf8(out).unwrap();
@@ -362,7 +359,7 @@ fn test_prefix_list(
 )]
     list_config: CondaDenyListConfig,
     mut out: Vec<u8>,
-    _colored_control: ()
+    _colored_control: (),
 ) {
     // When --prefix is specified, only the license information for the conda-meta directory in the specified prefix should be listed
     // License information from pixi.lock should not be listed
@@ -383,7 +380,7 @@ fn test_exception_check(
     )]
     check_config: CondaDenyCheckConfig,
     mut out: Vec<u8>,
-    _colored_control: ()
+    _colored_control: (),
 ) {
     let result = check(check_config, &mut out);
     let output = String::from_utf8(out).unwrap();
@@ -412,7 +409,7 @@ fn test_pypi_ignore_check(
     )]
     check_config: CondaDenyCheckConfig,
     mut out: Vec<u8>,
-    _colored_control: ()
+    _colored_control: (),
 ) {
     let result = check(check_config, &mut out);
     let output = String::from_utf8(out).unwrap();
