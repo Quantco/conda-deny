@@ -124,7 +124,7 @@ pub fn format_check_output(
     }
 
     output.push_str(&format!(
-        "\nThere were {} safe licenses and {} unsafe licenses.\n",
+        "\nThere were {} safe licenses and {} unsafe licenses.",
         safe_dependencies.len().to_string().green(),
         unsafe_dependencies.len().to_string().red()
     ));
