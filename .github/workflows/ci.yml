@@ -1,5 +1,4 @@
 name: Cargo Build, Test & Lint
-permissions: read-all
 
 on:
   push:
