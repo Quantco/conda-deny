@@ -57,7 +57,7 @@ indicatif = "0.18.4"
 rayon = "1.11.0"
 rattler_networking = { version = "0.23.0", default-features = false }
 reqwest-middleware = { version = "0.4.1", default-features = false }
-tar = "0.4.44"
+tar = "0.4.45"
 futures = "0.3.32"
 glob = "0.3.3"
 shellexpand = "3.1.2"
