@@ -2,6 +2,7 @@
 source: tests/integration_tests.rs
 expression: output
 ---
+
 ❌ The following dependencies are unsafe:
 
 _openmp_mutex 4.5-2_gnu (linux-64): BSD-3-Clause 
