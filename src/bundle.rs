@@ -58,14 +58,18 @@ pub fn bundle<W: Write>(config: CondaDenyBundleConfig, mut out: W) -> Result<()>
                         })
                         .cloned()
                 },
-                |pkg| pkg.record().name.as_source().to_string(),
+                |pkg| pkg.name().as_source().to_string(),
                 |pkg| {
-                    format!(
-                        "{}-{}-{}",
-                        pkg.record().name.as_source(),
-                        pkg.record().version,
-                        pkg.record().build
-                    )
+                    if let Some(record) = pkg.record() {
+                        format!(
+                            "{}-{}-{}",
+                            record.name.as_source(),
+                            record.version,
+                            record.build
+                        )
+                    } else {
+                        pkg.name().as_source().to_string()
+                    }
                 },
             )?
         }
