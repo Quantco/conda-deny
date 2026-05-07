@@ -15,10 +15,6 @@ use std::process::Command;
 use tempfile::NamedTempFile;
 use walkdir::WalkDir;
 
-fn network_tests_enabled() -> bool {
-    std::env::var_os("CONDA_DENY_RUN_NETWORK_TESTS").is_some()
-}
-
 #[fixture]
 #[once]
 fn colored_control() {
@@ -185,7 +181,7 @@ fn test_lockfile_pattern(#[case] subcommand: &str) {
 }
 
 #[test]
-fn test_remote_allowlist_check() {
+fn test_local_allowlist_check() {
     // Create a temporary file for the license_allowlist.toml
     let mut temp_config_file = NamedTempFile::new().unwrap();
     let file_content = r#"[tool.conda-deny]
@@ -454,11 +450,6 @@ fn test_pypi_ignore_error(
 
 #[rstest]
 fn test_bundle_prefix() {
-    if !network_tests_enabled() {
-        eprintln!("Skipping network-dependent bundle test; set CONDA_DENY_RUN_NETWORK_TESTS=1 to enable.");
-        return;
-    }
-
     let mut out = out();
     let temp_dir = tempfile::tempdir().unwrap();
     let bundle_config = bundle_config(
@@ -508,11 +499,6 @@ fn test_bundle_prefix() {
 
 #[rstest]
 fn test_bundle_lockfile() {
-    if !network_tests_enabled() {
-        eprintln!("Skipping network-dependent bundle test; set CONDA_DENY_RUN_NETWORK_TESTS=1 to enable.");
-        return;
-    }
-
     let mut out = out();
     let temp_dir = tempfile::tempdir().unwrap();
     let bundle_config = bundle_config(

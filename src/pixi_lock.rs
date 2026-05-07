@@ -95,20 +95,12 @@ mod tests {
         );
         assert_eq!(package_records.unwrap().len(), 48);
 
-        let path = Path::new("tests/default_pixi_v7.lock");
+        let path = Path::new("tests/pixi-build/pixi.lock");
         let package_records = get_conda_packages_for_pixi_lock(path, &None, &None, false);
-        assert_eq!(package_records.unwrap().len(), 1386);
+        assert_eq!(package_records.unwrap().len(), 89);
 
         let package_records =
-            get_conda_packages_for_pixi_lock(path, &Some(vec!["lint".to_string()]), &None, false);
-        assert_eq!(package_records.unwrap().len(), 254);
-
-        let package_records = get_conda_packages_for_pixi_lock(
-            path,
-            &Some(vec!["lint".to_string()]),
-            &Some(vec![Platform::Linux64]),
-            false,
-        );
-        assert_eq!(package_records.unwrap().len(), 57);
+            get_conda_packages_for_pixi_lock(path, &None, &Some(vec![Platform::Linux64]), false);
+        assert_eq!(package_records.unwrap().len(), 22);
     }
 }

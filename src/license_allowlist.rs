@@ -261,19 +261,8 @@ mod tests {
     use super::*;
     use std::{error::Error, io::Write};
 
-    fn network_tests_enabled() -> bool {
-        std::env::var_os("CONDA_DENY_RUN_NETWORK_TESTS").is_some()
-    }
-
     #[test]
     fn test_fetch_safe_licenses_success() {
-        if !network_tests_enabled() {
-            eprintln!(
-                "Skipping network-dependent GitHub fetch test; set CONDA_DENY_RUN_NETWORK_TESTS=1 to enable."
-            );
-            return;
-        }
-
         let reader = RealRemoteConfigReader;
         let result = fetch_safe_licenses(
             "https://raw.githubusercontent.com/quantco/conda-deny/main/tests/default_license_allowlist.toml",
