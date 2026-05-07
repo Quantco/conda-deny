@@ -9,6 +9,7 @@ local-build-main-pkg = { path = "." }
 [package]
 name = "local-build-main-pkg"
 version = "0.1.0"
+license = "MIT"
 
 [package.build]
 backend = { name = "pixi-build-cmake", version = "==0.3.10" }
