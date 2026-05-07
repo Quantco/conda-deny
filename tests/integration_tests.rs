@@ -449,6 +449,25 @@ fn test_pypi_ignore_error(
 }
 
 #[rstest]
+fn test_pixi_build_list(
+    #[with(
+        // CONFIG PATH
+        None,
+        // LOCKFILE PATHS
+        Some(vec!["tests/pixi-build/pixi.lock".into()]),
+    )]
+    list_config: CondaDenyListConfig,
+    mut out: Vec<u8>,
+    _colored_control: (),
+) {
+    let result = list(list_config, &mut out);
+    let output = String::from_utf8(out).unwrap();
+
+    assert!(result.is_ok(), "{:?}", result.unwrap_err());
+    insta::assert_snapshot!(output);
+}
+
+#[rstest]
 fn test_bundle_prefix() {
     let mut out = out();
     let temp_dir = tempfile::tempdir().unwrap();
