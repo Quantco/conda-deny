@@ -4,7 +4,7 @@ use anyhow::{Context, Result};
 
 use log::warn;
 use rattler_conda_types::Platform;
-use rattler_lock::{CondaPackageData, LockFile, LockedPackageRef};
+use rattler_lock::{CondaPackageData, LockFile, LockedPackage};
 
 fn _get_environment_names(lock_file: &LockFile) -> Vec<String> {
     lock_file
@@ -32,7 +32,7 @@ pub fn get_conda_packages_for_pixi_lock(
                 for platform in environment.platforms() {
                     if platform_spec
                         .as_ref()
-                        .map(|all| all.contains(&platform))
+                        .map(|all| all.contains(&platform.subdir()))
                         .unwrap_or(true)
                     {
                         let packages = match environment.packages(platform) {
@@ -41,17 +41,17 @@ pub fn get_conda_packages_for_pixi_lock(
                         };
                         for package in packages {
                             match package {
-                                LockedPackageRef::Conda(conda_package) => {
+                                LockedPackage::Conda(conda_package) => {
                                     package_records.push(conda_package.to_owned());
                                 }
-                                LockedPackageRef::Pypi(package_data, _) => {
+                                LockedPackage::Pypi(package_data) => {
                                     if !ignore_pypi {
                                         return Err(anyhow::anyhow!(
                                             "Pypi packages are not supported: {}",
-                                            package_data.name
+                                            package_data.name()
                                         ));
                                     } else {
-                                        warn!("Ignoring pypi package: {}", package_data.name);
+                                        warn!("Ignoring pypi package: {}", package_data.name());
                                     }
                                 }
                             }
@@ -94,5 +94,13 @@ mod tests {
             false,
         );
         assert_eq!(package_records.unwrap().len(), 48);
+
+        let path = Path::new("tests/pixi-build/pixi.lock");
+        let package_records = get_conda_packages_for_pixi_lock(path, &None, &None, false);
+        assert_eq!(package_records.unwrap().len(), 89);
+
+        let package_records =
+            get_conda_packages_for_pixi_lock(path, &None, &Some(vec![Platform::Linux64]), false);
+        assert_eq!(package_records.unwrap().len(), 22);
     }
 }

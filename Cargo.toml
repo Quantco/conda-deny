@@ -1,7 +1,7 @@
 [package]
 name = "conda-deny"
 description = "A CLI tool to check your project's dependencies for license compliance."
-version = "0.5.5"
+version = "0.5.6"
 edition = "2021"
 
 [features]
@@ -45,17 +45,17 @@ regex = "1.12.3"
 spdx = "0.13.4"
 colored = "3.1.1"
 async-trait = "0.1.89"
-rattler_conda_types = "0.33.0"
-rattler_lock = "0.23.3"
+rattler_conda_types = "0.46.0"
+rattler_lock = "0.29.0"
 anyhow = "1.0.102"
 clap-verbosity-flag = "3.0.4"
 env_logger = "0.11.10"
 log = "0.4.29"
 csv = "1.4.0"
-rattler_package_streaming = { version = "0.22.37", default-features = false }
+rattler_package_streaming = { version = "0.25.0", default-features = false }
 indicatif = "0.18.4"
 rayon = "1.12.0"
-rattler_networking = { version = "0.23.0", default-features = false }
+rattler_networking = { version = "0.26.9", default-features = false }
 reqwest-middleware = { version = "0.4.1", default-features = false }
 tar = "0.4.45"
 futures = "0.3.32"

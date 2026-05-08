@@ -264,14 +264,34 @@ mod tests {
     #[test]
     fn test_fetch_safe_licenses_success() {
         let reader = RealRemoteConfigReader;
-        let (safe_licenses, ignore_packages) = fetch_safe_licenses("https://raw.githubusercontent.com/quantco/conda-deny/main/tests/default_license_allowlist.toml", &reader)
-            .unwrap();
+        let result = fetch_safe_licenses(
+            "https://raw.githubusercontent.com/quantco/conda-deny/main/tests/default_license_allowlist.toml",
+            &reader,
+        );
 
-        // Assert the result
-        assert_eq!(safe_licenses.len(), 5);
-        assert!(safe_licenses.iter().any(|e| e.to_string() == "MIT"));
-        assert!(safe_licenses.iter().any(|e| e.to_string() == "Apache-2.0"));
-        assert_eq!(ignore_packages.len(), 1);
+        let (safe_licenses, ignore_packages) = result.unwrap();
+        let (expected_safe_licenses, expected_ignore_packages) =
+            license_config_from_toml_str("tests/default_license_allowlist.toml").unwrap();
+
+        assert_eq!(safe_licenses.len(), expected_safe_licenses.len());
+        assert_eq!(
+            safe_licenses.iter().map(|e| e.to_string()).collect::<Vec<_>>(),
+            expected_safe_licenses
+                .iter()
+                .map(|e| e.to_string())
+                .collect::<Vec<_>>()
+        );
+        assert_eq!(ignore_packages.len(), expected_ignore_packages.len());
+        assert_eq!(
+            ignore_packages
+                .iter()
+                .map(|p| (&p.package, &p.version))
+                .collect::<Vec<_>>(),
+            expected_ignore_packages
+                .iter()
+                .map(|p| (&p.package, &p.version))
+                .collect::<Vec<_>>()
+        );
     }
 
     #[test]

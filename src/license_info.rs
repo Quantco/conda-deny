@@ -98,6 +98,8 @@ impl Ord for LicenseInfo {
         self.package_name
             .cmp(&other.package_name)
             .then_with(|| self.version.cmp(&other.version))
+            .then_with(|| self.build.cmp(&other.build))
+            .then_with(|| self.platform.cmp(&other.platform))
     }
 }
 
@@ -146,8 +148,16 @@ impl LicenseInfos {
 
         let license_infos: BTreeSet<_> = conda_packages
             .into_iter()
-            .map(|pkg| LicenseInfo::from_package_record(pkg.record().to_owned()))
-            .collect();
+            .map(|pkg| {
+                let record = pkg.record().cloned().ok_or_else(|| {
+                    anyhow::anyhow!(
+                        "Package record missing in lockfile for {}",
+                        pkg.name().as_source()
+                    )
+                })?;
+                Ok(LicenseInfo::from_package_record(record))
+            })
+            .collect::<Result<_>>()?;
 
         Ok(LicenseInfos {
             license_infos: license_infos.into_iter().collect(),

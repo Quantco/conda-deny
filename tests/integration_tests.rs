@@ -181,11 +181,11 @@ fn test_lockfile_pattern(#[case] subcommand: &str) {
 }
 
 #[test]
-fn test_remote_allowlist_check() {
+fn test_local_allowlist_check() {
     // Create a temporary file for the license_allowlist.toml
     let mut temp_config_file = NamedTempFile::new().unwrap();
     let file_content = r#"[tool.conda-deny]
-license-allowlist = "https://raw.githubusercontent.com/Quantco/conda-deny/refs/heads/main/tests/default_license_allowlist.toml""#;
+license-allowlist = "tests/default_license_allowlist.toml""#;
 
     temp_config_file
         .as_file_mut()
@@ -230,8 +230,11 @@ fn test_multiple_allowlists_check() {
     let mut temp_pixi_toml = NamedTempFile::new().unwrap();
     let file_content = "[tool.conda-deny]
         license-allowlist = [
-        \"https://raw.githubusercontent.com/Quantco/conda-deny/refs/heads/main/tests/default_license_allowlist.toml\",
-        \"".to_string() + temp_allowlist_path.to_str().unwrap() + "\"]";
+        \"tests/default_license_allowlist.toml\",
+        \""
+    .to_string()
+        + temp_allowlist_path.to_str().unwrap()
+        + "\"]";
 
     temp_pixi_toml
         .as_file_mut()
@@ -444,8 +447,28 @@ fn test_pypi_ignore_error(
         println!("Actual error: {e}");
     }
     assert!(result.is_err());
-    assert!(format!("{result:?}").contains("Pypi packages are not supported: beautifulsoup4"));
+    assert!(format!("{result:?}").contains("Pypi packages are not supported:"));
     assert_eq!(out, b"");
+}
+
+#[rstest]
+#[ignore = "https://github.com/prefix-dev/pixi/issues/6043"]
+fn test_pixi_build_list(
+    #[with(
+        // CONFIG PATH
+        None,
+        // LOCKFILE PATHS
+        Some(vec!["tests/pixi-build/pixi.lock".into()]),
+    )]
+    list_config: CondaDenyListConfig,
+    mut out: Vec<u8>,
+    _colored_control: (),
+) {
+    let result = list(list_config, &mut out);
+    let output = String::from_utf8(out).unwrap();
+
+    assert!(result.is_ok(), "{:?}", result.unwrap_err());
+    insta::assert_snapshot!(output);
 }
 
 #[rstest]

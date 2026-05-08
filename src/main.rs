@@ -1,4 +1,4 @@
-use std::io;
+use std::{io, process::ExitCode};
 
 use anyhow::Result;
 use clap::Parser;
@@ -10,7 +10,7 @@ use conda_deny::list::list;
 use conda_deny::CondaDenyConfig;
 use log::{debug, info};
 
-fn main() -> Result<()> {
+fn run() -> Result<()> {
     let cli = Cli::parse();
 
     env_logger::Builder::new()
@@ -29,5 +29,15 @@ fn main() -> Result<()> {
         CondaDenyConfig::Check(check_config) => check(check_config, stdout),
         CondaDenyConfig::List(list_config) => list(list_config, stdout),
         CondaDenyConfig::Bundle(bundle_config) => bundle(bundle_config, stdout),
+    }
+}
+
+fn main() -> ExitCode {
+    match run() {
+        Ok(()) => ExitCode::SUCCESS,
+        Err(error) => {
+            eprintln!("{error:#}");
+            ExitCode::FAILURE
+        }
     }
 }

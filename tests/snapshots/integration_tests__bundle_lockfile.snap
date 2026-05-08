@@ -2,6 +2,7 @@
 source: tests/integration_tests.rs
 expression: pretty_output
 ---
+
 bzip2-1.0.8-h99b78c6_7
 bzip2-1.0.8-h99b78c6_7/LICENSE
 ca-certificates-2025.8.3-hbd8a1cb_0
