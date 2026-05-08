@@ -231,7 +231,10 @@ fn test_multiple_allowlists_check() {
     let file_content = "[tool.conda-deny]
         license-allowlist = [
         \"tests/default_license_allowlist.toml\",
-        \"".to_string() + temp_allowlist_path.to_str().unwrap() + "\"]";
+        \""
+    .to_string()
+        + temp_allowlist_path.to_str().unwrap()
+        + "\"]";
 
     temp_pixi_toml
         .as_file_mut()
@@ -449,6 +452,7 @@ fn test_pypi_ignore_error(
 }
 
 #[rstest]
+#[ignore = "https://github.com/prefix-dev/pixi/issues/6043"]
 fn test_pixi_build_list(
     #[with(
         // CONFIG PATH
