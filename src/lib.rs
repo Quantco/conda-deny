@@ -84,7 +84,7 @@ pub enum LockfileOrPrefix {
 
 pub type CheckOutput = (Vec<LicenseInfo>, Vec<LicenseInfo>);
 
-pub fn fetch_license_infos(lockfile_or_prefix: LockfileOrPrefix) -> Result<LicenseInfos> {
+pub fn collect_license_infos(lockfile_or_prefix: LockfileOrPrefix) -> Result<LicenseInfos> {
     match lockfile_or_prefix {
         LockfileOrPrefix::Lockfile(lockfile_spec) => {
             LicenseInfos::from_pixi_lockfiles(lockfile_spec)
