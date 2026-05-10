@@ -568,3 +568,17 @@ fn test_bundle_lockfile() {
     let output = String::from_utf8(out).unwrap();
     assert!(output.contains("License files written to:"));
 }
+
+#[rstest]
+fn test_check_skips_source_package_without_record(
+    #[with(Some(PathBuf::from("tests/test_ignored_source_package/pixi.toml")))]
+    check_config: CondaDenyCheckConfig,
+    mut out: Vec<u8>,
+    _colored_control: (),
+) {
+    let result = check(check_config, &mut out);
+    let output = String::from_utf8(strip_ansi_escapes::strip(out)).unwrap();
+
+    assert!(result.is_ok(), "{result:?}");
+    assert!(output.contains("No unsafe licenses found"));
+}

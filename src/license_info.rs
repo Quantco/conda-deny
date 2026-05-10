@@ -1,6 +1,6 @@
 use std::{
     collections::BTreeSet,
-    path::{Path, PathBuf},
+    path::PathBuf,
 };
 
 use anyhow::{Context, Result};
@@ -127,9 +127,8 @@ impl LicenseInfos {
             .lockfiles
             .par_iter()
             .map(|lockfile| {
-                let path = Path::new(lockfile);
                 get_conda_packages_for_pixi_lock(
-                    path,
+                    lockfile,
                     &lockfile_spec.environments,
                     &lockfile_spec.platforms,
                     lockfile_spec.ignore_pypi,
@@ -146,18 +145,21 @@ impl LicenseInfos {
             .flatten()
             .collect();
 
-        let license_infos: BTreeSet<_> = conda_packages
-            .into_iter()
-            .map(|pkg| {
-                let record = pkg.record().cloned().ok_or_else(|| {
-                    anyhow::anyhow!(
-                        "Package record missing in lockfile for {}",
-                        pkg.name().as_source()
-                    )
-                })?;
-                Ok(LicenseInfo::from_package_record(record))
-            })
-            .collect::<Result<_>>()?;
+        let mut license_infos = BTreeSet::new();
+        for package in conda_packages {
+            // Source packages return False for `as_source().is_some()`. We don't check their licenses.
+            if package.as_source().is_some() {
+                continue;
+            }
+
+            let record = package.record().cloned().ok_or_else(|| {
+                anyhow::anyhow!(
+                    "Package record missing in lockfile for {}",
+                    package.name().as_source()
+                )
+            })?;
+            license_infos.insert(LicenseInfo::from_package_record(record));
+        }
 
         Ok(LicenseInfos {
             license_infos: license_infos.into_iter().collect(),

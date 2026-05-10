@@ -1,10 +1,10 @@
 use std::io::Write;
 
-use crate::{fetch_license_infos, CondaDenyListConfig, OutputFormat};
+use crate::{collect_license_infos, CondaDenyListConfig, OutputFormat};
 use anyhow::{Context, Result};
 
 pub fn list<W: Write>(config: CondaDenyListConfig, mut out: W) -> Result<()> {
-    let license_infos = fetch_license_infos(config.lockfile_or_prefix.clone())
+    let license_infos = collect_license_infos(config.lockfile_or_prefix.clone())
         .with_context(|| "Fetching license information failed.")?;
 
     match config.output_format {
