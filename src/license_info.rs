@@ -147,7 +147,7 @@ impl LicenseInfos {
 
         let mut license_infos = BTreeSet::new();
         for package in conda_packages {
-            // Source packages return False for `as_source().is_some()`. We don't check their licenses.
+            // Source packages may not have a full package record, so there is no license metadata to check here.
             if package.as_source().is_some() {
                 continue;
             }
