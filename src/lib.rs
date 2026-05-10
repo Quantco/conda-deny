@@ -22,10 +22,7 @@ use rattler_conda_types::Platform;
 use serde::Deserialize;
 use spdx::Expression;
 
-use crate::{
-    conda_deny_config::parse_paths_in_config,
-    license_info::LicenseInfos,
-};
+use crate::{conda_deny_config::parse_paths_in_config, license_info::LicenseInfos};
 
 #[derive(Debug)]
 pub enum CondaDenyConfig {
@@ -74,6 +71,7 @@ pub struct LockfileSpec {
     platforms: Option<Vec<Platform>>,
     environments: Option<Vec<String>>,
     ignore_pypi: bool,
+    ignore_source_packages: bool,
 }
 
 #[derive(Debug, Clone)]
@@ -82,12 +80,25 @@ pub enum LockfileOrPrefix {
     Prefix(Vec<PathBuf>),
 }
 
+pub enum MissingPackageRecordBehavior<'a> {
+    /// Fail when a package has no full package record.
+    Error,
+    /// Allow check-only `ignore-packages` entries without a version to suppress
+    /// missing records for source packages. Versioned ignores are not accepted
+    /// here because the missing package record means there is no reliable
+    /// version to compare against.
+    IgnoreNameOnlySourcePackages(&'a [IgnorePackage]),
+}
+
 pub type CheckOutput = (Vec<LicenseInfo>, Vec<LicenseInfo>);
 
-pub fn collect_license_infos(lockfile_or_prefix: LockfileOrPrefix) -> Result<LicenseInfos> {
+pub fn collect_license_infos(
+    lockfile_or_prefix: LockfileOrPrefix,
+    missing_record_behavior: MissingPackageRecordBehavior<'_>,
+) -> Result<LicenseInfos> {
     match lockfile_or_prefix {
         LockfileOrPrefix::Lockfile(lockfile_spec) => {
-            LicenseInfos::from_pixi_lockfiles(lockfile_spec)
+            LicenseInfos::from_pixi_lockfiles(lockfile_spec, missing_record_behavior)
                 .with_context(|| "Getting license information from config file failed.")
         }
         LockfileOrPrefix::Prefix(prefixes) => LicenseInfos::from_conda_prefixes(&prefixes)
@@ -96,6 +107,7 @@ pub fn collect_license_infos(lockfile_or_prefix: LockfileOrPrefix) -> Result<Lic
 }
 
 const IGNORE_PYPI_DEFAULT: bool = false;
+const IGNORE_SOURCE_PACKAGES_DEFAULT: bool = false;
 
 fn get_lockfile_or_prefix(
     cli_config: &CondaDenyCliConfig,
@@ -105,7 +117,7 @@ fn get_lockfile_or_prefix(
     if let Some(prefix) = cli_config.prefix() {
         debug!("Ignoring toml config in favor of CLI config");
         assert!(!prefix.is_empty());
-        return Ok(LockfileOrPrefix::Prefix(prefix))
+        return Ok(LockfileOrPrefix::Prefix(prefix));
     } else if let Some(lockfile_patterns) = cli_config.lockfile() {
         // ignore lockfile spec from toml config, only look at cli config
         debug!("Ignoring toml config in favor of CLI config");
@@ -115,8 +127,11 @@ fn get_lockfile_or_prefix(
             lockfiles: parse_paths_in_config(&lockfile_patterns)?,
             platforms: cli_config.platform(),
             ignore_pypi: cli_config.ignore_pypi().unwrap_or(IGNORE_PYPI_DEFAULT),
+            ignore_source_packages: cli_config
+                .ignore_source_packages()
+                .unwrap_or(IGNORE_SOURCE_PACKAGES_DEFAULT),
         };
-        return Ok(LockfileOrPrefix::Lockfile(lockfile_spec))
+        return Ok(LockfileOrPrefix::Lockfile(lockfile_spec));
     }
 
     // fall back to toml config
@@ -141,11 +156,16 @@ fn get_lockfile_or_prefix(
         .ignore_pypi()
         .or(toml_config.get_ignore_pypi())
         .unwrap_or(IGNORE_PYPI_DEFAULT);
+    let ignore_source_packages = cli_config
+        .ignore_source_packages()
+        .or(toml_config.get_ignore_source_packages())
+        .unwrap_or(IGNORE_SOURCE_PACKAGES_DEFAULT);
     Ok(LockfileOrPrefix::Lockfile(LockfileSpec {
         lockfiles,
         platforms,
         environments,
         ignore_pypi,
+        ignore_source_packages,
     }))
 }
 

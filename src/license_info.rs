@@ -1,7 +1,4 @@
-use std::{
-    collections::BTreeSet,
-    path::PathBuf,
-};
+use std::{collections::BTreeSet, path::PathBuf};
 
 use anyhow::{Context, Result};
 use colored::Colorize;
@@ -14,9 +11,9 @@ use spdx::Expression;
 
 use crate::{
     expression_utils::{check_expression_safety, extract_license_texts, parse_expression},
-    license_allowlist::is_package_ignored,
+    license_allowlist::{is_package_ignored, is_package_ignored_without_version},
     pixi_lock::get_conda_packages_for_pixi_lock,
-    CheckOutput, CondaDenyCheckConfig, LockfileSpec,
+    CheckOutput, CondaDenyCheckConfig, LockfileSpec, MissingPackageRecordBehavior,
 };
 
 #[derive(Debug, Clone, Serialize)]
@@ -117,7 +114,10 @@ impl LicenseInfos {
         self.license_infos.dedup();
     }
 
-    pub fn from_pixi_lockfiles(lockfile_spec: LockfileSpec) -> Result<LicenseInfos> {
+    pub fn from_pixi_lockfiles(
+        lockfile_spec: LockfileSpec,
+        missing_record_behavior: MissingPackageRecordBehavior<'_>,
+    ) -> Result<LicenseInfos> {
         anyhow::ensure!(
             !lockfile_spec.lockfiles.is_empty(),
             "No lockfiles provided in LockfileSpec"
@@ -147,17 +147,35 @@ impl LicenseInfos {
 
         let mut license_infos = BTreeSet::new();
         for package in conda_packages {
-            // Source packages may not have a full package record, so there is no license metadata to check here.
-            if package.as_source().is_some() {
+            let is_source_package = package.as_source().is_some();
+            if lockfile_spec.ignore_source_packages && is_source_package {
                 continue;
             }
 
-            let record = package.record().cloned().ok_or_else(|| {
-                anyhow::anyhow!(
-                    "Package record missing in lockfile for {}",
-                    package.name().as_source()
-                )
-            })?;
+            let package_name = package.name().as_source();
+            let Some(record) = package.record().cloned() else {
+                if let MissingPackageRecordBehavior::IgnoreNameOnlySourcePackages(ignore_packages) =
+                    missing_record_behavior
+                {
+                    if is_source_package
+                        && is_package_ignored_without_version(ignore_packages, package_name)
+                    {
+                        continue;
+                    }
+                }
+
+                if is_source_package {
+                    return Err(anyhow::anyhow!(
+                        "Package record missing in lockfile for source package {package_name}. \
+                         Use ignore-source-packages to ignore all source packages, or add a name-only \
+                         entry for this package to ignore-packages."
+                    ));
+                }
+
+                return Err(anyhow::anyhow!(
+                    "Package record missing in lockfile for {package_name}."
+                ));
+            };
             license_infos.insert(LicenseInfo::from_package_record(record));
         }
 
@@ -324,6 +342,7 @@ mod tests {
                 platforms: None,
                 environments: None,
                 ignore_pypi: false,
+                ignore_source_packages: false,
             }),
             osi: false,
             safe_licenses,

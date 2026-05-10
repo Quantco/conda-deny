@@ -49,6 +49,10 @@ pub enum CondaDenyCliConfig {
         #[arg(long)]
         ignore_pypi: Option<bool>,
 
+        /// Ignore all source packages in pixi lockfiles.
+        #[arg(long)]
+        ignore_source_packages: Option<bool>,
+
         /// Output format
         #[arg(short, long)]
         output: Option<OutputFormat>,
@@ -74,6 +78,10 @@ pub enum CondaDenyCliConfig {
         /// Ignore when encountering pypi packages instead of failing.
         #[arg(long)]
         ignore_pypi: Option<bool>,
+
+        /// Ignore all source packages in pixi lockfiles.
+        #[arg(long)]
+        ignore_source_packages: Option<bool>,
 
         /// Output format
         #[arg(short, long)]
@@ -101,6 +109,10 @@ pub enum CondaDenyCliConfig {
         /// Ignore when encountering pypi packages instead of failing.
         #[arg(long)]
         ignore_pypi: Option<bool>,
+
+        /// Ignore all source packages in pixi lockfiles.
+        #[arg(long)]
+        ignore_source_packages: Option<bool>,
 
         /// Directory to bundle licenses into
         #[arg(short, long)]
@@ -146,6 +158,23 @@ impl CondaDenyCliConfig {
             CondaDenyCliConfig::Check { ignore_pypi, .. } => *ignore_pypi,
             CondaDenyCliConfig::List { ignore_pypi, .. } => *ignore_pypi,
             CondaDenyCliConfig::Bundle { ignore_pypi, .. } => *ignore_pypi,
+        }
+    }
+
+    pub fn ignore_source_packages(&self) -> Option<bool> {
+        match self {
+            CondaDenyCliConfig::Check {
+                ignore_source_packages,
+                ..
+            } => *ignore_source_packages,
+            CondaDenyCliConfig::List {
+                ignore_source_packages,
+                ..
+            } => *ignore_source_packages,
+            CondaDenyCliConfig::Bundle {
+                ignore_source_packages,
+                ..
+            } => *ignore_source_packages,
         }
     }
 

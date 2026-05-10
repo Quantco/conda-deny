@@ -1,11 +1,16 @@
 use std::io::Write;
 
-use crate::{collect_license_infos, CondaDenyListConfig, OutputFormat};
+use crate::{
+    collect_license_infos, CondaDenyListConfig, MissingPackageRecordBehavior, OutputFormat,
+};
 use anyhow::{Context, Result};
 
 pub fn list<W: Write>(config: CondaDenyListConfig, mut out: W) -> Result<()> {
-    let license_infos = collect_license_infos(config.lockfile_or_prefix.clone())
-        .with_context(|| "Fetching license information failed.")?;
+    let license_infos = collect_license_infos(
+        config.lockfile_or_prefix.clone(),
+        MissingPackageRecordBehavior::Error,
+    )
+    .with_context(|| "Fetching license information failed.")?;
 
     match config.output_format {
         OutputFormat::Default => {
@@ -26,9 +31,7 @@ pub fn list<W: Write>(config: CondaDenyListConfig, mut out: W) -> Result<()> {
 
             for license_info in &license_infos.license_infos {
                 writer.serialize(license_info).with_context(|| {
-                    format!(
-                        "Failed to serialize the following license info: {license_info:?}"
-                    )
+                    format!("Failed to serialize the following license info: {license_info:?}")
                 })?;
             }
 

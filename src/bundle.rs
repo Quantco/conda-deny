@@ -44,7 +44,10 @@ pub fn bundle<W: Write>(config: CondaDenyBundleConfig, mut out: W) -> Result<()>
                         &lockfile_spec.platforms,
                         lockfile_spec.ignore_pypi,
                     )?
-                    .into_iter(),
+                    .into_iter()
+                    .filter(|package| {
+                        !(lockfile_spec.ignore_source_packages && package.as_source().is_some())
+                    }),
                 );
             }
 
@@ -160,9 +163,7 @@ where
 
 fn create_license_file_directory(path: &Path, license_files: Vec<LicenseFile>) -> Result<()> {
     if path.exists() {
-        warn!(
-            "Output directory already exists. Removing and creating a new one: {path:?}"
-        );
+        warn!("Output directory already exists. Removing and creating a new one: {path:?}");
         std::fs::remove_dir_all(path)
             .with_context(|| format!("Failed to remove existing directory: {path:?}"))?;
     }

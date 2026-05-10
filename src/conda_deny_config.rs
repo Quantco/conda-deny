@@ -62,6 +62,7 @@ pub struct CondaDeny {
     lockfile_spec: Option<LockfileSpec>,
     osi: Option<bool>,
     ignore_pypi: Option<bool>,
+    ignore_source_packages: Option<bool>,
     pub safe_licenses: Option<Vec<String>>,
     pub ignore_packages: Option<Vec<IgnorePackage>>,
 }
@@ -126,6 +127,10 @@ impl CondaDenyTomlConfig {
         self.tool.conda_deny.ignore_pypi
     }
 
+    pub fn get_ignore_source_packages(&self) -> Option<bool> {
+        self.tool.conda_deny.ignore_source_packages
+    }
+
     pub fn empty() -> Self {
         CondaDenyTomlConfig {
             tool: Tool {
@@ -136,6 +141,7 @@ impl CondaDenyTomlConfig {
                     lockfile_spec: None,
                     osi: None,
                     ignore_pypi: None,
+                    ignore_source_packages: None,
                     safe_licenses: None,
                     ignore_packages: None,
                 },
