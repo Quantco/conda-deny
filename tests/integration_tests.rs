@@ -30,7 +30,6 @@ fn list_config(
     #[default(None)] platform: Option<Vec<Platform>>,
     #[default(None)] environment: Option<Vec<String>>,
     #[default(None)] ignore_pypi: Option<bool>,
-    #[default(None)] ignore_source_packages: Option<bool>,
     #[default(Some(OutputFormat::Default))] output: Option<OutputFormat>,
 ) -> CondaDenyListConfig {
     let cli = CondaDenyCliConfig::List {
@@ -39,7 +38,6 @@ fn list_config(
         platform,
         environment,
         ignore_pypi,
-        ignore_source_packages,
         output,
     };
 
@@ -59,7 +57,6 @@ fn bundle_config(
     #[default(None)] platform: Option<Vec<Platform>>,
     #[default(None)] environment: Option<Vec<String>>,
     #[default(None)] ignore_pypi: Option<bool>,
-    #[default(None)] ignore_source_packages: Option<bool>,
     #[default(None)] directory: Option<PathBuf>,
 ) -> CondaDenyBundleConfig {
     let cli = CondaDenyCliConfig::Bundle {
@@ -68,7 +65,6 @@ fn bundle_config(
         platform,
         environment,
         ignore_pypi,
-        ignore_source_packages,
         directory,
     };
 
@@ -89,7 +85,6 @@ fn check_config(
     #[default(None)] environment: Option<Vec<String>>,
     #[default(None)] osi: Option<bool>,
     #[default(None)] ignore_pypi: Option<bool>,
-    #[default(None)] ignore_source_packages: Option<bool>,
     #[default(Some(OutputFormat::Default))] output: Option<OutputFormat>,
 ) -> CondaDenyCheckConfig {
     let cli = CondaDenyCliConfig::Check {
@@ -99,7 +94,6 @@ fn check_config(
         environment,
         osi,
         ignore_pypi,
-        ignore_source_packages,
         output,
     };
 
@@ -165,10 +159,9 @@ fn test_lockfile_pattern(#[case] subcommand: &str) {
         None,
         None,
         None,
-        None,
     );
 
-    let list_config = list_config(Some(config), None, None, None, None, None, None, None);
+    let list_config = list_config(Some(config), None, None, None, None, None, None);
 
     if subcommand == "check" {
         let result = check(check_config, &mut out);
@@ -205,7 +198,6 @@ license-allowlist = "tests/default_license_allowlist.toml""#;
     let check_config = check_config(
         Some(temp_config_file_path),
         Some(vec!["tests/default_pixi.lock".into()]),
-        None,
         None,
         None,
         None,
@@ -261,7 +253,6 @@ fn test_multiple_allowlists_check() {
         None,
         None,
         None,
-        None,
     );
 
     let result = check(check_config, &mut out);
@@ -289,7 +280,7 @@ environment = "lint""#;
     let mut out = out();
     // Inject the temporary file's path into check_config
     let temp_path = Some(temp_pixi_toml.path().to_path_buf());
-    let check_config = check_config(temp_path, None, None, None, None, None, None, None, None);
+    let check_config = check_config(temp_path, None, None, None, None, None, None, None);
 
     let result = check(check_config, &mut out);
     let output = String::from_utf8(out).unwrap();
@@ -317,7 +308,6 @@ safe-licenses = ["BSD-3-Clause"]"#;
     let check_config = check_config(
         temp_path,
         Some(vec!["tests/default_pixi.lock".into()]),
-        None,
         None,
         None,
         None,
@@ -498,8 +488,6 @@ fn test_bundle_prefix() {
         None,
         // IGNORE PYPI
         None,
-        // SKIP SOURCE PACKAGES
-        None,
         // DIRECTORY
         Some(temp_dir.path().join(Path::new("test_bundle"))),
     );
@@ -549,8 +537,6 @@ fn test_bundle_lockfile() {
         None,
         // IGNORE PYPI
         None,
-        // SKIP SOURCE PACKAGES
-        None,
         // DIRECTORY
         Some(temp_dir.path().join(Path::new("test_bundle"))),
     );
@@ -584,7 +570,6 @@ fn test_bundle_lockfile() {
 }
 
 #[rstest]
-#[case("tests/test_ignored_source_package/pixi_ignore_source.toml")]
 #[case("tests/test_ignored_source_package/pixi_ignore.toml")]
 fn test_check_allows_source_package_without_record(
     #[case] _config_path: &str,

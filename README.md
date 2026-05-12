@@ -73,7 +73,6 @@ license-allowlist = "https://raw.githubusercontent.com/quantco/conda-deny/main/t
 platform = "linux-64" # or ["linux-64", "osx-arm64"]
 environment = "default" # or ["default", "py39", "py310", "prod"]
 lockfile = "environment/pixi.lock" # or ["environment1/pixi.lock", "environment2/pixi.lock"]
-ignore-source-packages = false # set to true to ignore all pixi source packages
 
 #--------------------------------------------------------
 # License allowlist directly in configuration file:

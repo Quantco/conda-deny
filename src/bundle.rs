@@ -44,10 +44,7 @@ pub fn bundle<W: Write>(config: CondaDenyBundleConfig, mut out: W) -> Result<()>
                         &lockfile_spec.platforms,
                         lockfile_spec.ignore_pypi,
                     )?
-                    .into_iter()
-                    .filter(|package| {
-                        !(lockfile_spec.ignore_source_packages && package.as_source().is_some())
-                    }),
+                    .into_iter(),
                 );
             }
 

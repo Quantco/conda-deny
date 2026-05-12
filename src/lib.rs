@@ -71,7 +71,6 @@ pub struct LockfileSpec {
     platforms: Option<Vec<Platform>>,
     environments: Option<Vec<String>>,
     ignore_pypi: bool,
-    ignore_source_packages: bool,
 }
 
 #[derive(Debug, Clone)]
@@ -107,7 +106,6 @@ pub fn collect_license_infos(
 }
 
 const IGNORE_PYPI_DEFAULT: bool = false;
-const IGNORE_SOURCE_PACKAGES_DEFAULT: bool = false;
 
 fn get_lockfile_or_prefix(
     cli_config: &CondaDenyCliConfig,
@@ -127,9 +125,6 @@ fn get_lockfile_or_prefix(
             lockfiles: parse_paths_in_config(&lockfile_patterns)?,
             platforms: cli_config.platform(),
             ignore_pypi: cli_config.ignore_pypi().unwrap_or(IGNORE_PYPI_DEFAULT),
-            ignore_source_packages: cli_config
-                .ignore_source_packages()
-                .unwrap_or(IGNORE_SOURCE_PACKAGES_DEFAULT),
         };
         return Ok(LockfileOrPrefix::Lockfile(lockfile_spec));
     }
@@ -156,16 +151,11 @@ fn get_lockfile_or_prefix(
         .ignore_pypi()
         .or(toml_config.get_ignore_pypi())
         .unwrap_or(IGNORE_PYPI_DEFAULT);
-    let ignore_source_packages = cli_config
-        .ignore_source_packages()
-        .or(toml_config.get_ignore_source_packages())
-        .unwrap_or(IGNORE_SOURCE_PACKAGES_DEFAULT);
     Ok(LockfileOrPrefix::Lockfile(LockfileSpec {
         lockfiles,
         platforms,
         environments,
         ignore_pypi,
-        ignore_source_packages,
     }))
 }
 

@@ -148,10 +148,6 @@ impl LicenseInfos {
         let mut license_infos = BTreeSet::new();
         for package in conda_packages {
             let is_source_package = package.as_source().is_some();
-            if lockfile_spec.ignore_source_packages && is_source_package {
-                continue;
-            }
-
             let package_name = package.name().as_source();
             let Some(record) = package.record().cloned() else {
                 if let MissingPackageRecordBehavior::IgnoreNameOnlySourcePackages(ignore_packages) =
@@ -167,8 +163,7 @@ impl LicenseInfos {
                 if is_source_package {
                     return Err(anyhow::anyhow!(
                         "Package record missing in lockfile for source package {package_name}. \
-                         Use ignore-source-packages to ignore all source packages, or add a name-only \
-                         entry for this package to ignore-packages."
+                         Add a name-only entry for this package to ignore-packages to ignore it."
                     ));
                 }
 
@@ -342,7 +337,6 @@ mod tests {
                 platforms: None,
                 environments: None,
                 ignore_pypi: false,
-                ignore_source_packages: false,
             }),
             osi: false,
             safe_licenses,
