@@ -55,6 +55,7 @@ pub struct CondaDenyCheckConfig {
 #[derive(Debug)]
 pub struct CondaDenyListConfig {
     pub lockfile_or_prefix: LockfileOrPrefix,
+    pub ignore_packages: Vec<IgnorePackage>,
     pub output_format: OutputFormat,
 }
 
@@ -79,25 +80,15 @@ pub enum LockfileOrPrefix {
     Prefix(Vec<PathBuf>),
 }
 
-pub enum MissingPackageRecordBehavior<'a> {
-    /// Fail when a package has no full package record.
-    Error,
-    /// Allow check-only `ignore-packages` entries without a version to suppress
-    /// missing records for source packages. Versioned ignores are not accepted
-    /// here because the missing package record means there is no reliable
-    /// version to compare against.
-    IgnoreNameOnlySourcePackages(&'a [IgnorePackage]),
-}
-
 pub type CheckOutput = (Vec<LicenseInfo>, Vec<LicenseInfo>);
 
 pub fn collect_license_infos(
     lockfile_or_prefix: LockfileOrPrefix,
-    missing_record_behavior: MissingPackageRecordBehavior<'_>,
+    ignore_packages: &[IgnorePackage],
 ) -> Result<LicenseInfos> {
     match lockfile_or_prefix {
         LockfileOrPrefix::Lockfile(lockfile_spec) => {
-            LicenseInfos::from_pixi_lockfiles(lockfile_spec, missing_record_behavior)
+            LicenseInfos::from_pixi_lockfiles(lockfile_spec, ignore_packages)
                 .with_context(|| "Getting license information from config file failed.")
         }
         LockfileOrPrefix::Prefix(prefixes) => LicenseInfos::from_conda_prefixes(&prefixes)
@@ -225,10 +216,14 @@ pub fn get_config_options(
                 output_format,
             })
         }
-        CondaDenyCliConfig::List { .. } => CondaDenyConfig::List(CondaDenyListConfig {
-            lockfile_or_prefix,
-            output_format,
-        }),
+        CondaDenyCliConfig::List { .. } => {
+            let (_, ignore_packages) = get_license_information_from_toml_config(&toml_config)?;
+            CondaDenyConfig::List(CondaDenyListConfig {
+                lockfile_or_prefix,
+                ignore_packages,
+                output_format,
+            })
+        }
         CondaDenyCliConfig::Bundle { directory, .. } => {
             CondaDenyConfig::Bundle(CondaDenyBundleConfig {
                 lockfile_or_prefix,

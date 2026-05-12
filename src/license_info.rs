@@ -11,9 +11,10 @@ use spdx::Expression;
 
 use crate::{
     expression_utils::{check_expression_safety, extract_license_texts, parse_expression},
+    license_allowlist::IgnorePackage,
     license_allowlist::{is_package_ignored, is_package_ignored_without_version},
     pixi_lock::get_conda_packages_for_pixi_lock,
-    CheckOutput, CondaDenyCheckConfig, LockfileSpec, MissingPackageRecordBehavior,
+    CheckOutput, CondaDenyCheckConfig, LockfileSpec,
 };
 
 #[derive(Debug, Clone, Serialize)]
@@ -116,7 +117,7 @@ impl LicenseInfos {
 
     pub fn from_pixi_lockfiles(
         lockfile_spec: LockfileSpec,
-        missing_record_behavior: MissingPackageRecordBehavior<'_>,
+        ignore_packages: &[IgnorePackage],
     ) -> Result<LicenseInfos> {
         anyhow::ensure!(
             !lockfile_spec.lockfiles.is_empty(),
@@ -150,14 +151,10 @@ impl LicenseInfos {
             let is_source_package = package.as_source().is_some();
             let package_name = package.name().as_source();
             let Some(record) = package.record().cloned() else {
-                if let MissingPackageRecordBehavior::IgnoreNameOnlySourcePackages(ignore_packages) =
-                    missing_record_behavior
+                if is_source_package
+                    && is_package_ignored_without_version(ignore_packages, package_name)
                 {
-                    if is_source_package
-                        && is_package_ignored_without_version(ignore_packages, package_name)
-                    {
-                        continue;
-                    }
+                    continue;
                 }
 
                 if is_source_package {

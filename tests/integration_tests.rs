@@ -600,6 +600,35 @@ fn test_check_errors_on_source_package_without_record(
 }
 
 #[rstest]
+fn test_list_allows_ignored_source_package_without_record(
+    #[with(Some(PathBuf::from("tests/test_ignored_source_package/pixi_ignore.toml")))]
+    list_config: CondaDenyListConfig,
+    mut out: Vec<u8>,
+    _colored_control: (),
+) {
+    let result = list(list_config, &mut out);
+    let output = String::from_utf8(strip_ansi_escapes::strip(out)).unwrap();
+
+    assert!(result.is_ok(), "{result:?}");
+    assert!(!output.contains("my-partial-pkg"));
+}
+
+#[rstest]
+#[case("tests/test_ignored_source_package/pixi.toml")]
+#[case("tests/test_ignored_source_package/pixi_ignore_version.toml")]
+fn test_list_errors_on_source_package_without_record(
+    #[case] _config_path: &str,
+    #[with(Some(PathBuf::from(_config_path)))] list_config: CondaDenyListConfig,
+    mut out: Vec<u8>,
+    _colored_control: (),
+) {
+    let result = list(list_config, &mut out);
+    let error = format!("{result:?}");
+
+    assert!(error.contains("Package record missing in lockfile for source package my-partial-pkg"));
+}
+
+#[rstest]
 fn test_check_checks_source_package_with_record(
     #[with(Some(PathBuf::from("tests/test_source_package_with_record/pixi.toml")))]
     check_config: CondaDenyCheckConfig,
