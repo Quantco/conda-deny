@@ -71,7 +71,7 @@ pub fn is_package_ignored(
     Ok(false)
 }
 
-pub fn is_package_ignored_without_version(
+pub fn is_package_ignored_by_name_only(
     ignore_packages: &[IgnorePackage],
     package_name: &str,
 ) -> bool {

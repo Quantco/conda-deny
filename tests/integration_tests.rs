@@ -570,13 +570,27 @@ fn test_bundle_lockfile() {
 }
 
 #[rstest]
-#[case("tests/test_ignored_source_package/pixi_ignore.toml")]
-fn test_check_allows_source_package_without_record(
-    #[case] _config_path: &str,
-    #[with(Some(PathBuf::from(_config_path)))] check_config: CondaDenyCheckConfig,
-    mut out: Vec<u8>,
-    _colored_control: (),
-) {
+fn test_check_allows_source_package_without_record(mut out: Vec<u8>, _colored_control: ()) {
+    let mut temp_config_file = NamedTempFile::new().unwrap();
+    let file_content = r#"[tool.conda-deny]
+lockfile = "tests/test_ignored_source_package/pixi.lock"
+safe-licenses = ["MIT"]
+ignore-packages = [{ package = "my-partial-pkg" }]"#;
+    temp_config_file
+        .as_file_mut()
+        .write_all(file_content.as_bytes())
+        .unwrap();
+
+    let check_config = check_config(
+        Some(temp_config_file.path().to_path_buf()),
+        None,
+        None,
+        None,
+        None,
+        None,
+        None,
+        None,
+    );
     let result = check(check_config, &mut out);
     let output = String::from_utf8(strip_ansi_escapes::strip(out)).unwrap();
 
@@ -596,16 +610,30 @@ fn test_check_errors_on_source_package_without_record(
     let result = check(check_config, &mut out);
     let error = format!("{result:?}");
 
-    assert!(error.contains("Package record missing in lockfile for source package my-partial-pkg"));
+    assert!(error.contains("Package record missing in lockfile for my-partial-pkg"));
 }
 
 #[rstest]
-fn test_list_allows_ignored_source_package_without_record(
-    #[with(Some(PathBuf::from("tests/test_ignored_source_package/pixi_ignore.toml")))]
-    list_config: CondaDenyListConfig,
-    mut out: Vec<u8>,
-    _colored_control: (),
-) {
+fn test_list_allows_ignored_source_package_without_record(mut out: Vec<u8>, _colored_control: ()) {
+    let mut temp_config_file = NamedTempFile::new().unwrap();
+    let file_content = r#"[tool.conda-deny]
+lockfile = "tests/test_ignored_source_package/pixi.lock"
+safe-licenses = ["MIT"]
+ignore-packages = [{ package = "my-partial-pkg" }]"#;
+    temp_config_file
+        .as_file_mut()
+        .write_all(file_content.as_bytes())
+        .unwrap();
+
+    let list_config = list_config(
+        Some(temp_config_file.path().to_path_buf()),
+        None,
+        None,
+        None,
+        None,
+        None,
+        None,
+    );
     let result = list(list_config, &mut out);
     let output = String::from_utf8(strip_ansi_escapes::strip(out)).unwrap();
 
@@ -625,7 +653,7 @@ fn test_list_errors_on_source_package_without_record(
     let result = list(list_config, &mut out);
     let error = format!("{result:?}");
 
-    assert!(error.contains("Package record missing in lockfile for source package my-partial-pkg"));
+    assert!(error.contains("Package record missing in lockfile for my-partial-pkg"));
 }
 
 #[rstest]

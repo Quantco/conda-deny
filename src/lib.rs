@@ -91,8 +91,10 @@ pub fn collect_license_infos(
             LicenseInfos::from_pixi_lockfiles(lockfile_spec, ignore_packages)
                 .with_context(|| "Getting license information from config file failed.")
         }
-        LockfileOrPrefix::Prefix(prefixes) => LicenseInfos::from_conda_prefixes(&prefixes)
-            .with_context(|| "Getting license information from conda prefixes failed."),
+        LockfileOrPrefix::Prefix(prefixes) => {
+            LicenseInfos::from_conda_prefixes(&prefixes, ignore_packages)
+                .with_context(|| "Getting license information from conda prefixes failed.")
+        }
     }
 }
 

@@ -12,7 +12,7 @@ use spdx::Expression;
 use crate::{
     expression_utils::{check_expression_safety, extract_license_texts, parse_expression},
     license_allowlist::IgnorePackage,
-    license_allowlist::{is_package_ignored, is_package_ignored_without_version},
+    license_allowlist::{is_package_ignored, is_package_ignored_by_name_only},
     pixi_lock::get_conda_packages_for_pixi_lock,
     CheckOutput, CondaDenyCheckConfig, LockfileSpec,
 };
@@ -148,26 +148,21 @@ impl LicenseInfos {
 
         let mut license_infos = BTreeSet::new();
         for package in conda_packages {
-            let is_source_package = package.as_source().is_some();
             let package_name = package.name().as_source();
             let Some(record) = package.record().cloned() else {
-                if is_source_package
-                    && is_package_ignored_without_version(ignore_packages, package_name)
-                {
+                if is_package_ignored_by_name_only(ignore_packages, package_name) {
                     continue;
                 }
 
-                if is_source_package {
-                    return Err(anyhow::anyhow!(
-                        "Package record missing in lockfile for source package {package_name}. \
-                         Add a name-only entry for this package to ignore-packages to ignore it."
-                    ));
-                }
-
                 return Err(anyhow::anyhow!(
-                    "Package record missing in lockfile for {package_name}."
+                    "Package record missing in lockfile for {package_name}. \
+                     Add a name-only entry for this package to ignore-packages to ignore it."
                 ));
             };
+            let package_version = record.version.version().to_string();
+            if is_package_ignored(ignore_packages, package_name, &package_version)? {
+                continue;
+            }
             license_infos.insert(LicenseInfo::from_package_record(record));
         }
 
@@ -176,7 +171,10 @@ impl LicenseInfos {
         })
     }
 
-    pub fn from_conda_prefixes(prefixes: &[PathBuf]) -> Result<LicenseInfos> {
+    pub fn from_conda_prefixes(
+        prefixes: &[PathBuf],
+        ignore_packages: &[IgnorePackage],
+    ) -> Result<LicenseInfos> {
         let mut license_infos: BTreeSet<_> = BTreeSet::new();
         anyhow::ensure!(!prefixes.is_empty(), "No conda prefixes provided");
 
@@ -198,9 +196,14 @@ impl LicenseInfos {
                 })?;
 
             for record in prefix_records {
-                let license_info =
-                    LicenseInfo::from_package_record(record.repodata_record.package_record.clone());
-                license_infos.insert(license_info);
+                let package_record = record.repodata_record.package_record;
+                let package_name = package_record.name.as_source();
+                let package_version = package_record.version.version().to_string();
+                if is_package_ignored(ignore_packages, package_name, &package_version)? {
+                    continue;
+                }
+
+                license_infos.insert(LicenseInfo::from_package_record(package_record));
             }
         }
 
@@ -216,28 +219,14 @@ impl LicenseInfos {
         for license_info in &self.license_infos {
             match &license_info.license {
                 LicenseState::Valid(license) => {
-                    if check_expression_safety(license, &config.safe_licenses)
-                        || is_package_ignored(
-                            &config.ignore_packages,
-                            &license_info.package_name,
-                            &license_info.version,
-                        )?
-                    {
+                    if check_expression_safety(license, &config.safe_licenses) {
                         safe_dependencies.push(license_info.clone());
                     } else {
                         unsafe_dependencies.push(license_info.clone());
                     }
                 }
                 LicenseState::Invalid(_) => {
-                    if is_package_ignored(
-                        &config.ignore_packages,
-                        &license_info.package_name,
-                        &license_info.version,
-                    )? {
-                        safe_dependencies.push(license_info.clone());
-                    } else {
-                        unsafe_dependencies.push(license_info.clone());
-                    }
+                    unsafe_dependencies.push(license_info.clone());
                 }
             }
         }
