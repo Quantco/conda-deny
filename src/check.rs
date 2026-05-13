@@ -1,5 +1,5 @@
 use crate::{
-    fetch_license_infos,
+    collect_license_infos,
     license_info::{LicenseInfo, LicenseState},
     CheckOutput, CondaDenyCheckConfig, OutputFormat,
 };
@@ -11,8 +11,9 @@ use serde_json::json;
 use std::io::Write;
 
 fn check_license_infos(config: &CondaDenyCheckConfig) -> Result<CheckOutput> {
-    let license_infos = fetch_license_infos(config.lockfile_or_prefix.clone())
-        .with_context(|| "Fetching license information failed.")?;
+    let license_infos =
+        collect_license_infos(config.lockfile_or_prefix.clone(), &config.ignore_packages)
+            .with_context(|| "Fetching license information failed.")?;
 
     if config.osi {
         debug!("Checking licenses for OSI compliance");

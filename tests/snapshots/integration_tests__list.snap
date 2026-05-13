@@ -2,7 +2,6 @@
 source: tests/integration_tests.rs
 expression: output
 ---
-_libgcc_mutex 0.1-conda_forge (linux-64): None (Non-SPDX)
 _openmp_mutex 4.5-2_gnu (linux-64): BSD-3-Clause 
 binutils_impl_linux-64 2.43-h4bf12b8_4 (linux-64): GPL-3.0-only 
 ca-certificates 2025.4.26-hbd8a1cb_0 (noarch): ISC 

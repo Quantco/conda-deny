@@ -160,9 +160,7 @@ where
 
 fn create_license_file_directory(path: &Path, license_files: Vec<LicenseFile>) -> Result<()> {
     if path.exists() {
-        warn!(
-            "Output directory already exists. Removing and creating a new one: {path:?}"
-        );
+        warn!("Output directory already exists. Removing and creating a new one: {path:?}");
         std::fs::remove_dir_all(path)
             .with_context(|| format!("Failed to remove existing directory: {path:?}"))?;
     }

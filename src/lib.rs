@@ -22,10 +22,7 @@ use rattler_conda_types::Platform;
 use serde::Deserialize;
 use spdx::Expression;
 
-use crate::{
-    conda_deny_config::parse_paths_in_config,
-    license_info::LicenseInfos,
-};
+use crate::{conda_deny_config::parse_paths_in_config, license_info::LicenseInfos};
 
 #[derive(Debug)]
 pub enum CondaDenyConfig {
@@ -58,6 +55,7 @@ pub struct CondaDenyCheckConfig {
 #[derive(Debug)]
 pub struct CondaDenyListConfig {
     pub lockfile_or_prefix: LockfileOrPrefix,
+    pub ignore_packages: Vec<IgnorePackage>,
     pub output_format: OutputFormat,
 }
 
@@ -84,14 +82,19 @@ pub enum LockfileOrPrefix {
 
 pub type CheckOutput = (Vec<LicenseInfo>, Vec<LicenseInfo>);
 
-pub fn fetch_license_infos(lockfile_or_prefix: LockfileOrPrefix) -> Result<LicenseInfos> {
+pub fn collect_license_infos(
+    lockfile_or_prefix: LockfileOrPrefix,
+    ignore_packages: &[IgnorePackage],
+) -> Result<LicenseInfos> {
     match lockfile_or_prefix {
         LockfileOrPrefix::Lockfile(lockfile_spec) => {
-            LicenseInfos::from_pixi_lockfiles(lockfile_spec)
+            LicenseInfos::from_pixi_lockfiles(lockfile_spec, ignore_packages)
                 .with_context(|| "Getting license information from config file failed.")
         }
-        LockfileOrPrefix::Prefix(prefixes) => LicenseInfos::from_conda_prefixes(&prefixes)
-            .with_context(|| "Getting license information from conda prefixes failed."),
+        LockfileOrPrefix::Prefix(prefixes) => {
+            LicenseInfos::from_conda_prefixes(&prefixes, ignore_packages)
+                .with_context(|| "Getting license information from conda prefixes failed.")
+        }
     }
 }
 
@@ -105,7 +108,7 @@ fn get_lockfile_or_prefix(
     if let Some(prefix) = cli_config.prefix() {
         debug!("Ignoring toml config in favor of CLI config");
         assert!(!prefix.is_empty());
-        return Ok(LockfileOrPrefix::Prefix(prefix))
+        return Ok(LockfileOrPrefix::Prefix(prefix));
     } else if let Some(lockfile_patterns) = cli_config.lockfile() {
         // ignore lockfile spec from toml config, only look at cli config
         debug!("Ignoring toml config in favor of CLI config");
@@ -116,7 +119,7 @@ fn get_lockfile_or_prefix(
             platforms: cli_config.platform(),
             ignore_pypi: cli_config.ignore_pypi().unwrap_or(IGNORE_PYPI_DEFAULT),
         };
-        return Ok(LockfileOrPrefix::Lockfile(lockfile_spec))
+        return Ok(LockfileOrPrefix::Lockfile(lockfile_spec));
     }
 
     // fall back to toml config
@@ -215,10 +218,14 @@ pub fn get_config_options(
                 output_format,
             })
         }
-        CondaDenyCliConfig::List { .. } => CondaDenyConfig::List(CondaDenyListConfig {
-            lockfile_or_prefix,
-            output_format,
-        }),
+        CondaDenyCliConfig::List { .. } => {
+            let (_, ignore_packages) = get_license_information_from_toml_config(&toml_config)?;
+            CondaDenyConfig::List(CondaDenyListConfig {
+                lockfile_or_prefix,
+                ignore_packages,
+                output_format,
+            })
+        }
         CondaDenyCliConfig::Bundle { directory, .. } => {
             CondaDenyConfig::Bundle(CondaDenyBundleConfig {
                 lockfile_or_prefix,

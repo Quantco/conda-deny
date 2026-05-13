@@ -1,0 +1,3 @@
+[tool.conda-deny]
+lockfile = "tests/test_ignored_source_package/pixi.lock"
+safe-licenses = ["MIT"]

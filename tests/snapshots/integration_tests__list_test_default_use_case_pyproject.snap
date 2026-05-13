@@ -2,7 +2,6 @@
 source: tests/integration_tests.rs
 expression: stdout
 ---
-_libgcc_mutex 0.1-conda_forge (linux-64): None (Non-SPDX)
 _openmp_mutex 4.5-2_gnu (linux-64): BSD-3-Clause 
 _openmp_mutex 4.5-2_gnu (linux-aarch64): BSD-3-Clause 
 _sysroot_linux-aarch64_curr_repodata_hack 4-h57d6b7b_14 (noarch): LGPL-2.0-or-later AND LGPL-2.0-or-later WITH exceptions AND GPL-2.0-or-later AND MPL-2.0 (Non-SPDX)

@@ -36,7 +36,7 @@ struct LicenseAllowlist {
 }
 
 pub fn is_package_ignored(
-    ignore_packages: &Vec<IgnorePackage>,
+    ignore_packages: &[IgnorePackage],
     package_name: &str,
     package_version: &str,
 ) -> Result<bool> {
@@ -69,6 +69,15 @@ pub fn is_package_ignored(
 
     // If no matches were found, the package is not ignored
     Ok(false)
+}
+
+pub fn is_package_ignored_by_name_only(
+    ignore_packages: &[IgnorePackage],
+    package_name: &str,
+) -> bool {
+    ignore_packages.iter().any(|ignore_package| {
+        ignore_package.package == package_name && ignore_package.version.is_none()
+    })
 }
 
 pub fn license_config_from_toml_str(
@@ -275,7 +284,10 @@ mod tests {
 
         assert_eq!(safe_licenses.len(), expected_safe_licenses.len());
         assert_eq!(
-            safe_licenses.iter().map(|e| e.to_string()).collect::<Vec<_>>(),
+            safe_licenses
+                .iter()
+                .map(|e| e.to_string())
+                .collect::<Vec<_>>(),
             expected_safe_licenses
                 .iter()
                 .map(|e| e.to_string())

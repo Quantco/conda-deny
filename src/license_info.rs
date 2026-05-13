@@ -1,7 +1,4 @@
-use std::{
-    collections::BTreeSet,
-    path::{Path, PathBuf},
-};
+use std::{collections::BTreeSet, path::PathBuf};
 
 use anyhow::{Context, Result};
 use colored::Colorize;
@@ -14,7 +11,8 @@ use spdx::Expression;
 
 use crate::{
     expression_utils::{check_expression_safety, extract_license_texts, parse_expression},
-    license_allowlist::is_package_ignored,
+    license_allowlist::IgnorePackage,
+    license_allowlist::{is_package_ignored, is_package_ignored_by_name_only},
     pixi_lock::get_conda_packages_for_pixi_lock,
     CheckOutput, CondaDenyCheckConfig, LockfileSpec,
 };
@@ -117,7 +115,10 @@ impl LicenseInfos {
         self.license_infos.dedup();
     }
 
-    pub fn from_pixi_lockfiles(lockfile_spec: LockfileSpec) -> Result<LicenseInfos> {
+    pub fn from_pixi_lockfiles(
+        lockfile_spec: LockfileSpec,
+        ignore_packages: &[IgnorePackage],
+    ) -> Result<LicenseInfos> {
         anyhow::ensure!(
             !lockfile_spec.lockfiles.is_empty(),
             "No lockfiles provided in LockfileSpec"
@@ -127,9 +128,8 @@ impl LicenseInfos {
             .lockfiles
             .par_iter()
             .map(|lockfile| {
-                let path = Path::new(lockfile);
                 get_conda_packages_for_pixi_lock(
-                    path,
+                    lockfile,
                     &lockfile_spec.environments,
                     &lockfile_spec.platforms,
                     lockfile_spec.ignore_pypi,
@@ -146,25 +146,35 @@ impl LicenseInfos {
             .flatten()
             .collect();
 
-        let license_infos: BTreeSet<_> = conda_packages
-            .into_iter()
-            .map(|pkg| {
-                let record = pkg.record().cloned().ok_or_else(|| {
-                    anyhow::anyhow!(
-                        "Package record missing in lockfile for {}",
-                        pkg.name().as_source()
-                    )
-                })?;
-                Ok(LicenseInfo::from_package_record(record))
-            })
-            .collect::<Result<_>>()?;
+        let mut license_infos = BTreeSet::new();
+        for package in conda_packages {
+            let package_name = package.name().as_source();
+            let Some(record) = package.record().cloned() else {
+                if is_package_ignored_by_name_only(ignore_packages, package_name) {
+                    continue;
+                }
+
+                return Err(anyhow::anyhow!(
+                    "Package record missing in lockfile for {package_name}. \
+                     Add a name-only entry for this package to ignore-packages to ignore it."
+                ));
+            };
+            let package_version = record.version.version().to_string();
+            if is_package_ignored(ignore_packages, package_name, &package_version)? {
+                continue;
+            }
+            license_infos.insert(LicenseInfo::from_package_record(record));
+        }
 
         Ok(LicenseInfos {
             license_infos: license_infos.into_iter().collect(),
         })
     }
 
-    pub fn from_conda_prefixes(prefixes: &[PathBuf]) -> Result<LicenseInfos> {
+    pub fn from_conda_prefixes(
+        prefixes: &[PathBuf],
+        ignore_packages: &[IgnorePackage],
+    ) -> Result<LicenseInfos> {
         let mut license_infos: BTreeSet<_> = BTreeSet::new();
         anyhow::ensure!(!prefixes.is_empty(), "No conda prefixes provided");
 
@@ -186,9 +196,14 @@ impl LicenseInfos {
                 })?;
 
             for record in prefix_records {
-                let license_info =
-                    LicenseInfo::from_package_record(record.repodata_record.package_record.clone());
-                license_infos.insert(license_info);
+                let package_record = record.repodata_record.package_record;
+                let package_name = package_record.name.as_source();
+                let package_version = package_record.version.version().to_string();
+                if is_package_ignored(ignore_packages, package_name, &package_version)? {
+                    continue;
+                }
+
+                license_infos.insert(LicenseInfo::from_package_record(package_record));
             }
         }
 
@@ -204,28 +219,14 @@ impl LicenseInfos {
         for license_info in &self.license_infos {
             match &license_info.license {
                 LicenseState::Valid(license) => {
-                    if check_expression_safety(license, &config.safe_licenses)
-                        || is_package_ignored(
-                            &config.ignore_packages,
-                            &license_info.package_name,
-                            &license_info.version,
-                        )?
-                    {
+                    if check_expression_safety(license, &config.safe_licenses) {
                         safe_dependencies.push(license_info.clone());
                     } else {
                         unsafe_dependencies.push(license_info.clone());
                     }
                 }
                 LicenseState::Invalid(_) => {
-                    if is_package_ignored(
-                        &config.ignore_packages,
-                        &license_info.package_name,
-                        &license_info.version,
-                    )? {
-                        safe_dependencies.push(license_info.clone());
-                    } else {
-                        unsafe_dependencies.push(license_info.clone());
-                    }
+                    unsafe_dependencies.push(license_info.clone());
                 }
             }
         }
