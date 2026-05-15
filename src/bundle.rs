@@ -43,6 +43,7 @@ pub fn bundle<W: Write>(config: CondaDenyBundleConfig, mut out: W) -> Result<()>
                         &lockfile_spec.environments,
                         &lockfile_spec.platforms,
                         lockfile_spec.ignore_pypi,
+                        &[],
                     )?
                     .into_iter(),
                 );
