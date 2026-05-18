@@ -120,6 +120,7 @@ pub enum CondaDenyCliConfig {
     /// Generate shell completions
     Completion {
         /// Shell to generate completions for
+        #[arg(long)]
         shell: Shell,
     },
 }
@@ -215,7 +216,7 @@ mod tests {
 
     #[test]
     fn test_cli_with_completion_arguments() {
-        let cli = Cli::try_parse_from(vec!["conda-deny", "completion", "bash"]).unwrap();
+        let cli = Cli::try_parse_from(vec!["conda-deny", "completion", "--shell", "bash"]).unwrap();
         match cli.command {
             CondaDenyCliConfig::Completion { shell } => {
                 assert_eq!(shell, Shell::Bash);

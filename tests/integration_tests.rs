@@ -142,7 +142,7 @@ fn test_default_use_case(#[case] subcommand: &str, #[case] test_name: &str) {
 #[test]
 fn test_completion_bash() {
     let output = Command::new(assert_cmd::cargo::cargo_bin!("conda-deny"))
-        .args(["completion", "bash"])
+        .args(["completion", "--shell", "bash"])
         .output()
         .expect("Failed to execute command");
 
