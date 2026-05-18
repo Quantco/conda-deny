@@ -37,15 +37,13 @@ pub fn bundle<W: Write>(config: CondaDenyBundleConfig, mut out: W) -> Result<()>
             let lockfiles = lockfile_spec.lockfiles.clone();
             let mut conda_packages = vec![];
             for lockfile in lockfiles.clone() {
-                conda_packages.extend(
-                    get_conda_packages_for_pixi_lock(
-                        &lockfile,
-                        &lockfile_spec.environments,
-                        &lockfile_spec.platforms,
-                        lockfile_spec.ignore_pypi,
-                    )?
-                    .into_iter(),
-                );
+                conda_packages.extend(get_conda_packages_for_pixi_lock(
+                    &lockfile,
+                    &lockfile_spec.environments,
+                    &lockfile_spec.platforms,
+                    lockfile_spec.ignore_pypi,
+                    &[],
+                )?);
             }
 
             bundle_license_files(

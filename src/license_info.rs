@@ -133,6 +133,7 @@ impl LicenseInfos {
                     &lockfile_spec.environments,
                     &lockfile_spec.platforms,
                     lockfile_spec.ignore_pypi,
+                    ignore_packages,
                 )
                 .with_context(|| {
                     format!(

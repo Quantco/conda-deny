@@ -393,12 +393,22 @@ fn test_exception_check(
 }
 
 #[rstest]
-fn test_pypi_ignore_check(
-    #[with(
+fn test_pypi_ignore_check(mut out: Vec<u8>, _colored_control: ()) {
+    let mut temp_config_file = NamedTempFile::new().unwrap();
+    let file_content = r#"[tool.conda-deny]
+license-allowlist = "tests/default_license_allowlist.toml""#;
+    temp_config_file
+        .as_file_mut()
+        .write_all(file_content.as_bytes())
+        .unwrap();
+
+    let check_config = check_config(
         // CONFIG PATH
-        Some(PathBuf::from("tests/test_pypi_ignore/pixi.toml")),
+        Some(temp_config_file.path().to_path_buf()),
         // LOCKFILE PATHS
-        Some(vec!["tests/test_pypi_ignore/lockfile_with_pypi_packages.lock".into()]),
+        Some(vec![
+            "tests/test_pypi_ignore/lockfile_with_pypi_packages.lock".into(),
+        ]),
         // PREFIXES
         None,
         // PLATFORM
@@ -408,12 +418,11 @@ fn test_pypi_ignore_check(
         // OSI FLAG
         None,
         // IGNORE PYPI
-        Some(true)
-    )]
-    check_config: CondaDenyCheckConfig,
-    mut out: Vec<u8>,
-    _colored_control: (),
-) {
+        Some(true),
+        // OUTPUT
+        None,
+    );
+
     let result = check(check_config, &mut out);
     let output = String::from_utf8(out).unwrap();
 
@@ -422,12 +431,23 @@ fn test_pypi_ignore_check(
 }
 
 #[rstest]
-fn test_pypi_ignore_error(
-    #[with(
+fn test_pypi_ignore_error(mut out: Vec<u8>) {
+    let mut temp_config_file = NamedTempFile::new().unwrap();
+    let file_content = r#"[tool.conda-deny]
+license-allowlist = "tests/default_license_allowlist.toml"
+ignore-packages = [{ package = "beautifulsoup4" }]"#;
+    temp_config_file
+        .as_file_mut()
+        .write_all(file_content.as_bytes())
+        .unwrap();
+
+    let check_config = check_config(
         // CONFIG PATH
-        Some(PathBuf::from("tests/test_pypi_ignore/pixi.toml")),
+        Some(temp_config_file.path().to_path_buf()),
         // LOCKFILE PATHS
-        Some(vec!["tests/test_pypi_ignore/lockfile_with_pypi_packages.lock".into()]),
+        Some(vec![
+            "tests/test_pypi_ignore/lockfile_with_pypi_packages.lock".into(),
+        ]),
         // PREFIXES
         None,
         // PLATFORM
@@ -437,17 +457,17 @@ fn test_pypi_ignore_error(
         // OSI FLAG
         None,
         // IGNORE PYPI
-        Some(false)
-    )]
-    check_config: CondaDenyCheckConfig,
-    mut out: Vec<u8>,
-) {
+        Some(false),
+        // OUTPUT FORMAT
+        None,
+    );
+
     let result = check(check_config, &mut out);
-    if let Err(e) = &result {
-        println!("Actual error: {e}");
-    }
+    let error = format!("{result:?}");
+
     assert!(result.is_err());
-    assert!(format!("{result:?}").contains("Pypi packages are not supported:"));
+    assert!(!error.contains("beautifulsoup4"));
+    assert!(error.contains("Pypi packages are not supported: certifi"));
     assert_eq!(out, b"");
 }
 

@@ -40,14 +40,16 @@ pub fn is_package_ignored(
     package_name: &str,
     package_version: &str,
 ) -> Result<bool> {
-    let parsed_package_version = Version::from_str(package_version).with_context(|| {
-        format!("Error parsing package version: {package_version} for package: {package_name}")
-    })?;
-
     for ignore_package in ignore_packages {
         if ignore_package.package == package_name {
             match &ignore_package.version {
                 Some(version_req_str) => {
+                    let parsed_package_version =
+                        Version::from_str(package_version).with_context(|| {
+                            format!(
+                                "Error parsing package version: {package_version} for package: {package_name}"
+                            )
+                        })?;
                     let version_req =
                         VersionSpec::from_str(version_req_str, ParseStrictness::Strict)
                             .with_context(|| {
