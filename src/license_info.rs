@@ -20,30 +20,30 @@ use crate::{
 #[derive(Debug, Clone, Serialize)]
 pub struct LicenseInfo {
     pub package_name: String,
-    pub version: String,
+    pub version: Option<String>,
     pub license: LicenseState,
     pub platform: Option<String>,
-    pub build: String,
+    pub build: Option<String>,
 }
 
 impl LicenseInfo {
     pub fn from_package_record(package_record: PackageRecord) -> Self {
         LicenseInfo {
             package_name: package_record.name.as_source().to_string(),
-            version: package_record.version.version().to_string(),
+            version: Some(package_record.version.version().to_string()),
             license: license_state_from_optional_str(package_record.license.as_deref()),
             platform: Some(package_record.subdir),
-            build: package_record.build,
+            build: Some(package_record.build),
         }
     }
 
     pub fn from_partial_source_metadata(metadata: &PartialSourceMetadata) -> Self {
         LicenseInfo {
             package_name: metadata.name.as_source().to_string(),
-            version: "unknown".to_string(),
+            version: None,
             license: license_state_from_optional_str(metadata.license.as_deref()),
             platform: None,
-            build: "source".to_string(),
+            build: None,
         }
     }
 
@@ -51,25 +51,38 @@ impl LicenseInfo {
         let license_str = match &self.license {
             LicenseState::Valid(license) => license.to_string(),
             LicenseState::Invalid(license) => license.to_string(),
+            LicenseState::NoLicense => "no license".to_string(),
         };
 
-        let recognized = match &self.license {
-            LicenseState::Valid(_) => "",
-            LicenseState::Invalid(_) => "(Non-SPDX)",
+        let comment = match &self.license {
+            LicenseState::Valid(_) => None,
+            LicenseState::Invalid(_) => Some("(Non-SPDX)"),
+            LicenseState::NoLicense => None,
         };
-        format!(
-            "{} {}-{} ({}): {} {}\n",
-            &self.package_name.blue(),
-            &self.version.cyan(),
-            &self.build.bright_cyan().italic(),
-            &self
-                .platform
-                .as_ref()
-                .unwrap_or(&"Unknown".to_string())
-                .bright_purple(),
-            license_str.yellow(),
-            recognized.bright_black(),
-        )
+        let version = self.version.as_deref().unwrap_or("unknown-source");
+        let build = self.build.as_deref().unwrap_or("unknown-source");
+        let platform = self.platform.as_deref().unwrap_or("unknown-source");
+
+        if let Some(comment) = comment {
+            format!(
+                "{} {}-{} ({}): {} {}\n",
+                &self.package_name.blue(),
+                &version.cyan(),
+                &build.bright_cyan().italic(),
+                &platform.bright_purple(),
+                license_str.yellow(),
+                comment.bright_black(),
+            )
+        } else {
+            format!(
+                "{} {}-{} ({}): {}\n",
+                &self.package_name.blue(),
+                &version.cyan(),
+                &build.bright_cyan().italic(),
+                &platform.bright_purple(),
+                license_str.yellow(),
+            )
+        }
     }
 }
 
@@ -237,7 +250,7 @@ impl LicenseInfos {
                         unsafe_dependencies.push(license_info.clone());
                     }
                 }
-                LicenseState::Invalid(_) => {
+                LicenseState::Invalid(_) | LicenseState::NoLicense => {
                     unsafe_dependencies.push(license_info.clone());
                 }
             }
@@ -268,7 +281,7 @@ impl LicenseInfos {
                         unsafe_dependencies.push(license_info.clone());
                     }
                 }
-                LicenseState::Invalid(_) => {
+                LicenseState::Invalid(_) | LicenseState::NoLicense => {
                     unsafe_dependencies.push(license_info.clone());
                 }
             }
@@ -284,13 +297,16 @@ pub enum LicenseState {
     #[serde(serialize_with = "serialize_expression")]
     Valid(Expression),
     Invalid(String),
+    NoLicense,
 }
 
 fn license_state_from_optional_str(license: Option<&str>) -> LicenseState {
-    let license_str = license.unwrap_or("None");
-    match parse_expression(license_str) {
+    let Some(license) = license else {
+        return LicenseState::NoLicense;
+    };
+    match parse_expression(license) {
         Ok(parsed_license) => LicenseState::Valid(parsed_license),
-        Err(_) => LicenseState::Invalid(license_str.to_owned()),
+        Err(_) => LicenseState::Invalid(license.to_owned()),
     }
 }
 
@@ -313,17 +329,17 @@ mod tests {
         // Create license infos without unsafe dependencies
         let unsafe_license_info = LicenseInfo {
             package_name: "test".to_string(),
-            version: "0.1.0".to_string(),
+            version: Some("0.1.0".to_string()),
             license: LicenseState::Invalid("Invalid-MIT".to_string()),
             platform: Some("linux-64".to_string()),
-            build: "py_0".to_string(),
+            build: Some("py_0".to_string()),
         };
         let safe_license_info = LicenseInfo {
             package_name: "test".to_string(),
-            version: "0.1.0".to_string(),
+            version: Some("0.1.0".to_string()),
             license: LicenseState::Valid(Expression::parse("MIT").unwrap()),
             platform: Some("linux-64".to_string()),
-            build: "py_0".to_string(),
+            build: Some("py_0".to_string()),
         };
 
         let unsafe_license_infos = LicenseInfos {
@@ -361,17 +377,17 @@ mod tests {
     fn test_sort_license_infos() {
         let license_info1 = LicenseInfo {
             package_name: "test".to_string(),
-            version: "0.1.0".to_string(),
+            version: Some("0.1.0".to_string()),
             license: LicenseState::Invalid("Invalid-MIT".to_string()),
             platform: Some("linux-64".to_string()),
-            build: "py_0".to_string(),
+            build: Some("py_0".to_string()),
         };
         let license_info2 = LicenseInfo {
             package_name: "test2".to_string(),
-            version: "0.1.0".to_string(),
+            version: Some("0.1.0".to_string()),
             license: LicenseState::Invalid("Invalid-MIT".to_string()),
             platform: Some("linux-64".to_string()),
-            build: "py_0".to_string(),
+            build: Some("py_0".to_string()),
         };
 
         let mut license_infos = LicenseInfos {
@@ -388,17 +404,17 @@ mod tests {
     fn test_dedub_license_infos() {
         let license_info1 = LicenseInfo {
             package_name: "test".to_string(),
-            version: "0.1.0".to_string(),
+            version: Some("0.1.0".to_string()),
             license: LicenseState::Invalid("Invalid-MIT".to_string()),
             platform: Some("linux-64".to_string()),
-            build: "py_0".to_string(),
+            build: Some("py_0".to_string()),
         };
         let license_info2 = LicenseInfo {
             package_name: "test".to_string(),
-            version: "0.1.0".to_string(),
+            version: Some("0.1.0".to_string()),
             license: LicenseState::Invalid("Invalid-MIT".to_string()),
             platform: Some("linux-64".to_string()),
-            build: "py_0".to_string(),
+            build: Some("py_0".to_string()),
         };
 
         let mut license_infos = LicenseInfos {

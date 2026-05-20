@@ -53,10 +53,10 @@ pub fn check<W: Write>(check_config: CondaDenyCheckConfig, mut out: W) -> Result
             #[derive(Debug, Clone, Serialize)]
             struct LicenseInfoWithSafety {
                 package_name: String,
-                version: String,
+                version: Option<String>,
                 license: LicenseState,
                 platform: Option<String>,
-                build: String,
+                build: Option<String>,
                 safe: bool,
             }
 
