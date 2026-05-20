@@ -14,3 +14,4 @@ tests_private/
 
 # conda-deny bundle default output directory
 bundle/
+*.pending-snap

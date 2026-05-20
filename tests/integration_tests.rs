@@ -492,6 +492,52 @@ fn test_pixi_build_list(
 }
 
 #[rstest]
+fn test_list_source_package_variants_with_license(mut out: Vec<u8>, _colored_control: ()) {
+    let mut temp_lockfile = NamedTempFile::new().unwrap();
+    let lockfile_content = r#"version: 7
+platforms:
+- name: linux-64
+- name: linux-aarch64
+environments:
+  default:
+    channels:
+    - url: https://conda.anaconda.org/conda-forge/
+    packages:
+      linux-64:
+      - conda_source: my-package[6652ddb3] @ .
+      linux-aarch64:
+      - conda_source: my-package[949d3bf9] @ .
+packages:
+- conda_source: my-package[6652ddb3] @ .
+  variants:
+    target_platform: noarch
+- conda_source: my-package[949d3bf9] @ .
+  variants:
+    target_platform: noarch
+  license: MIT
+"#;
+    temp_lockfile
+        .as_file_mut()
+        .write_all(lockfile_content.as_bytes())
+        .unwrap();
+
+    let list_config = list_config(
+        None,
+        Some(vec![temp_lockfile.path().display().to_string()]),
+        None,
+        None,
+        None,
+        None,
+        None,
+    );
+    let result = list(list_config, &mut out);
+    let stripped_output = String::from_utf8(strip_ansi_escapes::strip(out)).unwrap();
+
+    assert!(result.is_ok(), "{result:?}");
+    insta::assert_snapshot!(stripped_output, @"my-package unknown-source-unknown-source (unknown-source): MIT");
+}
+
+#[rstest]
 fn test_bundle_prefix() {
     let mut out = out();
     let temp_dir = tempfile::tempdir().unwrap();
