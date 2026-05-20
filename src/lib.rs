@@ -232,6 +232,7 @@ pub fn get_config_options(
                 directory,
             })
         }
+        CondaDenyCliConfig::Completion { .. } => unreachable!(),
     };
 
     Ok(config)
