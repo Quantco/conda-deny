@@ -15,6 +15,29 @@ use std::process::Command;
 use tempfile::NamedTempFile;
 use walkdir::WalkDir;
 
+const SOURCE_PACKAGE_VARIANTS_LOCKFILE: &str = r#"version: 7
+platforms:
+- name: linux-64
+- name: linux-aarch64
+environments:
+  default:
+    channels:
+    - url: https://conda.anaconda.org/conda-forge/
+    packages:
+      linux-64:
+      - conda_source: my-package[6652ddb3] @ .
+      linux-aarch64:
+      - conda_source: my-package[949d3bf9] @ .
+packages:
+- conda_source: my-package[6652ddb3] @ .
+  variants:
+    target_platform: noarch
+- conda_source: my-package[949d3bf9] @ .
+  variants:
+    target_platform: noarch
+  license: MIT
+"#;
+
 #[fixture]
 #[once]
 fn colored_control() {
@@ -523,6 +546,75 @@ fn test_pixi_build_list(
 }
 
 #[rstest]
+fn test_list_source_package_variants_with_license(mut out: Vec<u8>, _colored_control: ()) {
+    let mut temp_lockfile = NamedTempFile::new().unwrap();
+    temp_lockfile
+        .as_file_mut()
+        .write_all(SOURCE_PACKAGE_VARIANTS_LOCKFILE.as_bytes())
+        .unwrap();
+
+    let list_config = list_config(
+        None,
+        Some(vec![temp_lockfile.path().display().to_string()]),
+        None,
+        None,
+        None,
+        None,
+        None,
+    );
+    let result = list(list_config, &mut out);
+    let stripped_output = String::from_utf8(strip_ansi_escapes::strip(out)).unwrap();
+
+    assert!(result.is_ok(), "{result:?}");
+    insta::assert_snapshot!(stripped_output, @r"
+my-package[6652ddb3] @ . (source): no license
+my-package[949d3bf9] @ . (source): MIT
+");
+}
+
+#[rstest]
+fn test_check_source_package_variants_with_license(mut out: Vec<u8>, _colored_control: ()) {
+    let mut temp_lockfile = NamedTempFile::new().unwrap();
+    temp_lockfile
+        .as_file_mut()
+        .write_all(SOURCE_PACKAGE_VARIANTS_LOCKFILE.as_bytes())
+        .unwrap();
+
+    let mut temp_config_file = NamedTempFile::new().unwrap();
+    let config_content = r#"[tool.conda-deny]
+safe-licenses = ["MIT"]
+"#;
+    temp_config_file
+        .as_file_mut()
+        .write_all(config_content.as_bytes())
+        .unwrap();
+
+    let check_config = check_config(
+        Some(temp_config_file.path().to_path_buf()),
+        Some(vec![temp_lockfile.path().display().to_string()]),
+        None,
+        None,
+        None,
+        None,
+        None,
+        None,
+    );
+    let result = check(check_config, &mut out);
+    let stripped_output = String::from_utf8(strip_ansi_escapes::strip(out)).unwrap();
+
+    assert!(result.is_err());
+    insta::assert_snapshot!(stripped_output, @r"
+
+❌ The following dependencies are unsafe:
+
+my-package[6652ddb3] @ . (source): no license
+
+❌ Unsafe licenses found! ❌
+There were 1 safe licenses and 1 unsafe licenses.
+");
+}
+
+#[rstest]
 fn test_bundle_prefix() {
     let mut out = out();
     let temp_dir = tempfile::tempdir().unwrap();
@@ -652,16 +744,20 @@ ignore-packages = [{ package = "my-partial-pkg" }]"#;
 #[rstest]
 #[case("tests/test_ignored_source_package/pixi.toml")]
 #[case("tests/test_ignored_source_package/pixi_ignore_version.toml")]
-fn test_check_errors_on_source_package_without_record(
+fn test_check_checks_source_package_without_record(
     #[case] _config_path: &str,
     #[with(Some(PathBuf::from(_config_path)))] check_config: CondaDenyCheckConfig,
     mut out: Vec<u8>,
     _colored_control: (),
 ) {
     let result = check(check_config, &mut out);
-    let error = format!("{result:?}");
+    let output = String::from_utf8(strip_ansi_escapes::strip(out)).unwrap();
 
-    assert!(error.contains("Package record missing in lockfile for my-partial-pkg"));
+    assert!(result.is_err());
+    assert!(output.contains("my-partial-pkg"));
+    assert!(output.contains("my-partial-pkg[abcd1234] @ my-partial-pkg"));
+    assert!(output.contains("(source)"));
+    assert!(output.contains("no license"));
 }
 
 #[rstest]
@@ -695,16 +791,20 @@ ignore-packages = [{ package = "my-partial-pkg" }]"#;
 #[rstest]
 #[case("tests/test_ignored_source_package/pixi.toml")]
 #[case("tests/test_ignored_source_package/pixi_ignore_version.toml")]
-fn test_list_errors_on_source_package_without_record(
+fn test_list_shows_source_package_without_record(
     #[case] _config_path: &str,
     #[with(Some(PathBuf::from(_config_path)))] list_config: CondaDenyListConfig,
     mut out: Vec<u8>,
     _colored_control: (),
 ) {
     let result = list(list_config, &mut out);
-    let error = format!("{result:?}");
+    let output = String::from_utf8(strip_ansi_escapes::strip(out)).unwrap();
 
-    assert!(error.contains("Package record missing in lockfile for my-partial-pkg"));
+    assert!(result.is_ok(), "{result:?}");
+    assert!(output.contains("my-partial-pkg"));
+    assert!(output.contains("my-partial-pkg[abcd1234] @ my-partial-pkg"));
+    assert!(output.contains("(source)"));
+    assert!(output.contains("no license"));
 }
 
 #[rstest]
