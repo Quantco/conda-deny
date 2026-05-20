@@ -4,7 +4,7 @@ use anyhow::{Context, Result};
 use colored::Colorize;
 use rattler_conda_types::prefix_record::PrefixRecord;
 use rattler_conda_types::PackageRecord;
-use rattler_lock::{CondaPackageData, PartialSourceMetadata};
+use rattler_lock::{CondaPackageData, CondaSourceData, SourceIdentifier};
 use rayon::prelude::*;
 use serde::Serialize;
 use spdx::Expression;
@@ -24,6 +24,8 @@ pub struct LicenseInfo {
     pub license: LicenseState,
     pub platform: Option<String>,
     pub build: Option<String>,
+    #[serde(skip_serializing)]
+    pub source_identifier: Option<String>,
 }
 
 impl LicenseInfo {
@@ -34,17 +36,21 @@ impl LicenseInfo {
             license: license_state_from_optional_str(package_record.license.as_deref()),
             platform: Some(package_record.subdir),
             build: Some(package_record.build),
+            source_identifier: None,
         }
     }
 
-    pub fn from_partial_source_metadata(metadata: &PartialSourceMetadata) -> Self {
-        LicenseInfo {
+    pub fn from_partial_source(source_data: &CondaSourceData) -> Option<Self> {
+        let metadata = source_data.metadata.as_partial()?;
+
+        Some(LicenseInfo {
             package_name: metadata.name.as_source().to_string(),
             version: None,
             license: license_state_from_optional_str(metadata.license.as_deref()),
             platform: None,
             build: None,
-        }
+            source_identifier: Some(SourceIdentifier::from_source_data(source_data).to_string()),
+        })
     }
 
     pub fn pretty_print(&self) -> String {
@@ -62,6 +68,25 @@ impl LicenseInfo {
         let version = self.version.as_deref().unwrap_or("unknown-source");
         let build = self.build.as_deref().unwrap_or("unknown-source");
         let platform = self.platform.as_deref().unwrap_or("unknown-source");
+
+        if let Some(source_identifier) = &self.source_identifier {
+            return if let Some(comment) = comment {
+                format!(
+                    "{} ({}): {} {}\n",
+                    source_identifier.blue(),
+                    "source".bright_purple(),
+                    license_str.yellow(),
+                    comment.bright_black(),
+                )
+            } else {
+                format!(
+                    "{} ({}): {}\n",
+                    source_identifier.blue(),
+                    "source".bright_purple(),
+                    license_str.yellow(),
+                )
+            };
+        }
 
         if let Some(comment) = comment {
             format!(
@@ -94,6 +119,7 @@ impl PartialEq for LicenseInfo {
             && self.version == other.version
             && self.build == other.build
             && self.platform == other.platform
+            && self.source_identifier == other.source_identifier
     }
 }
 
@@ -112,6 +138,7 @@ impl Ord for LicenseInfo {
             .then_with(|| self.version.cmp(&other.version))
             .then_with(|| self.build.cmp(&other.build))
             .then_with(|| self.platform.cmp(&other.platform))
+            .then_with(|| self.source_identifier.cmp(&other.source_identifier))
     }
 }
 
@@ -177,17 +204,21 @@ impl LicenseInfos {
                     continue;
                 }
 
-                let Some(metadata) = package
-                    .as_source()
-                    .and_then(|source| source.metadata.as_partial())
-                else {
+                let Some(source) = package.as_source() else {
                     return Err(anyhow::anyhow!(
                         "Package record missing in lockfile for {package_name}. \
                          Add a name-only entry for this package to ignore-packages to ignore it."
                     ));
                 };
 
-                license_infos.insert(LicenseInfo::from_partial_source_metadata(metadata));
+                let Some(license_info) = LicenseInfo::from_partial_source(source) else {
+                    return Err(anyhow::anyhow!(
+                        "Package record missing in lockfile for {package_name}. \
+                         Add a name-only entry for this package to ignore-packages to ignore it."
+                    ));
+                };
+
+                license_infos.insert(license_info);
             }
         }
 
@@ -333,6 +364,7 @@ mod tests {
             license: LicenseState::Invalid("Invalid-MIT".to_string()),
             platform: Some("linux-64".to_string()),
             build: Some("py_0".to_string()),
+            source_identifier: None,
         };
         let safe_license_info = LicenseInfo {
             package_name: "test".to_string(),
@@ -340,6 +372,7 @@ mod tests {
             license: LicenseState::Valid(Expression::parse("MIT").unwrap()),
             platform: Some("linux-64".to_string()),
             build: Some("py_0".to_string()),
+            source_identifier: None,
         };
 
         let unsafe_license_infos = LicenseInfos {
@@ -381,6 +414,7 @@ mod tests {
             license: LicenseState::Invalid("Invalid-MIT".to_string()),
             platform: Some("linux-64".to_string()),
             build: Some("py_0".to_string()),
+            source_identifier: None,
         };
         let license_info2 = LicenseInfo {
             package_name: "test2".to_string(),
@@ -388,6 +422,7 @@ mod tests {
             license: LicenseState::Invalid("Invalid-MIT".to_string()),
             platform: Some("linux-64".to_string()),
             build: Some("py_0".to_string()),
+            source_identifier: None,
         };
 
         let mut license_infos = LicenseInfos {
@@ -408,6 +443,7 @@ mod tests {
             license: LicenseState::Invalid("Invalid-MIT".to_string()),
             platform: Some("linux-64".to_string()),
             build: Some("py_0".to_string()),
+            source_identifier: None,
         };
         let license_info2 = LicenseInfo {
             package_name: "test".to_string(),
@@ -415,6 +451,7 @@ mod tests {
             license: LicenseState::Invalid("Invalid-MIT".to_string()),
             platform: Some("linux-64".to_string()),
             build: Some("py_0".to_string()),
+            source_identifier: None,
         };
 
         let mut license_infos = LicenseInfos {
