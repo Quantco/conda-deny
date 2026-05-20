@@ -17,6 +17,8 @@ fn print_completions(shell: clap_complete::Shell, stdout: &mut dyn Write) -> Res
     let mut command = Cli::command();
 
     if shell == clap_complete::Shell::Bash {
+        // clap_complete currently generates mismatched Bash command-state names for
+        // hyphenated command names, which breaks subcommand completion.
         command = command.name("conda_deny");
         let mut completions = Vec::new();
         clap_complete::generate(shell, &mut command, "conda_deny", &mut completions);

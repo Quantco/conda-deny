@@ -152,6 +152,7 @@ fn test_completion_bash() {
     assert!(stdout.contains("complete -F _conda_deny"));
     assert!(stdout.contains("conda-deny"));
     assert!(stdout.contains("conda_deny__subcmd__check"));
+    assert!(!stdout.contains("conda__subcmd__deny"));
     assert!(stdout.contains("--lockfile"));
 }
 

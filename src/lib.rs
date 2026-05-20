@@ -156,12 +156,6 @@ pub fn get_config_options(
     config: Option<PathBuf>,
     cli_config: CondaDenyCliConfig,
 ) -> Result<CondaDenyConfig> {
-    if matches!(cli_config, CondaDenyCliConfig::Completion { .. }) {
-        return Err(anyhow::anyhow!(
-            "completion command does not use project configuration"
-        ));
-    }
-
     // if config provided, use config
     // else, try to load pixi.toml, then pyproject.toml and if nothing helps, use empty config
     let toml_config = if let Some(config_path) = config {
