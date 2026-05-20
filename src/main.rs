@@ -5,6 +5,10 @@ use std::{
 
 use anyhow::Result;
 use clap::{CommandFactory, Parser};
+use clap_complete::{
+    env::{Bash, Elvish, EnvCompleter, Fish, Powershell, Zsh},
+    CompleteEnv,
+};
 use conda_deny::bundle::bundle;
 use conda_deny::check::check;
 use conda_deny::cli::{Cli, CondaDenyCliConfig};
@@ -14,28 +18,34 @@ use conda_deny::CondaDenyConfig;
 use log::{debug, info};
 
 fn print_completions(shell: clap_complete::Shell, stdout: &mut dyn Write) -> Result<()> {
-    let mut command = Cli::command();
+    let command = Cli::command();
+    // We are using the (unstable) Rust-Native completion engine.
+    // It addresses some bugs that would otherwise need to be fixed here
+    // (see https://github.com/clap-rs/clap/issues/3166)
+    let completer: &dyn EnvCompleter = match shell {
+        clap_complete::Shell::Bash => &Bash,
+        clap_complete::Shell::Elvish => &Elvish,
+        clap_complete::Shell::Fish => &Fish,
+        clap_complete::Shell::PowerShell => &Powershell,
+        clap_complete::Shell::Zsh => &Zsh,
+        _ => unreachable!("clap_complete::Shell is non-exhaustive"),
+    };
 
-    if shell == clap_complete::Shell::Bash {
-        // clap_complete currently generates mismatched Bash command-state names for
-        // hyphenated command names, which breaks subcommand completion.
-        command = command.name("conda_deny");
-        let mut completions = Vec::new();
-        clap_complete::generate(shell, &mut command, "conda_deny", &mut completions);
-        let completions = String::from_utf8(completions)?;
-        write!(
-            stdout,
-            "{}",
-            completions.replace(" conda_deny\n", " conda-deny\n")
-        )?;
-    } else {
-        clap_complete::generate(shell, &mut command, "conda-deny", stdout);
-    }
-
+    completer.write_registration(
+        "COMPLETE",
+        command.get_name(),
+        "conda-deny",
+        "conda-deny",
+        stdout,
+    )?;
     Ok(())
 }
 
 fn run() -> Result<()> {
+    CompleteEnv::with_factory(Cli::command)
+        .bin("conda-deny")
+        .complete();
+
     let cli = Cli::parse();
 
     env_logger::Builder::new()
