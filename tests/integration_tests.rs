@@ -621,16 +621,19 @@ ignore-packages = [{ package = "my-partial-pkg" }]"#;
 #[rstest]
 #[case("tests/test_ignored_source_package/pixi.toml")]
 #[case("tests/test_ignored_source_package/pixi_ignore_version.toml")]
-fn test_check_errors_on_source_package_without_record(
+fn test_check_checks_source_package_without_record(
     #[case] _config_path: &str,
     #[with(Some(PathBuf::from(_config_path)))] check_config: CondaDenyCheckConfig,
     mut out: Vec<u8>,
     _colored_control: (),
 ) {
     let result = check(check_config, &mut out);
-    let error = format!("{result:?}");
+    let output = String::from_utf8(strip_ansi_escapes::strip(out)).unwrap();
 
-    assert!(error.contains("Package record missing in lockfile for my-partial-pkg"));
+    assert!(result.is_err());
+    assert!(output.contains("my-partial-pkg"));
+    assert!(output.contains("unknown-source"));
+    assert!(output.contains("None"));
 }
 
 #[rstest]
@@ -664,16 +667,19 @@ ignore-packages = [{ package = "my-partial-pkg" }]"#;
 #[rstest]
 #[case("tests/test_ignored_source_package/pixi.toml")]
 #[case("tests/test_ignored_source_package/pixi_ignore_version.toml")]
-fn test_list_errors_on_source_package_without_record(
+fn test_list_shows_source_package_without_record(
     #[case] _config_path: &str,
     #[with(Some(PathBuf::from(_config_path)))] list_config: CondaDenyListConfig,
     mut out: Vec<u8>,
     _colored_control: (),
 ) {
     let result = list(list_config, &mut out);
-    let error = format!("{result:?}");
+    let output = String::from_utf8(strip_ansi_escapes::strip(out)).unwrap();
 
-    assert!(error.contains("Package record missing in lockfile for my-partial-pkg"));
+    assert!(result.is_ok(), "{result:?}");
+    assert!(output.contains("my-partial-pkg"));
+    assert!(output.contains("unknown-source"));
+    assert!(output.contains("None"));
 }
 
 #[rstest]

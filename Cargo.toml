@@ -8,16 +8,14 @@ edition = "2021"
 default = ["native-tls"]
 native-tls = [
   "reqwest/native-tls",
-  "reqwest/native-tls-alpn",
   "rattler_networking/native-tls",
   "rattler_package_streaming/native-tls",
 ]
 rustls-tls = [
-  "reqwest/rustls-tls",
-  "reqwest/rustls-tls-native-roots",
-  "rattler_networking/rustls-tls",
-  "reqwest-middleware/rustls-tls",
-  "rattler_package_streaming/rustls-tls",
+  "reqwest/rustls",
+  "rattler_networking/rustls",
+  "reqwest-middleware/rustls",
+  "rattler_package_streaming/rustls",
 ]
 
 # See https://doc.rust-lang.org/cargo/reference/profiles.html
@@ -35,7 +33,7 @@ serde = { version = "1.0.228", features = ["derive"] }
 serde_json = "1.0.149"
 toml = "1.1.2"
 tokio = { version = "1.52.1", features = ["full"] }
-reqwest = { version = "0.12.28", default-features = false, features = [
+reqwest = { version = "0.13.3", default-features = false, features = [
   "http2",
   "blocking",
   "stream",
@@ -45,18 +43,18 @@ regex = "1.12.3"
 spdx = "0.13.4"
 colored = "3.1.1"
 async-trait = "0.1.89"
-rattler_conda_types = "0.46.0"
-rattler_lock = "0.29.0"
+rattler_conda_types = "0.46.4"
+rattler_lock = "0.30.3"
 anyhow = "1.0.102"
 clap-verbosity-flag = "3.0.4"
 env_logger = "0.11.10"
 log = "0.4.29"
 csv = "1.4.0"
-rattler_package_streaming = { version = "0.25.0", default-features = false }
+rattler_package_streaming = { version = "0.26.2", default-features = false }
 indicatif = "0.18.4"
 rayon = "1.12.0"
-rattler_networking = { version = "0.26.9", default-features = false }
-reqwest-middleware = { version = "0.4.1", default-features = false }
+rattler_networking = { version = "0.27.2", default-features = false }
+reqwest-middleware = { package = "astral-reqwest-middleware", version = "0.5.1", default-features = false }
 tar = "0.4.45"
 futures = "0.3.32"
 glob = "0.3.3"

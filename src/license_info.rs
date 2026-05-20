@@ -4,7 +4,7 @@ use anyhow::{Context, Result};
 use colored::Colorize;
 use rattler_conda_types::prefix_record::PrefixRecord;
 use rattler_conda_types::PackageRecord;
-use rattler_lock::CondaPackageData;
+use rattler_lock::{CondaPackageData, PartialSourceMetadata};
 use rayon::prelude::*;
 use serde::Serialize;
 use spdx::Expression;
@@ -28,21 +28,22 @@ pub struct LicenseInfo {
 
 impl LicenseInfo {
     pub fn from_package_record(package_record: PackageRecord) -> Self {
-        let license_str = match &package_record.license {
-            Some(license) => license.clone(),
-            None => "None".to_string(),
-        };
-        let license_for_package = match parse_expression(&license_str) {
-            Ok(parsed_license) => LicenseState::Valid(parsed_license),
-            Err(_) => LicenseState::Invalid(license_str.to_owned()),
-        };
-
         LicenseInfo {
             package_name: package_record.name.as_source().to_string(),
             version: package_record.version.version().to_string(),
-            license: license_for_package,
+            license: license_state_from_optional_str(package_record.license.as_deref()),
             platform: Some(package_record.subdir),
             build: package_record.build,
+        }
+    }
+
+    pub fn from_partial_source_metadata(metadata: &PartialSourceMetadata) -> Self {
+        LicenseInfo {
+            package_name: metadata.name.as_source().to_string(),
+            version: "unknown".to_string(),
+            license: license_state_from_optional_str(metadata.license.as_deref()),
+            platform: None,
+            build: "source".to_string(),
         }
     }
 
@@ -150,21 +151,31 @@ impl LicenseInfos {
         let mut license_infos = BTreeSet::new();
         for package in conda_packages {
             let package_name = package.name().as_source();
-            let Some(record) = package.record().cloned() else {
+
+            if let Some(record) = package.record().cloned() {
+                let package_version = record.version.version().to_string();
+                if is_package_ignored(ignore_packages, package_name, &package_version)? {
+                    continue;
+                }
+
+                license_infos.insert(LicenseInfo::from_package_record(record));
+            } else {
                 if is_package_ignored_by_name_only(ignore_packages, package_name) {
                     continue;
                 }
 
-                return Err(anyhow::anyhow!(
-                    "Package record missing in lockfile for {package_name}. \
-                     Add a name-only entry for this package to ignore-packages to ignore it."
-                ));
-            };
-            let package_version = record.version.version().to_string();
-            if is_package_ignored(ignore_packages, package_name, &package_version)? {
-                continue;
+                let Some(metadata) = package
+                    .as_source()
+                    .and_then(|source| source.metadata.as_partial())
+                else {
+                    return Err(anyhow::anyhow!(
+                        "Package record missing in lockfile for {package_name}. \
+                         Add a name-only entry for this package to ignore-packages to ignore it."
+                    ));
+                };
+
+                license_infos.insert(LicenseInfo::from_partial_source_metadata(metadata));
             }
-            license_infos.insert(LicenseInfo::from_package_record(record));
         }
 
         Ok(LicenseInfos {
@@ -273,6 +284,14 @@ pub enum LicenseState {
     #[serde(serialize_with = "serialize_expression")]
     Valid(Expression),
     Invalid(String),
+}
+
+fn license_state_from_optional_str(license: Option<&str>) -> LicenseState {
+    let license_str = license.unwrap_or("None");
+    match parse_expression(license_str) {
+        Ok(parsed_license) => LicenseState::Valid(parsed_license),
+        Err(_) => LicenseState::Invalid(license_str.to_owned()),
+    }
 }
 
 fn serialize_expression<S>(expr: &Expression, serializer: S) -> Result<S::Ok, S::Error>
