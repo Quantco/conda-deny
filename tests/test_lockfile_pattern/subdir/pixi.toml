@@ -8,3 +8,7 @@ rust = "==1.77.2"
 openssl = "3.*"
 pkg-config = "*"
 k9s = "*"
+
+# Avoid GitHub tooling trying to update this pixi.toml
+[tool.update]
+autoupdate-schedule = "never"

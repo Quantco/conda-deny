@@ -1,3 +1,7 @@
 [tool.conda-deny]
 lockfile = "tests/test_ignored_source_package/pixi.lock"
 safe-licenses = ["MIT"]
+
+# Avoid GitHub tooling trying to update this pixi.toml
+[tool.update]
+autoupdate-schedule = "never"

@@ -5,3 +5,7 @@ platforms = ["linux-64"]
 
 [dependencies]
 vhs = "*"
+
+# Avoid GitHub tooling trying to update this pixi.toml
+[tool.update]
+autoupdate-schedule = "never"
