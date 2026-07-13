@@ -42,3 +42,7 @@ lint = { features = ["lint"], no-default-feature = true }
 
 [tool.conda-deny]
 license-allowlist = "license_allowlist.toml"
+
+# Avoid GitHub tooling trying to update this pixi.toml
+[tool.update]
+autoupdate-schedule = "never"
