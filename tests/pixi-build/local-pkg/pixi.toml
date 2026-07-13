@@ -7,3 +7,7 @@ backend = { name = "pixi-build-cmake", version = "==0.3.10" }
 
 [package.run-dependencies]
 curl = "==8.17.0"
+
+# Avoid tooling trying to autoupdate this pixi.toml
+[tool.update]
+autoupdate-schedule = "never"

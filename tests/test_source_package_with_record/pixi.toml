@@ -1,3 +1,7 @@
 [tool.conda-deny]
 lockfile = "tests/test_source_package_with_record/pixi.lock"
 safe-licenses = ["MIT"]
+
+# Avoid tooling trying to autoupdate this pixi.toml
+[tool.update]
+autoupdate-schedule = "never"
