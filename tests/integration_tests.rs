@@ -197,26 +197,7 @@ fn test_completion_bash() {
 #[case("check")]
 #[case("list")]
 fn test_lockfile_pattern(#[case] subcommand: &str) {
-    let test_folder = String::from("tests/test_lockfile_pattern");
-    let mut temp_config_file = NamedTempFile::new().unwrap();
-    let file_content = format!(
-        r#"[project]
-name = "my-project"
-channels = ["conda-forge"]
-platforms = ["linux-64"]
-
-[tool.conda-deny]
-license-allowlist = "{}/license_allowlist.toml"
-lockfile = "{}//**/*.lock""#,
-        test_folder, test_folder
-    );
-
-    temp_config_file
-        .as_file_mut()
-        .write_all(file_content.as_bytes())
-        .unwrap();
-
-    let config = temp_config_file.path().to_path_buf();
+    let config = PathBuf::from("tests/test_lockfile_pattern/pixi.toml");
 
     let mut out = out();
 
