@@ -9,6 +9,6 @@ openssl = "3.*"
 pkg-config = "*"
 k9s = "*"
 
-# Avoid GitHub tooling trying to update this pixi.toml
+# Avoid tooling trying to autoupdate this pixi.toml
 [tool.update]
 autoupdate-schedule = "never"

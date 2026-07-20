@@ -7,6 +7,6 @@ platforms = ["linux-64"]
 license-allowlist = "tests/test_lockfile_pattern/license_allowlist.toml"
 lockfile = "tests/test_lockfile_pattern/**/*.lock"
 
-# Avoid GitHub tooling trying to update this pixi.toml
+# Avoid GitHub tooling trying to autoupdate this pixi.toml
 [tool.update]
 autoupdate-schedule = "never"
