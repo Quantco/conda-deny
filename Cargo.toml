@@ -2,7 +2,7 @@
 name = "conda-deny"
 description = "A CLI tool to check your project's dependencies for license compliance."
 version = "0.5.9"
-edition = "2021"
+edition = "2024"
 
 [features]
 default = ["native-tls"]

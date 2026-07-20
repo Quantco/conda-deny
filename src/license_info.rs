@@ -91,20 +91,20 @@ impl LicenseInfo {
         if let Some(comment) = comment {
             format!(
                 "{} {}-{} ({}): {} {}\n",
-                &self.package_name.blue(),
-                &version.cyan(),
-                &build.bright_cyan().italic(),
-                &platform.bright_purple(),
+                self.package_name.blue(),
+                version.cyan(),
+                build.bright_cyan().italic(),
+                platform.bright_purple(),
                 license_str.yellow(),
                 comment.bright_black(),
             )
         } else {
             format!(
                 "{} {}-{} ({}): {}\n",
-                &self.package_name.blue(),
-                &version.cyan(),
-                &build.bright_cyan().italic(),
-                &platform.bright_purple(),
+                self.package_name.blue(),
+                version.cyan(),
+                build.bright_cyan().italic(),
+                platform.bright_purple(),
                 license_str.yellow(),
             )
         }

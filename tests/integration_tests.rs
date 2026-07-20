@@ -197,10 +197,7 @@ fn test_completion_bash() {
 #[case("check")]
 #[case("list")]
 fn test_lockfile_pattern(#[case] subcommand: &str) {
-    let test_folder = String::from("tests/test_lockfile_pattern");
-    std::env::set_var("TEST_FOLDER", &test_folder);
-    let test_dir = Path::new(&test_folder);
-    let config = PathBuf::from(test_dir).join("pixi.toml");
+    let config = PathBuf::from("tests/test_lockfile_pattern/pixi.toml");
 
     let mut out = out();
 
@@ -635,9 +632,6 @@ fn test_bundle_prefix() {
         Some(temp_dir.path().join(Path::new("test_bundle"))),
     );
 
-    // Suppress progress bar
-    std::env::set_var("NO_PROGRESS", "1");
-
     bundle(bundle_config.clone(), &mut out).unwrap();
     let bundle_dir = bundle_config.directory.unwrap();
 
@@ -683,9 +677,6 @@ fn test_bundle_lockfile() {
         // DIRECTORY
         Some(temp_dir.path().join(Path::new("test_bundle"))),
     );
-
-    // Suppress progress bar
-    std::env::set_var("NO_PROGRESS", "1");
 
     bundle(bundle_config.clone(), &mut out).unwrap();
     let bundle_dir = bundle_config.directory.unwrap();
