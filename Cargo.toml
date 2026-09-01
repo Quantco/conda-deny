@@ -65,7 +65,7 @@ shellexpand = "3.1.2"
 assert_cmd = "2.2.1"
 insta = { version = "1.47.2", features = ["yaml"] }
 predicates = "3.1.4"
-serial_test = "3.4.0"
+serial_test = "4.0.1"
 rstest = "0.26.1"
 tempfile = "3.27.0"
 walkdir = "2.5.0"
