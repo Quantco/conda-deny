@@ -66,7 +66,7 @@ assert_cmd = "2.2.1"
 insta = { version = "1.47.2", features = ["yaml"] }
 predicates = "3.1.4"
 serial_test = "4.0.1"
-rstest = "0.26.1"
+rstest = "0.27.0"
 tempfile = "3.27.0"
 walkdir = "2.5.0"
 strip-ansi-escapes = "0.2.1"
