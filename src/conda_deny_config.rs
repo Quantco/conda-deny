@@ -1,7 +1,7 @@
 use anyhow::{Context, Result};
 use glob::glob_with;
 use log::debug;
-use rattler_conda_types::Platform;
+use rattler_conda_types::Subdir;
 use serde::Deserialize;
 use std::collections::HashSet;
 use std::path::PathBuf;
@@ -31,8 +31,8 @@ pub enum LicenseAllowlist {
 #[derive(Debug, Deserialize, Clone)]
 #[serde(untagged)]
 pub enum PlatformSpec {
-    Single(Platform),
-    Multiple(Vec<Platform>),
+    Single(Subdir),
+    Multiple(Vec<Subdir>),
 }
 
 #[derive(Debug, Deserialize, Clone)]
@@ -94,7 +94,7 @@ impl CondaDenyTomlConfig {
         Ok(resolved)
     }
 
-    pub fn get_platform_spec(&self) -> Option<Vec<Platform>> {
+    pub fn get_platform_spec(&self) -> Option<Vec<Subdir>> {
         match &self.tool.conda_deny.platform_spec {
             Some(PlatformSpec::Single(name)) => Some(vec![*name]),
             Some(PlatformSpec::Multiple(names)) => Some(names.clone()),

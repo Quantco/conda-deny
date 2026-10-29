@@ -18,7 +18,7 @@ use license_info::LicenseInfo;
 
 use anyhow::{Context, Result};
 use log::{debug, warn};
-use rattler_conda_types::Platform;
+use rattler_conda_types::Subdir;
 use serde::Deserialize;
 use spdx::Expression;
 
@@ -69,7 +69,7 @@ pub struct CondaDenyBundleConfig {
 #[derive(Debug, Clone)]
 pub struct LockfileSpec {
     lockfiles: Vec<PathBuf>,
-    platforms: Option<Vec<Platform>>,
+    platforms: Option<Vec<Subdir>>,
     environments: Option<Vec<String>>,
     ignore_pypi: bool,
 }

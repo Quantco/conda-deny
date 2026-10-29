@@ -35,7 +35,7 @@ impl LicenseInfo {
             version: Some(package_record.version.version().to_string()),
             license: license_state_from_optional_str(package_record.license.as_deref()),
             platform: Some(package_record.subdir),
-            build: Some(package_record.build),
+            build: Some(package_record.build.into()),
             source_identifier: None,
         }
     }

@@ -44,17 +44,17 @@ regex = "1.12.3"
 spdx = "0.13.4"
 colored = "3.1.1"
 async-trait = "0.1.89"
-rattler_conda_types = "0.46.4"
-rattler_lock = "0.30.3"
+rattler_conda_types = "0.58.0"
+rattler_lock = "0.34.10"
 anyhow = "1.0.102"
 clap-verbosity-flag = "3.0.4"
 env_logger = "0.11.10"
 log = "0.4.29"
 csv = "1.4.0"
-rattler_package_streaming = { version = "0.26.2", default-features = false }
+rattler_package_streaming = { version = "0.28.0", default-features = false }
 indicatif = "0.18.4"
 rayon = "1.12.0"
-rattler_networking = { version = "0.30.3", default-features = false }
+rattler_networking = { version = "0.34.4", default-features = false }
 reqwest-middleware = { package = "astral-reqwest-middleware", version = "0.5.1", default-features = false }
 tar = "0.4.46"
 futures = "0.3.32"
