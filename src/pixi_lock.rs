@@ -3,7 +3,7 @@ use std::path::Path;
 use anyhow::{Context, Result};
 
 use log::warn;
-use rattler_conda_types::Platform;
+use rattler_conda_types::Subdir;
 use rattler_lock::{CondaPackageData, LockFile, LockedPackage, PypiPackageData};
 
 use crate::license_allowlist::{
@@ -13,7 +13,7 @@ use crate::license_allowlist::{
 pub fn get_conda_packages_for_pixi_lock(
     pixi_lock_path: &Path,
     environment_spec: &Option<Vec<String>>,
-    platform_spec: &Option<Vec<Platform>>,
+    platform_spec: &Option<Vec<Subdir>>,
     ignore_pypi: bool,
     ignore_packages: &[IgnorePackage],
 ) -> Result<Vec<CondaPackageData>> {
@@ -40,7 +40,7 @@ pub fn get_conda_packages_for_pixi_lock(
 fn collect_conda_packages_for_environment(
     lock_file: &LockFile,
     environment_name: &str,
-    platform_spec: &Option<Vec<Platform>>,
+    platform_spec: &Option<Vec<Subdir>>,
     ignore_pypi: bool,
     ignore_packages: &[IgnorePackage],
 ) -> Result<Vec<CondaPackageData>> {
@@ -116,7 +116,7 @@ fn is_pypi_package_ignored(
     }
 }
 
-fn platform_matches(platform: Platform, platform_spec: &Option<Vec<Platform>>) -> bool {
+fn platform_matches(platform: Subdir, platform_spec: &Option<Vec<Subdir>>) -> bool {
     platform_spec
         .as_ref()
         .map(|all| all.contains(&platform))
@@ -154,7 +154,7 @@ mod tests {
         let package_records = get_conda_packages_for_pixi_lock(
             path,
             &Some(vec!["lint".to_string()]),
-            &Some(vec![Platform::Linux64]),
+            &Some(vec![Subdir::Linux64]),
             false,
             &[],
         );
@@ -167,7 +167,7 @@ mod tests {
         let package_records = get_conda_packages_for_pixi_lock(
             path,
             &None,
-            &Some(vec![Platform::Linux64]),
+            &Some(vec![Subdir::Linux64]),
             false,
             &[],
         );

@@ -7,7 +7,7 @@ use conda_deny::{
     CondaDenyListConfig,
 };
 use conda_deny::{CondaDenyBundleConfig, OutputFormat};
-use rattler_conda_types::Platform;
+use rattler_conda_types::Subdir;
 use rstest::{fixture, rstest};
 use std::io::Write;
 use std::path::{Path, PathBuf};
@@ -50,7 +50,7 @@ fn list_config(
     #[default(None)] config: Option<PathBuf>,
     #[default(None)] lockfile: Option<Vec<String>>,
     #[default(None)] prefix: Option<Vec<PathBuf>>,
-    #[default(None)] platform: Option<Vec<Platform>>,
+    #[default(None)] platform: Option<Vec<Subdir>>,
     #[default(None)] environment: Option<Vec<String>>,
     #[default(None)] ignore_pypi: Option<bool>,
     #[default(Some(OutputFormat::Default))] output: Option<OutputFormat>,
@@ -77,7 +77,7 @@ fn bundle_config(
     #[default(None)] config: Option<PathBuf>,
     #[default(None)] lockfile: Option<Vec<String>>,
     #[default(None)] prefix: Option<Vec<PathBuf>>,
-    #[default(None)] platform: Option<Vec<Platform>>,
+    #[default(None)] platform: Option<Vec<Subdir>>,
     #[default(None)] environment: Option<Vec<String>>,
     #[default(None)] ignore_pypi: Option<bool>,
     #[default(None)] directory: Option<PathBuf>,
@@ -104,7 +104,7 @@ fn check_config(
     #[default(None)] config: Option<PathBuf>,
     #[default(None)] lockfile: Option<Vec<String>>,
     #[default(None)] prefix: Option<Vec<PathBuf>>,
-    #[default(None)] platform: Option<Vec<Platform>>,
+    #[default(None)] platform: Option<Vec<Subdir>>,
     #[default(None)] environment: Option<Vec<String>>,
     #[default(None)] osi: Option<bool>,
     #[default(None)] ignore_pypi: Option<bool>,

@@ -4,7 +4,7 @@ use clap_verbosity_flag::{ErrorLevel, Verbosity};
 
 use clap::{Parser, ValueHint};
 use clap_complete::Shell;
-use rattler_conda_types::Platform;
+use rattler_conda_types::Subdir;
 
 use crate::OutputFormat;
 
@@ -45,7 +45,7 @@ pub enum CondaDenyCliConfig {
 
         /// Platform(s) to check
         #[arg(short, long)]
-        platform: Option<Vec<Platform>>,
+        platform: Option<Vec<Subdir>>,
 
         /// Pixi environment(s) to check
         #[arg(short, long)]
@@ -75,7 +75,7 @@ pub enum CondaDenyCliConfig {
 
         /// Platform(s) to list
         #[arg(short, long)]
-        platform: Option<Vec<Platform>>,
+        platform: Option<Vec<Subdir>>,
 
         /// Pixi environment(s) to list
         #[arg(short, long)]
@@ -102,7 +102,7 @@ pub enum CondaDenyCliConfig {
 
         /// Platform(s) to bundle
         #[arg(short, long)]
-        platform: Option<Vec<Platform>>,
+        platform: Option<Vec<Subdir>>,
 
         /// Pixi environment(s) to bundle
         #[arg(short, long)]
@@ -144,7 +144,7 @@ impl CondaDenyCliConfig {
         }
     }
 
-    pub fn platform(&self) -> Option<Vec<Platform>> {
+    pub fn platform(&self) -> Option<Vec<Subdir>> {
         match self {
             CondaDenyCliConfig::Check { platform, .. } => platform.clone(),
             CondaDenyCliConfig::List { platform, .. } => platform.clone(),
