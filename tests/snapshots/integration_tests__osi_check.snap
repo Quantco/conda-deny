@@ -20,11 +20,6 @@ gxx_impl_linux-64 12.3.0-h2a574ab_13 (linux-64): GPL-3.0-only WITH GCC-exception
 gxx_impl_linux-aarch64 12.3.0-hba91e99_13 (linux-aarch64): GPL-3.0-only WITH GCC-exception-3.1
 kernel-headers_linux-64 2.6.32-he073ed8_17 (noarch): LGPL-2.0-or-later AND LGPL-2.0-or-later WITH exceptions AND GPL-2.0-or-later AND MPL-2.0 (Non-SPDX)
 kernel-headers_linux-aarch64 4.18.0-h5b4a56d_14 (noarch): LGPL-2.0-or-later AND LGPL-2.0-or-later WITH exceptions AND GPL-2.0-or-later AND MPL-2.0 (Non-SPDX)
-libcurl 8.8.0-h4e8248e_1 (linux-aarch64): curl
-libcurl 8.8.0-h7b6f9a7_1 (osx-arm64): curl
-libcurl 8.8.0-hca28451_1 (linux-64): curl
-libcurl 8.8.0-hd5e4a3a_1 (win-64): curl
-libcurl 8.8.0-hf9fcc65_1 (osx-64): curl
 libcxx 17.0.6-h5f092b4_0 (osx-arm64): Apache-2.0 WITH LLVM-exception
 libcxx 17.0.6-h88467a6_0 (osx-64): Apache-2.0 WITH LLVM-exception
 libgcc-devel_linux-64 12.3.0-h6b66f73_113 (noarch): GPL-3.0-only WITH GCC-exception-3.1
@@ -74,4 +69,4 @@ xz 5.2.6-h8d14728_0 (win-64): LGPL-2.1 and GPL-2.0 (Non-SPDX)
 xz 5.2.6-h9cdd2b7_0 (linux-aarch64): LGPL-2.1 and GPL-2.0 (Non-SPDX)
 
 ❌ Unsafe licenses found! ❌
-There were 333 safe licenses and 67 unsafe licenses.
+There were 338 safe licenses and 62 unsafe licenses.
